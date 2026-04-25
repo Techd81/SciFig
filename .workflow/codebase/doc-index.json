@@ -1,0 +1,178 @@
+{
+  "version": "1.0",
+  "schema_version": "1.0",
+  "project": "SciFig",
+  "last_updated": "2026-04-26T00:23:35+08:00",
+  "features": [
+    {
+      "id": "FT-001",
+      "name": "Research-backed figure product definition",
+      "status": "documented",
+      "evidence_paths": [
+        "doc/deep-research-report.md",
+        "CLAUDE.md"
+      ]
+    },
+    {
+      "id": "FT-002",
+      "name": "Skill-defined figure generation workflow",
+      "status": "specified",
+      "evidence_paths": [
+        ".claude/skills/scifig-generate/SKILL.md",
+        ".claude/skills/scifig-generate/phases/01-data-detect.md",
+        ".claude/skills/scifig-generate/phases/02-recommend-stats.md",
+        ".claude/skills/scifig-generate/phases/03-code-gen-style.md",
+        ".claude/skills/scifig-generate/phases/04-export-report.md"
+      ]
+    },
+    {
+      "id": "FT-003",
+      "name": "Sample dataset pack",
+      "status": "available",
+      "evidence_paths": [
+        "data/dose_response_experiment.csv",
+        "data/multi_panel_experiment.csv",
+        "data/line_ci_data.csv",
+        "data/manhattan_data.csv",
+        "data/qq_data.csv",
+        "data/waterfall_data.csv",
+        "data/forest_data.csv"
+      ]
+    },
+    {
+      "id": "FT-004",
+      "name": "Rendered figure gallery",
+      "status": "available",
+      "evidence_paths": [
+        "output/all14",
+        "output/requirements.txt"
+      ]
+    }
+  ],
+  "components": [
+    {
+      "id": "TC-001",
+      "name": "research-docs",
+      "type": "documentation",
+      "code_locations": [
+        "CLAUDE.md",
+        "doc/CLAUDE.md",
+        "doc/deep-research-report.md"
+      ],
+      "symbols": []
+    },
+    {
+      "id": "TC-002",
+      "name": "scifig-generate-skill",
+      "type": "workflow-skill",
+      "code_locations": [
+        ".claude/skills/scifig-generate/SKILL.md",
+        ".claude/skills/scifig-generate/phases/01-data-detect.md",
+        ".claude/skills/scifig-generate/phases/02-recommend-stats.md",
+        ".claude/skills/scifig-generate/phases/03-code-gen-style.md",
+        ".claude/skills/scifig-generate/phases/04-export-report.md"
+      ],
+      "symbols": [
+        "Phase 1",
+        "Phase 2",
+        "Phase 3",
+        "Phase 4"
+      ]
+    },
+    {
+      "id": "TC-003",
+      "name": "sample-datasets",
+      "type": "data-assets",
+      "code_locations": [
+        "data/dose_response_experiment.csv",
+        "data/multi_panel_experiment.csv",
+        "data/line_ci_data.csv",
+        "data/manhattan_data.csv",
+        "data/qq_data.csv",
+        "data/waterfall_data.csv",
+        "data/forest_data.csv"
+      ],
+      "symbols": []
+    },
+    {
+      "id": "TC-004",
+      "name": "figure-gallery",
+      "type": "generated-assets",
+      "code_locations": [
+        "output/all14",
+        "output/requirements.txt"
+      ],
+      "symbols": []
+    },
+    {
+      "id": "TC-005",
+      "name": "workflow-metadata",
+      "type": "workflow-metadata",
+      "code_locations": [
+        ".workflow/project.md",
+        ".workflow/state.json",
+        ".workflow/config.json",
+        ".workflow/codebase/context.md"
+      ],
+      "symbols": []
+    }
+  ],
+  "requirements": [
+    {
+      "id": "REQ-001",
+      "title": "Generate publication-ready vector figures from real experimental data",
+      "status": "planned",
+      "evidence_paths": [
+        "doc/deep-research-report.md",
+        ".claude/skills/scifig-generate/SKILL.md"
+      ]
+    },
+    {
+      "id": "REQ-002",
+      "title": "Auto-detect data structure and guard against pseudo-replication",
+      "status": "planned",
+      "evidence_paths": [
+        ".claude/skills/scifig-generate/phases/01-data-detect.md",
+        ".claude/skills/scifig-generate/phases/02-recommend-stats.md"
+      ]
+    },
+    {
+      "id": "REQ-003",
+      "title": "Export reproducible code, figures, and statistical metadata",
+      "status": "planned",
+      "evidence_paths": [
+        ".claude/skills/scifig-generate/phases/03-code-gen-style.md",
+        ".claude/skills/scifig-generate/phases/04-export-report.md",
+        "output/requirements.txt"
+      ]
+    }
+  ],
+  "architecture_decisions": [
+    {
+      "id": "ADR-001",
+      "title": "Bootstrap from research and workflow specs before runtime implementation",
+      "status": "accepted",
+      "evidence_paths": [
+        "doc/deep-research-report.md",
+        ".claude/skills/scifig-generate/SKILL.md"
+      ]
+    },
+    {
+      "id": "ADR-002",
+      "title": "Use sample datasets and rendered outputs as reference fixtures",
+      "status": "accepted",
+      "evidence_paths": [
+        "data",
+        "output/all14"
+      ]
+    }
+  ],
+  "actions": [
+    {
+      "id": "ACT-001",
+      "title": "Deep scan initialization",
+      "status": "completed",
+      "at": "2026-04-26T00:23:35+08:00"
+    }
+  ]
+}

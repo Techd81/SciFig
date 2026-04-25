@@ -1,0 +1,55 @@
+{
+  "version": "1.0",
+  "project_name": "SciFig",
+  "current_milestone": "repository_bootstrap",
+  "current_phase": 1,
+  "status": "initialized",
+  "phases_summary": {
+    "total": 1,
+    "completed": 1,
+    "in_progress": 0,
+    "pending": 0
+  },
+  "last_updated": "2026-04-26T00:23:35+08:00",
+  "accumulated_context": {
+    "key_decisions": [
+      "Treat the repository as artifact-first until a Python source package is added.",
+      "Use doc/deep-research-report.md and .claude/skills/scifig-generate as the main implementation references.",
+      "Document data and output assets during initialization so future work starts from real examples."
+    ],
+    "blockers": [
+      "No committed runtime package, CLI, or automated tests exist yet."
+    ],
+    "deferred": [
+      {
+        "id": "bootstrap-runnable-package",
+        "severity": "high",
+        "fix_direction": "Create a Python package and move workflow behavior from markdown guidance into executable modules.",
+        "description": "The repository can describe and demonstrate the workflow, but it cannot yet run end-to-end from committed source."
+      }
+    ]
+  },
+  "transition_history": [
+    {
+      "at": "2026-04-26T00:23:35+08:00",
+      "from": "partial_init",
+      "to": "initialized",
+      "reason": "Added missing workflow metadata and performed a full-project deep scan."
+    }
+  ],
+  "milestone_history": [
+    {
+      "name": "Repository Bootstrap",
+      "slug": "repository_bootstrap",
+      "status": "completed",
+      "completed_at": "2026-04-26T00:23:35+08:00",
+      "phases": [
+        "metadata bootstrap",
+        "repository deep scan"
+      ],
+      "audit_verdict": "pass_with_gaps",
+      "force_completed": false,
+      "archive_path": null
+    }
+  ]
+}
