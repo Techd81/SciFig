@@ -138,6 +138,9 @@ figures/
 *.tiff
 *.eps
 
-# Keep demo/example outputs tracked explicitly if needed
-# !examples/output/*.pdf
+# Internal project files (not for distribution)
+data/
+doc/
+.workflow/
+CLAUDE.md
 .ace-tool/
