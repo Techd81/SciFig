@@ -5,8 +5,8 @@ Use these profiles as explicit plotting tokens. They define the visual language;
 ## Notes On Sources
 
 - `Nature-like` is grounded in official Nature figure guidance. Nature shows both rounded initial-submission canvases (`90/180 mm`) and final-submission-safe widths (`89/183 mm`); this skill uses the tighter `89/183 mm` tokens because they are safer for final artwork planning.
-- `Cell-like` is a house-inspired preset derived from Cell Press guidance emphasizing clarity, sparse text, simple labels, restrained color, and strong figure storytelling. It is intentionally not presented as an official Cell regular-figure production spec.
-- `Science-like` is an internal minimal preset for fast visual parsing and low-ink figures.
+- `Cell-like` is derived from Cell Press guidance emphasizing clarity, sparse text, simple labels, restrained color, and strong figure storytelling. It is not presented as an official Cell regular-figure production spec.
+- `Science-like` is a minimal preset for fast visual parsing and low-ink figures.
 
 ## Profile Table
 

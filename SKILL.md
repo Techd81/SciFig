@@ -39,7 +39,7 @@ End-to-end workflow for turning real experimental data into submission-ready sci
 
 ## Key Design Principles
 
-1. **Journal-token driven**: Use explicit style profiles instead of ad-hoc plotting choices. Nature dimensions are grounded in the official Nature figure guide; Cell-like and Science-like modes are house-inspired presets that keep the same production-safe discipline.
+1. **Journal-token driven**: Use explicit style profiles instead of ad-hoc plotting choices. Nature dimensions are grounded in the official Nature figure guide; Cell-like and Science-like presets maintain the same production-safe discipline.
 2. **Domain-aware charting**: Infer likely domains such as genomics, single-cell, pharmacology, neuroscience, or clinical survival and bias chart recommendations toward the conventions of that field.
 3. **Narrative multi-panel design**: Treat multi-panel figures as a story with hero, support, validation, and mechanism panels rather than a loose grid of unrelated plots.
 4. **Palette governance**: Prefer restrained, colorblind-safe palettes; keep semantic mappings consistent across panels; avoid rainbow and uncontrolled red-green contrasts.
