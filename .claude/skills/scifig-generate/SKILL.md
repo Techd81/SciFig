@@ -3,7 +3,6 @@ name: scifig-generate
 description: Upload experimental data (CSV/Excel/matrix), auto-detect structure, infer scientific domain, recommend publication-grade charts, generate Nature/Cell/Science-aligned figure code, optimize multi-panel composition and palette systems, and export vector graphics with statistical reports. Triggers on "generate figure", "plot data", "sci figure", "科研图", "画图", "多 panel".
 allowed-tools: Agent, AskUserQuestion, TodoWrite, Read, Write, Edit, Bash, Glob, Grep
 ---
-
 # SciFig Generate
 
 End-to-end workflow for turning real experimental data into submission-ready scientific figures. The skill is journal-token driven, domain-aware, and narrative-first: it reads the data, infers the scientific context, picks chart families and statistics, builds a multi-panel story when needed, and exports reproducible code plus publication assets.
@@ -225,24 +224,25 @@ Phase 4: Export, Source Data, Statistical Report
 
 **Phase Reference Documents** (read on-demand):
 
-| Phase | Document | Purpose | Compact |
-|-------|----------|---------|---------|
-| 1 | [phases/01-data-detect.md](phases/01-data-detect.md) | Data ingestion, semantic role mapping, domain inference | TodoWrite driven |
-| 2 | [phases/02-recommend-stats.md](phases/02-recommend-stats.md) | Chart taxonomy selection, stats, panel blueprint | TodoWrite driven + sentinel |
-| 3 | [phases/03-code-gen-style.md](phases/03-code-gen-style.md) | Journal profiles, palette system, code generation, composition | TodoWrite driven + sentinel |
-| 4 | [phases/04-export-report.md](phases/04-export-report.md) | Export bundle, source data, metadata, reporting | TodoWrite driven |
+| Phase | Document                                                  | Purpose                                                        | Compact                     |
+| ----- | --------------------------------------------------------- | -------------------------------------------------------------- | --------------------------- |
+| 1     | [phases/01-data-detect.md](phases/01-data-detect.md)         | Data ingestion, semantic role mapping, domain inference        | TodoWrite driven            |
+| 2     | [phases/02-recommend-stats.md](phases/02-recommend-stats.md) | Chart taxonomy selection, stats, panel blueprint               | TodoWrite driven + sentinel |
+| 3     | [phases/03-code-gen-style.md](phases/03-code-gen-style.md)   | Journal profiles, palette system, code generation, composition | TodoWrite driven + sentinel |
+| 4     | [phases/04-export-report.md](phases/04-export-report.md)     | Export bundle, source data, metadata, reporting                | TodoWrite driven            |
 
 **Reference Specs** (read on-demand when needed):
 
-| Kind | Document | Purpose |
-|------|----------|---------|
-| Journal | [specs/journal-profiles.md](specs/journal-profiles.md) | Nature/Cell/Science-aligned style tokens |
-| Charts | [specs/chart-catalog.md](specs/chart-catalog.md) | Expanded chart family taxonomy and triggers |
-| Domains | [specs/domain-playbooks.md](specs/domain-playbooks.md) | Domain-specific plotting, stats, and panel guidance |
-| Layouts | [templates/panel-layout-recipes.md](templates/panel-layout-recipes.md) | Reusable multi-panel story recipes |
-| Palettes | [templates/palette-presets.md](templates/palette-presets.md) | Reusable categorical/sequential/diverging palette presets |
+| Kind     | Document                                                            | Purpose                                                   |
+| -------- | ------------------------------------------------------------------- | --------------------------------------------------------- |
+| Journal  | [specs/journal-profiles.md](specs/journal-profiles.md)                 | Nature/Cell/Science-aligned style tokens                  |
+| Charts   | [specs/chart-catalog.md](specs/chart-catalog.md)                       | Expanded chart family taxonomy and triggers               |
+| Domains  | [specs/domain-playbooks.md](specs/domain-playbooks.md)                 | Domain-specific plotting, stats, and panel guidance       |
+| Layouts  | [templates/panel-layout-recipes.md](templates/panel-layout-recipes.md) | Reusable multi-panel story recipes                        |
+| Palettes | [templates/palette-presets.md](templates/palette-presets.md)           | Reusable categorical/sequential/diverging palette presets |
 
 **Compact Rules**:
+
 1. `TodoWrite in_progress` -> preserve full content
 2. `TodoWrite completed` -> safe to compress to summary
 3. If a sentinel remains without the full step protocol -> `Read("phases/0N-xxx.md")` before continuing
