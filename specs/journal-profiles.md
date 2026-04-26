@@ -29,9 +29,19 @@ NATURE_PROFILE = {
     "font_size_panel_label_pt": 8,
     "axis_linewidth_pt": 0.6,
     "tick_width_pt": 0.6,
+    "tick_direction": "out",
+    "tick_length_pt": 3,
+    "marker_size_pt": 4,
+    "line_cap": "round",
+    "line_join": "round",
     "legend_frame": False,
+    "legend_borderpad": 0.3,
     "grid": False,
-    "panel_gap_rel": 0.22
+    "panel_gap_rel": 0.22,
+    "panel_label_offset_xy": [-0.12, 1.05],
+    "colorbar_shrink": 0.6,
+    "shared_legend_position": "upper center",
+    "shared_legend_ncol": "auto"
 }
 ```
 

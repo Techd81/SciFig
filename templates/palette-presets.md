@@ -60,6 +60,62 @@ Stable palette presets for publication-grade scientific figures.
 ["#2D5AA7", "#9CC4E4", "#F5F5F5", "#F4A582", "#B2182B"]
 ```
 
+## Colorblind-safe Presets
+
+### `wong_8` (Bang Wong, Nature Methods)
+
+```python
+[
+    "#000000",  # black
+    "#E69F00",  # orange
+    "#56B4E9",  # sky blue
+    "#009E73",  # bluish green
+    "#F0E442",  # yellow
+    "#0072B2",  # blue
+    "#D55E00",  # vermillion
+    "#CC79A7"   # reddish purple
+]
+```
+
+### `okabe_ito_8`
+
+```python
+[
+    "#E69F00",  # orange
+    "#56B4E9",  # sky blue
+    "#009E73",  # bluish green
+    "#F0E442",  # yellow
+    "#0072B2",  # blue
+    "#D55E00",  # vermillion
+    "#CC79A7",  # reddish purple
+    "#000000"   # black
+]
+```
+
+### `genomics_categorical`
+
+```python
+[
+    "#3B5998",  # upregulated
+    "#C8553D",  # downregulated
+    "#999999",  # not significant
+    "#4C956C",  # pathway A
+    "#F2A541",  # pathway B
+    "#7A6C8F",  # pathway C
+]
+```
+
+### `clinical_survival`
+
+```python
+[
+    "#0072B2",  # treatment arm
+    "#C8553D",  # control arm
+    "#4C956C",  # subgroup A
+    "#F2A541",  # subgroup B
+]
+```
+
 ## Semantic Mapping Defaults
 
 - `control` -> `#1F4E79`

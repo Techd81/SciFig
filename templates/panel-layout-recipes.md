@@ -58,6 +58,32 @@ Reusable layout blueprints for multi-panel scientific figures.
 - C = `roc` or `pr_curve`
 - D = `calibration`
 
+## Density & Spacing Rules
+
+- `hspace=0.45` for 2-row layouts, `wspace=0.35` for 2-column layouts
+- Panel labels (A/B/C/D) at `(-0.12, 1.05)` in axes coordinates, bold, 8pt
+- Shared y-axis: align ticks across panels in same row
+- Shared x-axis: align ticks across panels in same column
+- Colorbar: `shrink=0.6`, positioned right of heatmap panels
+- Legend: shared at figure level when panels encode same semantics
+
+## Shared Legend Pattern
+
+```python
+# After all panels drawn, create shared legend
+handles, labels = ax_a.get_legend_handles_labels()
+fig.legend(handles, labels, loc="upper center", ncol=len(labels),
+           frameon=False, fontsize=5, bbox_to_anchor=(0.5, 1.02))
+```
+
+## Shared Colorbar Pattern
+
+```python
+# After heatmap, extract mappable for colorbar
+cbar = fig.colorbar(im, ax=[ax_a, ax_b], shrink=0.6, pad=0.02)
+cbar.set_label("Value", fontsize=5)
+```
+
 ## Recipe 5: Omics Discovery Board
 
 **When to use**
