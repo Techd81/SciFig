@@ -8,18 +8,15 @@ A reusable agent skill that transforms experimental data (CSV, Excel, or matrix 
 ## Install
 
 ```bash
-# Claude Code
-git clone https://github.com/Techd81/SciFig.git ~/.claude/skills/scifig-generate
-
-# Codex
-git clone https://github.com/Techd81/SciFig.git ~/.codex/skills/scifig-generate
+git clone https://github.com/Techd81/SciFig.git
+cp -r SciFig/.claude/skills/scifig-generate ~/.claude/skills/
 ```
 
 ## What It Does
 
 - Upload CSV/Excel/matrix data
 - Auto-detect data structure (tidy vs matrix) and scientific domain
-- Recommend publication-grade chart types (104 charts across 13 domains)
+- Recommend publication-grade chart types (35+ charts across 13 domains)
 - Generate Nature/Cell/Science/Lancet/NEJM/JAMA-aligned figure code
 - Apply colorblind-safe palettes and multi-panel composition
 - Export vector graphics (PDF/SVG) with statistical reports
@@ -47,18 +44,15 @@ MIT
 ## 安装
 
 ```bash
-# Claude Code
-git clone https://github.com/Techd81/SciFig.git ~/.claude/skills/scifig-generate
-
-# Codex
-git clone https://github.com/Techd81/SciFig.git ~/.codex/skills/scifig-generate
+git clone https://github.com/Techd81/SciFig.git
+cp -r SciFig/.claude/skills/scifig-generate ~/.claude/skills/
 ```
 
 ## 功能
 
 - 上传 CSV/Excel/矩阵数据
 - 自动识别数据结构（tidy vs matrix）和科研领域
-- 推荐投稿级图表类型（104 种图表，13 个领域）
+- 推荐投稿级图表类型（35+ 种图表，13 个领域）
 - 生成 Nature/Cell/Science/Lancet/NEJM/JAMA 风格代码
 - 应用色盲安全配色和多 panel 组图
 - 导出矢量图形（PDF/SVG）和统计报告

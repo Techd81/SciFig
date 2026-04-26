@@ -140,10 +140,17 @@ figures/
 
 # Tool-specific local agent/skill install directories
 .agents/
-.claude/
 .codex/
 AGENTS.md
 skills/
+
+# Allow .claude/skills/ (main skill package)
+!.claude/
+!.claude/skills/
+!.claude/skills/**
+
+# Local settings
+.claude/settings.local.json
 
 # Internal project files (not for distribution)
 data/
