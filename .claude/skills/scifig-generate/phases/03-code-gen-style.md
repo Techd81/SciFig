@@ -146,22 +146,55 @@ Convert the journal profile into `rcParams`:
 ```python
 def build_rcparams(journalProfile):
     return {
+        # Font embedding (CRITICAL for journal submission)
         "pdf.fonttype": 42,
         "ps.fonttype": 42,
+        "svg.fonttype": "none",  # text as text elements for editability
+        "mathtext.fontset": "dejavusans",
+
+        # Typography
         "font.family": "sans-serif",
         "font.sans-serif": journalProfile["font_family"],
         "font.size": journalProfile["font_size_body_pt"],
+        "axes.labelsize": journalProfile.get("font_size_body_pt", 6),
+        "axes.titlesize": journalProfile.get("font_size_body_pt", 6) + 1,
+        "xtick.labelsize": journalProfile.get("font_size_body_pt", 6) - 1,
+        "ytick.labelsize": journalProfile.get("font_size_body_pt", 6) - 1,
+        "legend.fontsize": journalProfile.get("font_size_small_pt", 5),
+
+        # Axes spines (Nature/Cell: remove top/right for "open L" style)
         "axes.linewidth": journalProfile["axis_linewidth_pt"],
+        "axes.spines.top": False,
+        "axes.spines.right": False,
         "axes.grid": False,
         "axes.facecolor": "white",
         "figure.facecolor": "white",
-        "legend.frameon": False,
+
+        # Tick geometry
         "xtick.major.width": journalProfile["tick_width_pt"],
         "ytick.major.width": journalProfile["tick_width_pt"],
-        "savefig.bbox": "tight",
-        "savefig.pad_inches": 0.05,
+        "xtick.major.size": journalProfile.get("tick_length_pt", 3),
+        "ytick.major.size": journalProfile.get("tick_length_pt", 3),
+        "xtick.direction": "out",
+        "ytick.direction": "out",
+        "xtick.top": False,
+        "ytick.right": False,
+
+        # Line style
+        "lines.linewidth": 0.8,
+        "lines.markersize": 4,
+        "lines.solid_capstyle": "round",
+        "lines.solid_joinstyle": "round",
+
+        # Legend
+        "legend.frameon": False,
+        "legend.borderpad": 0.3,
+
+        # Output
         "figure.dpi": 150,
-        "savefig.dpi": 300
+        "savefig.dpi": 300,
+        "savefig.bbox": "tight",
+        "savefig.pad_inches": 0.05
     }
 ```
 
@@ -173,6 +206,10 @@ Read `templates/palette-presets.md` and convert `palettePlan` into a chart-ready
 PALETTES = {
     "journal_muted_8": ["#1F4E79", "#4C956C", "#F2A541", "#C8553D", "#7A6C8F", "#2B6F77", "#BC4749", "#6C757D"],
     "journal_muted_6": ["#1F4E79", "#4C956C", "#F2A541", "#C8553D", "#7A6C8F", "#6C757D"],
+    "wong_8": ["#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7"],
+    "okabe_ito_8": ["#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#000000"],
+    "genomics_categorical": ["#3B5998", "#C8553D", "#999999", "#4C956C", "#F2A541", "#7A6C8F"],
+    "clinical_survival": ["#0072B2", "#C8553D", "#4C956C", "#F2A541"],
     "seq_cool": ["#F7FBFF", "#D6EAF8", "#A9CCE3", "#5DADE2", "#21618C"],
     "seq_warm": ["#FFF6E8", "#FBD38D", "#F6AD55", "#DD6B20", "#9C4221"],
     "div_centered": ["#3B6FB6", "#8FBCE6", "#F7F7F7", "#E6A0A0", "#B5403A"],
@@ -192,6 +229,10 @@ def resolve_color_system(chartPlan, dataProfile):
     categories = []
     if "group" in roles and roles["group"] in df.columns:
         categories = df[roles["group"]].dropna().astype(str).unique().tolist()
+
+    if len(categories) > len(categorical):
+        import warnings
+        warnings.warn(f"More categories ({len(categories)}) than palette colors ({len(categorical)}). Colors will repeat.")
 
     category_map = {cat: categorical[idx % len(categorical)] for idx, cat in enumerate(categories)}
     category_map.update(palettePlan.get("semanticMap", {}))
@@ -389,6 +430,68 @@ Each generator should:
 - Use the resolved `colorSystem`
 - Write figures, source-data friendly tables, and metadata hooks
 - Return its axis object when used inside multi-panel composition
+- Apply `apply_chart_polish(ax, chart_type)` after drawing data
+
+### Post-plot polish function (call after every chart generator)
+
+```python
+def apply_chart_polish(ax, chart_type):
+    """Apply publication-quality post-processing to any axes."""
+    # Remove top/right spines (Nature/Cell "open L" style)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    # Tick discipline
+    ax.tick_params(direction="out", length=3, width=0.6, pad=2)
+
+    # Violin transparency: make fill semi-transparent so strip points show through
+    if chart_type in ("violin+strip", "violin_paired", "violin_split", "violin_grouped"):
+        for coll in ax.collections:
+            if hasattr(coll, "set_alpha"):
+                coll.set_alpha(0.3)
+
+    # Y-axis baseline: anchor at 0 for ratio-scale data
+    if chart_type in ("violin+strip", "box+strip", "dot+box", "bar"):
+        ymin = ax.get_ylim()[0]
+        if ymin > 0:
+            ax.set_ylim(bottom=0)
+
+    # n-label styling: 5pt minimum, dark gray
+    for text in ax.texts:
+        if text.get_text().startswith("n="):
+            text.set_fontsize(5)
+            text.set_color("#333")
+
+
+def add_significance_bracket(ax, x1, x2, y, height, p_value, lw=0.6):
+    """Add a Nature-style significance bracket with T-caps and italic p."""
+    cap_w = height * 0.25
+    # Vertical risers with T-caps
+    ax.plot([x1, x1], [y, y+height], lw=lw, c="black", clip_on=False)
+    ax.plot([x2, x2], [y, y+height], lw=lw, c="black", clip_on=False)
+    # Horizontal bar
+    ax.plot([x1, x2], [y+height, y+height], lw=lw, c="black", clip_on=False)
+    # T-caps
+    ax.plot([x1-cap_w, x1+cap_w], [y, y], lw=lw, c="black", clip_on=False)
+    ax.plot([x2-cap_w, x2+cap_w], [y, y], lw=lw, c="black", clip_on=False)
+    # P-value text (italic, Nature convention)
+    if p_value < 0.001:
+        p_text = "p < 0.001"
+    else:
+        p_text = f"p = {p_value:.3g}"
+    ax.text((x1+x2)/2, y+height*1.1, p_text, ha="center", va="bottom",
+            fontsize=6, fontstyle="italic")
+
+
+def format_p_value(p_value):
+    """Format p-value per Nature convention: italic p, no leading zero."""
+    if p_value < 0.001:
+        return "p < 0.001"
+    elif p_value < 0.01:
+        return f"p = {p_value:.2g}"
+    else:
+        return f"p = {p_value:.2g}"
+```
 
 ### Label Collision Avoidance (volcano, manhattan, scatter with annotations)
 
@@ -461,12 +564,13 @@ for panel in panel_defs:
     ax = axes[panel["id"]]
     # Dispatch to chart generator using panel["chart"]
     # Generators should accept ax=... so panels share one figure.
-    ax.text(-0.12, 1.04, panel["id"], transform=ax.transAxes,
+    ax.text(-0.12, 1.05, panel["id"], transform=ax.transAxes,
             fontsize=8, fontweight="bold", va="top", ha="left")
 
-if chartPlan["panelBlueprint"]["sharedLegend"]:
-    # Collect and draw one shared legend rather than repeated legends.
-    pass
+if chartPlan["panelBlueprint"].get("sharedLegend", False):
+    handles, labels = axes[0].get_legend_handles_labels()
+    fig.legend(handles, labels, loc="upper center", ncol=len(labels),
+               frameon=False, fontsize=5, bbox_to_anchor=(0.5, 1.02))
 
 fig.savefig("output/figure1.pdf", bbox_inches="tight")
 fig.savefig("output/figure1.svg", bbox_inches="tight")
