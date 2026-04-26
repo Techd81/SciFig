@@ -19,7 +19,13 @@ import pandas as pd
 from pathlib import Path
 
 file_path = "{{FILE_PATH}}"
+if not file_path:
+    raise ValueError("Missing FILE_PATH. Ask the user where the data file lives before Phase 1.")
+
 path = Path(file_path)
+if not path.exists() or not path.is_file():
+    raise FileNotFoundError(f"Input file not found: {file_path}. Ask the user to confirm the exact path.")
+
 ext = path.suffix.lower()
 
 if ext in (".csv", ".txt", ".tsv"):
@@ -76,6 +82,42 @@ def detect_special_patterns(columns):
         patterns.add("dose_response")
     if any("ci_low" in c or "ci_lower" in c for c in cols) and any("ci_high" in c or "ci_upper" in c for c in cols):
         patterns.add("effect_interval")
+    # Materials / engineering
+    if any("stress" in c or "sigma" in c for c in cols) and any("strain" in c or "epsilon" in c for c in cols):
+        patterns.add("stress_strain")
+    if any("phase" in c for c in cols) and any("composition" in c or "temp" in c for c in cols):
+        patterns.add("phase_diagram")
+    if any("xrd" in c or "2theta" in c for c in cols):
+        patterns.add("xrd")
+    if any("ftir" in c or "wavenumber" in c for c in cols):
+        patterns.add("ftir")
+    if any("dsc" in c or "heat_flow" in c for c in cols):
+        patterns.add("dsc")
+    # Ecology / environmental
+    if any("species" in c or "taxon" in c or "otu" in c for c in cols):
+        patterns.add("species")
+    if any("abundance" in c or "count" in c for c in cols) and any("species" in c or "taxon" in c for c in cols):
+        patterns.add("abundance")
+    if any("shannon" in c or "diversity" in c or "richness" in c for c in cols):
+        patterns.add("diversity")
+    if any("ordination" in c or "nmds" in c or "pcoa" in c for c in cols):
+        patterns.add("ordination")
+    # Agriculture / food science
+    if any("yield" in c or "production" in c for c in cols):
+        patterns.add("yield")
+    if any("growth" in c or "biomass" in c for c in cols):
+        patterns.add("growth")
+    if any("sensory" in c or "panelist" in c for c in cols):
+        patterns.add("sensory")
+    # Psychology / social science
+    if any("likert" in c or "scale" in c for c in cols):
+        patterns.add("likert")
+    if any("survey" in c or "questionnaire" in c for c in cols):
+        patterns.add("survey")
+    if any("mediation" in c or "mediator" in c for c in cols):
+        patterns.add("mediation")
+    if any("pre" in c and "post" in c for c in cols) or any("before" in c and "after" in c for c in cols):
+        patterns.add("pre_post")
 
     return sorted(patterns)
 ```
@@ -87,8 +129,9 @@ Use a broader keyword system so downstream charting is domain-aware.
 ```python
 ROLE_KEYWORDS = {
     "sample_id": ["sample", "sample_id", "specimen", "id"],
-    "subject_id": ["subject", "patient", "mouse", "animal", "donor", "pair_id"],
-    "group": ["group", "condition", "treatment", "arm", "class"],
+    "subject_id": ["subject", "patient", "mouse", "animal", "donor", "participant"],
+    "pair_id": ["pair_id", "pair", "matched_id"],
+    "group": ["group", "condition", "treatment", "arm", "class", "variety"],
     "cohort": ["cohort", "batch", "center", "site"],
     "value": ["value", "measurement", "signal", "abundance", "expression"],
     "time": ["time", "day", "week", "month", "visit"],
@@ -96,22 +139,46 @@ ROLE_KEYWORDS = {
     "tech_rep": ["tech_rep", "techrep", "technical"],
     "dose": ["dose", "concentration", "conc", "drug_dose"],
     "response": ["response", "viability", "effect", "auc"],
-    "event": ["event", "status", "censor", "progression"],
-    "score": ["score", "probability", "risk", "prediction", "pred"],
+    "event": ["event", "status", "censor", "progression", "death"],
+    "duration": ["duration", "survival_time", "follow_up", "os", "pfs"],
+    "score": ["score", "probability", "risk", "prediction", "pred", "nes"],
     "label": ["label", "target", "truth", "outcome"],
     "effect": ["effect", "estimate", "beta", "hazard_ratio", "odds_ratio"],
+    "se": ["se", "std_error", "stderr"],
     "ci_low": ["ci_low", "ci_lower", "lower", "lcl"],
     "ci_high": ["ci_high", "ci_upper", "upper", "ucl"],
     "fold_change": ["log2fc", "logfc", "fold_change"],
     "p_value": ["p", "pval", "p_value", "padj", "qvalue"],
     "feature_id": ["gene", "protein", "metabolite", "feature", "marker", "pathway"],
     "pathway": ["pathway", "term", "hallmark", "geneset"],
+    "term": ["term", "pathway", "go_term", "kegg_term"],
+    "size": ["size", "count", "set_size", "n_genes"],
     "chromosome": ["chr", "chromosome"],
-    "position": ["pos", "position", "bp"],
-    "x_coord": ["x", "x_coord", "coord_x", "spatial_x"],
-    "y_coord": ["y", "y_coord", "coord_y", "spatial_y"],
+    "position": ["pos", "position", "bp", "amino_acid_position"],
+    "x": ["x", "x_coord", "coord_x", "spatial_x", "umap_1", "pc1"],
+    "y": ["y", "y_coord", "coord_y", "spatial_y", "umap_2", "pc2"],
+    "umap_1": ["umap_1", "umap1", "tsne_1", "pc1"],
+    "umap_2": ["umap_2", "umap2", "tsne_2", "pc2"],
     "cell_type": ["cell_type", "cluster", "annotation", "cellstate"],
-    "facet": ["facet", "panel", "marker", "endpoint"]
+    "before": ["before", "pre", "baseline", "value_pre"],
+    "after": ["after", "post", "followup", "value_post"],
+    "facet": ["facet", "panel", "marker", "endpoint"],
+    "label_col": ["label", "gene", "protein", "term_name"],
+    "estimate": ["estimate", "effect", "beta", "log2fc", "hazard_ratio"],
+    # Materials / engineering
+    "stress": ["stress", "sigma", "tensile_stress"],
+    "strain": ["strain", "epsilon", "deformation"],
+    "temperature": ["temperature", "temp", "celsius", "kelvin"],
+    "composition": ["composition", "fraction", "mol_percent", "wt_percent"],
+    # Ecology
+    "species": ["species", "taxon", "otu", "asv"],
+    "latitude": ["latitude", "lat"],
+    "longitude": ["longitude", "lon", "lng"],
+    # Agriculture
+    "yield": ["yield", "production", "output", "harvest"],
+    # Psychology
+    "score_pre": ["score_pre", "pre_score", "baseline_score"],
+    "score_post": ["score_post", "post_score", "followup_score"],
 }
 
 
@@ -142,27 +209,75 @@ def infer_domain_hints(df, roles, special_patterns, workflowPreferences):
         "neuroscience_behavior": 0,
         "clinical_diagnostics_survival": 0,
         "epidemiology_public_health": 0,
+        "materials_engineering": 0,
+        "ecology_environmental": 0,
+        "agriculture_food_science": 0,
+        "psychology_social_science": 0,
     }
+
+    custom_domain = (
+        workflowPreferences.get("customDomainText")
+        or workflowPreferences.get("syntheticDomainText")
+        or ""
+    ).lower()
 
     if "differential" in special_patterns or "genomic_association" in special_patterns:
         scores["genomics_transcriptomics"] += 4
-    if "embedding" in special_patterns or "x_coord" in roles or "cell_type" in roles:
+    if "embedding" in special_patterns or "x" in roles or "umap_1" in roles or "cell_type" in roles:
         scores["single_cell_spatial"] += 4
     if "dose_response" in special_patterns or "dose" in roles:
         scores["pharmacology_toxicology"] += 4
     if "survival" in special_patterns or "event" in roles:
         scores["clinical_diagnostics_survival"] += 4
-    if "feature_id" in roles and roles["feature_id"].lower() in ("protein", "metabolite"):
+    if "feature_id" in roles:
         scores["proteomics_metabolomics"] += 2
     if "subject_id" in roles and "score" in roles:
         scores["clinical_diagnostics_survival"] += 2
     if "time" in roles and "subject_id" in roles:
         scores["neuroscience_behavior"] += 1
         scores["immunology_cell_biology"] += 1
+    # Materials / engineering
+    if any(k in special_patterns for k in ("stress_strain", "phase_diagram", "xrd", "ftir", "dsc")):
+        scores["materials_engineering"] += 4
+    if any(roles.get(r) for r in ("stress", "strain", "temperature", "composition")):
+        scores["materials_engineering"] += 2
+    # Ecology / environmental
+    if any(k in special_patterns for k in ("species", "abundance", "diversity", "shannon", "ordination")):
+        scores["ecology_environmental"] += 4
+    if any(roles.get(r) for r in ("species", "cohort", "latitude", "longitude")):
+        scores["ecology_environmental"] += 2
+    # Agriculture / food science
+    if any(k in special_patterns for k in ("yield", "growth", "sensory")):
+        scores["agriculture_food_science"] += 4
+    if any(roles.get(r) for r in ("yield", "group", "bio_rep")):
+        scores["agriculture_food_science"] += 2
+    # Psychology / social science
+    if any(k in special_patterns for k in ("likert", "survey", "mediation", "pre_post")):
+        scores["psychology_social_science"] += 4
+    if any(roles.get(r) for r in ("subject_id", "group", "score_pre", "score_post")):
+        scores["psychology_social_science"] += 2
 
     user_domain = workflowPreferences.get("domainFamily")
     if user_domain in scores:
         scores[user_domain] += 3
+
+    custom_keyword_map = {
+        "genomics_transcriptomics": ["genomics", "transcriptomics", "rna", "dna", "epigen", "mutation"],
+        "single_cell_spatial": ["single-cell", "single cell", "spatial", "cell atlas", "cell state"],
+        "proteomics_metabolomics": ["proteomics", "metabolomics", "lipidomics", "mass spec"],
+        "pharmacology_toxicology": ["drug", "compound", "toxicology", "pharmacology", "screening"],
+        "immunology_cell_biology": ["immunology", "immune", "cell biology", "signaling", "pathway"],
+        "neuroscience_behavior": ["neuroscience", "behavior", "behaviour", "brain", "neural"],
+        "clinical_diagnostics_survival": ["clinical", "diagnostic", "survival", "oncology", "tumor", "tumour", "cancer"],
+        "epidemiology_public_health": ["epidemiology", "public health", "population", "cohort", "incidence"],
+        "materials_engineering": ["materials", "material", "engineering", "battery", "electrochem", "corrosion", "mechanical", "semiconductor"],
+        "ecology_environmental": ["ecology", "environment", "environmental", "marine", "biodiversity", "climate", "soil"],
+        "agriculture_food_science": ["agriculture", "crop", "plant", "food", "yield", "agronomy"],
+        "psychology_social_science": ["psychology", "social science", "education", "survey", "consumer", "behavioral"],
+    }
+    for domain_name, keywords in custom_keyword_map.items():
+        if any(keyword in custom_domain for keyword in keywords):
+            scores[domain_name] += 6
 
     ranked = sorted(scores.items(), key=lambda kv: kv[1], reverse=True)
     return {

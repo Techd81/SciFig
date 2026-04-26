@@ -65,15 +65,22 @@ Reusable layout blueprints for multi-panel scientific figures.
 - Shared y-axis: align ticks across panels in same row
 - Shared x-axis: align ticks across panels in same column
 - Colorbar: `shrink=0.6`, positioned right of heatmap panels
-- Legend: shared at figure level when panels encode same semantics
+- Legend: treat as a figure-level layout element, never as a panel annotation. If panels share group, color, marker, or line semantics, keep one shared legend outside every plotting area. Prefer bottom-center, then top-center, then outside-right.
+- Legend collision policy: never use `loc="best"` or any in-axes legend for publication output. If space is tight, adjust legend columns, shorten labels, reduce handle/text spacing, increase figure margins, or reflow panels before allowing the legend to overlap curves, bars, points, error bars, confidence intervals, grids, or heatmap cells.
 
 ## Shared Legend Pattern
 
 ```python
-# After all panels drawn, create shared legend
+# After all panels are drawn, remove panel legends and create one shared
+# figure-level legend outside the plotting regions.
 handles, labels = ax_a.get_legend_handles_labels()
-fig.legend(handles, labels, loc="upper center", ncol=len(labels),
-           frameon=False, fontsize=5, bbox_to_anchor=(0.5, 1.02))
+for ax in [ax_a, ax_b, ax_c, ax_d]:
+    legend = ax.get_legend()
+    if legend is not None:
+        legend.remove()
+fig.subplots_adjust(bottom=0.22)
+fig.legend(handles, labels, loc="lower center", ncol=min(len(labels), 4),
+           frameon=False, fontsize=5, bbox_to_anchor=(0.5, 0.02))
 ```
 
 ## Shared Colorbar Pattern
@@ -98,7 +105,7 @@ cbar.set_label("Value", fontsize=5)
 
 ## Composition Rules
 
-1. Share legends whenever the same categorical mapping appears in multiple panels.
+1. Share legends whenever the same categorical mapping appears in multiple panels, and keep them outside the data region.
 2. Share colorbars for the same continuous encoding.
 3. Align axes only when the encoded variable is the same.
 4. Prefer one hero panel over four equal-priority panels.

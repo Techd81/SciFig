@@ -161,3 +161,6 @@ CLAUDE.md
 pyproject.toml
 scifig/
 tests/
+
+# CCW temp
+.ccw/

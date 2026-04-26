@@ -31,19 +31,33 @@ Resolve the working domain with:
 ```python
 def resolve_domain(dataProfile, workflowPreferences):
     user_domain = workflowPreferences.get("domainFamily")
+    custom_domain_text = workflowPreferences.get("customDomainText") or workflowPreferences.get("syntheticDomainText")
     detected = dataProfile["domainHints"]["primary"]
+
+    if user_domain == "custom_user_domain" and custom_domain_text:
+        return {
+            "selected": custom_domain_text,
+            "selectedFamily": detected,
+            "detected": detected,
+            "overridden": True,
+            "custom": True
+        }
 
     if user_domain and user_domain != "general_biomedical":
         return {
             "selected": user_domain,
+            "selectedFamily": user_domain,
             "detected": detected,
-            "overridden": user_domain != detected
+            "overridden": user_domain != detected,
+            "custom": False
         }
 
     return {
         "selected": detected,
+        "selectedFamily": detected,
         "detected": detected,
-        "overridden": False
+        "overridden": False,
+        "custom": False
     }
 ```
 
@@ -60,19 +74,70 @@ def recommend_chart_bundle(dataProfile, workflowPreferences):
     n_obs = dataProfile["nObservations"]
     domain = dataProfile["domainHints"]["primary"]
 
+    # Implemented-only filter: only recommend charts with real gen_ functions
+    IMPLEMENTED_CHARTS = {
+        "violin+strip", "box+strip", "raincloud", "beeswarm", "paired_lines",
+        "dumbbell", "line_ci", "spaghetti", "heatmap+cluster", "heatmap_pure",
+        "volcano", "pca", "umap", "roc", "pr_curve", "calibration", "km",
+        "forest", "waterfall", "dose_response", "scatter_regression", "correlation",
+        "violin_paired", "violin_split", "dot_strip", "histogram", "density",
+        "ecdf", "ridge", "bland_altman", "funnel_plot", "pareto_chart",
+        "control_chart", "box_paired", "mean_diff_plot", "ci_plot",
+        "cook_distance", "leverage_plot", "pp_plot", "residual_vs_fitted",
+        "scale_location", "circos_karyotype", "gene_structure", "pathway_map",
+        "kegg_bar", "treemap", "sunburst", "swimmer_plot", "risk_ratio_plot",
+        "sankey", "radar", "likert_divergent", "likert_stacked",
+        "clustered_bar", "grouped_bar", "ordination_plot", "biodiversity_radar",
+        "bubble_scatter", "connected_scatter", "species_abundance",
+        "shannon_diversity", "stress_strain", "xrd_pattern", "enrichment_dotplot"
+    }
+
+    def _safe(chart):
+        """Return chart if implemented, else closest fallback."""
+        if chart in IMPLEMENTED_CHARTS:
+            return chart
+        FALLBACKS = {
+            "manhattan": "volcano", "qq": "pp_plot", "tsne": "umap",
+            "ma_plot": "volcano", "spatial_feature": "umap",
+            "oncoprint": "heatmap_pure", "lollipop_mutation": "scatter_regression",
+            "alluvial": "sankey", "ridgeline": "ridge",
+            "stacked_bar_comp": "clustered_bar", "composition_dotplot": "bubble_scatter",
+            "go_treemap": "treemap", "chromosome_coverage": "circos_karyotype",
+            "nomogram": "forest", "decision_curve": "calibration",
+            "caterpillar_plot": "forest", "tornado_chart": "pareto_chart",
+            "interaction_plot": "line_ci", "mediation_path": "scatter_regression",
+            "likert_stacked": "likert_divergent", "marimekko": "treemap",
+            "nested_donut": "sunburst", "stacked_area_comp": "sankey",
+            "chord_diagram": "sankey", "parallel_coordinates": "radar",
+            "nyquist_plot": "scatter_regression", "phase_diagram": "heatmap_pure",
+            "ftir_spectrum": "xrd_pattern", "dsc_thermogram": "xrd_pattern",
+            "mosaic_plot": "clustered_bar", "bump_chart": "connected_scatter",
+            "slope_chart": "dumbbell", "stem_plot": "line_ci",
+            "lollipop_horizontal": "pareto_chart", "diverging_bar": "grouped_bar",
+            "heatmap_symmetric": "correlation", "heatmap_triangular": "correlation",
+            "heatmap_mirrored": "correlation", "heatmap_annotated": "heatmap_pure",
+            "adjacency_matrix": "heatmap_pure", "cooccurrence_matrix": "correlation",
+            "dotplot": "bubble_scatter", "joyplot": "ridge",
+            "sparkline": "line_ci", "area": "line_ci", "area_stacked": "line_ci",
+            "streamgraph": "line_ci", "gantt": "swimmer_plot",
+            "timeline_annotation": "line_ci", "waffle_chart": "treemap",
+            "box_paired": "box+strip"
+        }
+        return FALLBACKS.get(chart, "box+strip")
+
     # Direct pattern matches
     if "genomic_association" in patterns:
-        return "manhattan", ["qq", "forest"]
+        return _safe("manhattan"), [_safe("qq"), "forest"]
     if "survival" in patterns:
         return "km", ["forest", "roc", "calibration"]
     if "dose_response" in patterns:
         return "dose_response", ["waterfall", "paired_lines"]
     if "embedding" in patterns:
-        primary = "umap" if any(c.startswith("umap") for c in cols) else "tsne"
-        return primary, ["composition_dotplot", "violin+strip", "heatmap_pure"]
+        primary = "umap" if any(c.startswith("umap") for c in cols) else _safe("tsne")
+        return primary, [_safe("composition_dotplot"), "violin+strip", "heatmap_pure"]
     if "differential" in patterns:
         if any("basemean" in c or "mean" in c for c in cols):
-            return "ma_plot", ["volcano", "enrichment_dotplot", "heatmap+cluster"]
+            return _safe("ma_plot"), ["volcano", "enrichment_dotplot", "heatmap+cluster"]
         return "volcano", ["heatmap+cluster", "enrichment_dotplot", "pca"]
 
     # Domain-aware defaults
@@ -81,13 +146,17 @@ def recommend_chart_bundle(dataProfile, workflowPreferences):
     if "effect" in roles and "ci_low" in roles and "ci_high" in roles:
         return "forest", ["km" if "event" in roles else "box+strip"]
     if "score" in roles and "label" in roles:
-        return "pr_curve" if n_obs > 0 and (dataProfile["df"][roles["label"]].mean() < 0.2) else "roc", ["calibration", "box+strip"]
+        label_col = dataProfile["df"][roles["label"]]
+        if pd.api.types.is_numeric_dtype(label_col):
+            pos_rate = label_col.mean()
+            return "pr_curve" if n_obs > 0 and pos_rate < 0.2 else "roc", ["calibration", "box+strip"]
+        return "roc", ["calibration", "box+strip"]
     if "subject_id" in roles and "time" in roles:
         return "spaghetti", ["line_ci", "paired_lines"]
     if "subject_id" in roles and n_groups == 2 and "value" in roles:
         return "paired_lines", ["dumbbell", "beeswarm"]
     if "time" in roles and "value" in roles:
-        return "line_ci" if any("ci" in c or "conf" in c for c in cols) else "line", ["beeswarm", "box+strip"]
+        return "line_ci" if any("ci" in c or "conf" in c for c in cols) else "line_ci", ["beeswarm", "box+strip"]
     if dataProfile["structure"] == "matrix":
         return "heatmap+cluster" if n_obs <= 500 else "heatmap_pure", ["pca", "correlation"]
 
@@ -177,9 +246,34 @@ def configure_annotations(dataProfile, primaryChart, statPlan):
 Map the story mode to one of the reusable layout recipes.
 
 ```python
+def _dedupe_charts(charts):
+    seen = set()
+    ordered = []
+    for chart in charts:
+        if chart and chart not in seen:
+            ordered.append(chart)
+            seen.add(chart)
+    return ordered
+
+
 def build_panel_blueprint(primaryChart, secondaryCharts, dataProfile, workflowPreferences):
     story = workflowPreferences.get("storyMode", "comparison_pair")
+    crowding_policy = workflowPreferences.get("crowdingPolicy", "auto_simplify")
     panel_candidates = dataProfile["panelCandidates"]
+    candidate_pool = _dedupe_charts(
+        [c["chart"] for c in panel_candidates if c["chart"] != primaryChart]
+    )
+    support_pool = _dedupe_charts(
+        [chart for chart in list(secondaryCharts) + candidate_pool if chart != primaryChart]
+    )
+    requested_story = story
+
+    if story == "story_board_2x2" and len(support_pool) < 3:
+        story = "hero_plus_stacked_support" if len(support_pool) >= 2 else "comparison_pair" if len(support_pool) >= 1 else "single"
+    elif story == "hero_plus_stacked_support" and len(support_pool) < 2:
+        story = "comparison_pair" if len(support_pool) >= 1 else "single"
+    elif story == "comparison_pair" and len(support_pool) < 1:
+        story = "single"
 
     if story == "single":
         panels = [{"id": "A", "role": "hero", "chart": primaryChart, "source": "primary"}]
@@ -187,38 +281,122 @@ def build_panel_blueprint(primaryChart, secondaryCharts, dataProfile, workflowPr
     elif story == "hero_plus_stacked_support":
         panels = [
             {"id": "A", "role": "hero", "chart": primaryChart, "source": "primary"},
-            {"id": "B", "role": "support", "chart": secondaryCharts[0], "source": "secondary"},
-            {"id": "C", "role": "validation", "chart": secondaryCharts[1], "source": "secondary"}
+            {"id": "B", "role": "support", "chart": support_pool[0], "source": "secondary"},
+            {"id": "C", "role": "validation", "chart": support_pool[1], "source": "secondary"}
         ]
         layout = {"recipe": "hero_plus_stacked_support", "grid": "2x2-hero-span"}
     elif story == "story_board_2x2":
-        fallback = [c["chart"] for c in panel_candidates if c["chart"] not in secondaryCharts]
-        charts = [primaryChart] + secondaryCharts[:2] + fallback[:1]
+        charts = [primaryChart] + support_pool[:3]
         panels = [
             {"id": "A", "role": "hero", "chart": charts[0], "source": "primary"},
             {"id": "B", "role": "support", "chart": charts[1], "source": "secondary"},
             {"id": "C", "role": "validation", "chart": charts[2], "source": "secondary"},
-            {"id": "D", "role": "context", "chart": charts[3] if len(charts) > 3 else charts[1], "source": "candidate"}
+            {"id": "D", "role": "context", "chart": charts[3], "source": "candidate"}
         ]
         layout = {"recipe": "story_board_2x2", "grid": "2x2"}
     else:
         panels = [
             {"id": "A", "role": "hero", "chart": primaryChart, "source": "primary"},
-            {"id": "B", "role": "support", "chart": secondaryCharts[0], "source": "secondary"}
+            {"id": "B", "role": "support", "chart": support_pool[0], "source": "secondary"}
         ]
         layout = {"recipe": "comparison_pair", "grid": "1x2"}
+
+    continuous_scale_charts = {
+        "heatmap_cluster", "heatmap_pure", "heatmap_annotated", "heatmap_triangular",
+        "heatmap_mirrored", "heatmap_symmetric", "spatial_feature", "correlation"
+    }
+    n_groups = dataProfile.get("nGroups") or 1
+    notes = ["keep_semantic_colors_consistent", "hero_panel_priority", "deduplicate_support_panels"]
+    if story != requested_story:
+        notes.append(f"degraded_from_{requested_story}_to_{story}")
+    if crowding_policy == "auto_simplify":
+        notes.append("clarity_first_crowding_policy")
 
     return {
         "layout": layout,
         "panels": panels,
-        "sharedLegend": True,
-        "sharedColorbar": primaryChart in ("heatmap+cluster", "heatmap_pure", "spatial_feature"),
+        "requestedLayout": requested_story,
+        "finalLayout": story,
+        "sharedLegend": n_groups > 1,
+        "sharedColorbar": any(panel["chart"] in continuous_scale_charts for panel in panels),
         "axisLinkGroups": [["A", "B"]] if len(panels) >= 2 else [],
-        "notes": ["keep_semantic_colors_consistent", "hero_panel_priority"]
+        "legendMode": "shared_auto",
+        "colorbarMode": "shared_single" if any(panel["chart"] in continuous_scale_charts for panel in panels) else "none",
+        "notes": notes
     }
 ```
 
-### Step 2.6: Build `palettePlan`
+### Step 2.6: Build `crowdingPlan`
+
+```python
+def build_crowding_plan(primaryChart, secondaryCharts, dataProfile, workflowPreferences, panelBlueprint):
+    policy = workflowPreferences.get("crowdingPolicy", "auto_simplify")
+    n_obs = dataProfile.get("nObservations") or 0
+    n_groups = dataProfile.get("nGroups") or 1
+    final_layout = panelBlueprint.get("finalLayout", panelBlueprint["layout"]["recipe"])
+    panel_count = len(panelBlueprint.get("panels", []))
+
+    if n_obs <= 400:
+        point_density_mode = "full_points"
+    elif n_obs <= 1000:
+        point_density_mode = "alpha_jitter_small_markers"
+    else:
+        point_density_mode = "summary_or_thin_points"
+
+    if panelBlueprint.get("sharedLegend", False):
+        if panelBlueprint.get("sharedColorbar", False):
+            legend_mode = "bottom_center"
+        elif n_groups <= 8:
+            legend_mode = "bottom_center"
+        else:
+            legend_mode = "outside_right"
+    else:
+        legend_mode = "bottom_center"
+
+    layout_fallbacks = {
+        "story_board_2x2": ["hero_plus_stacked_support", "comparison_pair", "single"],
+        "hero_plus_stacked_support": ["comparison_pair", "single"],
+        "comparison_pair": ["single"],
+        "single": []
+    }.get(final_layout, ["comparison_pair", "single"])
+
+    simplifications = []
+    if panelBlueprint.get("finalLayout") != panelBlueprint.get("requestedLayout"):
+        simplifications.append(f"layout_fallback:{panelBlueprint.get('requestedLayout')}->{panelBlueprint.get('finalLayout')}")
+    if panelBlueprint.get("sharedLegend", False):
+        simplifications.append("figure_level_shared_legend")
+        simplifications.append("no_in_axes_legend")
+    if panelBlueprint.get("sharedColorbar", False):
+        simplifications.append("shared_colorbar")
+    if point_density_mode != "full_points":
+        simplifications.append(f"point_density:{point_density_mode}")
+    if policy == "auto_simplify":
+        simplifications.append("direct_labels_capped")
+
+    return {
+        "policy": policy,
+        "overlapPriority": workflowPreferences.get("overlapPriority", "clarity_first"),
+        "panelBudget": panel_count,
+        "layoutFallbacks": layout_fallbacks,
+        "legendScope": "figure",
+        "legendMode": legend_mode,
+        "legendPlacementPriority": ["bottom_center", "top_center", "outside_right"],
+        "legendLabelMaxChars": 32,
+        "maxLegendColumns": 6,
+        "forbidInAxesLegend": True,
+        "colorbarMode": panelBlueprint.get("colorbarMode", "none"),
+        "maxDirectLabelsHero": 8 if policy == "preserve_information" else 5,
+        "maxDirectLabelsSupport": 4 if policy == "preserve_information" else 3,
+        "maxBracketGroups": 3 if policy == "preserve_information" else 2,
+        "pointDensityMode": point_density_mode,
+        "annotationMode": "compact" if policy == "auto_simplify" else "full",
+        "simplifyIfCrowded": policy != "preserve_information",
+        "simplificationsApplied": simplifications,
+        "droppedDirectLabelCount": 0
+    }
+```
+
+### Step 2.7: Build `palettePlan`
 
 ```python
 def build_palette_plan(primaryChart, dataProfile, workflowPreferences):
@@ -250,7 +428,7 @@ def build_palette_plan(primaryChart, dataProfile, workflowPreferences):
     return plan
 ```
 
-### Step 2.7: Assemble `chartPlan` And Confirm With User
+### Step 2.8: Assemble `chartPlan` And Confirm With User
 
 ```python
 domainProfile = resolve_domain(dataProfile, workflowPreferences)
@@ -258,6 +436,7 @@ primaryChart, secondaryCharts = recommend_chart_bundle(dataProfile, workflowPref
 statPlan = select_statistical_plan(dataProfile, primaryChart, workflowPreferences)
 annotations = configure_annotations(dataProfile, primaryChart, statPlan)
 panelBlueprint = build_panel_blueprint(primaryChart, secondaryCharts, dataProfile, workflowPreferences)
+crowdingPlan = build_crowding_plan(primaryChart, secondaryCharts, dataProfile, workflowPreferences, panelBlueprint)
 palettePlan = build_palette_plan(primaryChart, dataProfile, workflowPreferences)
 
 chartPlan = {
@@ -270,9 +449,10 @@ chartPlan = {
     "statNotes": statPlan["notes"],
     "annotations": annotations,
     "panelBlueprint": panelBlueprint,
+    "crowdingPlan": crowdingPlan,
     "palettePlan": palettePlan,
     "journalOverrides": {},
-    "rationale": "Selected using semantic roles, special patterns, domain hints, and requested story mode."
+    "rationale": "Selected using semantic roles, special patterns, domain hints, requested story mode, and clarity-first crowding control."
 }
 ```
 

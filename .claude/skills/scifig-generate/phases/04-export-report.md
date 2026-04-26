@@ -22,7 +22,39 @@ Path("output/source_data").mkdir(exist_ok=True)
 Path("output/reports").mkdir(exist_ok=True)
 ```
 
-### Step 4.2: Execute Generated Code
+### Step 4.2: Write and Execute Generated Code
+
+First, write the generated Python code to disk:
+
+```python
+output_script = Path("output/generate_figure.py")
+output_script.write_text(styledCode["pythonCode"], encoding="utf-8")
+```
+
+Smoke check -- verify the file was written and is valid Python:
+
+```python
+import ast
+
+# 1. File must exist and be non-empty
+assert output_script.exists(), f"Script not written: {output_script}"
+assert output_script.stat().st_size > 0, "Script is empty"
+
+# 2. Syntax must be valid Python
+source = output_script.read_text(encoding="utf-8")
+try:
+    ast.parse(source)
+except SyntaxError as exc:
+    raise RuntimeError(f"Generated code has syntax error: {exc}") from exc
+
+# 3. Must contain at least one savefig call (figure was requested)
+assert "savefig" in source, "Generated code has no savefig call -- no figure will be produced"
+
+# 4. Must import matplotlib (core dependency)
+assert "import matplotlib" in source, "Generated code missing matplotlib import"
+```
+
+Then execute:
 
 ```bash
 cd "{{PROJECT_ROOT}}"
@@ -35,6 +67,11 @@ If execution fails:
 - Font missing -> fall back to `DejaVu Sans` and note the substitution in metadata
 - Data path mismatch -> stop and verify `dataProfile["filePath"]`
 - Chart generator missing -> keep the emitted template and flag the chart in `generatorCoverage`
+
+> **CHECKPOINT**: After Step 4.2:
+> 1. `output/generate_figure.py` exists, is non-empty, and parses as valid Python
+> 2. The script contains at least one `savefig` call and imports `matplotlib`
+> 3. Execution produced figure files in `output/`
 
 ### Step 4.3: Validate Required Outputs
 
@@ -97,21 +134,33 @@ metadata = {
     "inputFile": dataProfile["filePath"],
     "inputHash": input_hash,
     "timestamp": datetime.now().isoformat(),
+    "interactionMode": workflowPreferences.get("interactionMode", "interactive"),
+    "preferenceSource": workflowPreferences.get("preferenceSource", "user_selected"),
+    "crowdingPolicy": workflowPreferences.get("crowdingPolicy", "auto_simplify"),
+    "overlapPriority": workflowPreferences.get("overlapPriority", "clarity_first"),
     "journalProfile": styledCode["journalProfile"]["name"],
     "primaryChart": chartPlan["primaryChart"],
     "secondaryCharts": chartPlan["secondaryCharts"],
     "statsMethod": chartPlan["statMethod"],
     "exportFormats": normalized_formats,
+    "rasterDpi": workflowPreferences.get("rasterDpi", 300),
+    "requestedLayout": chartPlan["panelBlueprint"].get("requestedLayout", chartPlan["panelBlueprint"]["layout"]["recipe"]),
+    "finalLayout": chartPlan["panelBlueprint"].get("finalLayout", chartPlan["panelBlueprint"]["layout"]["recipe"]),
+    "simplificationsApplied": chartPlan.get("crowdingPlan", {}).get("simplificationsApplied", []),
+    "droppedDirectLabelCount": chartPlan.get("crowdingPlan", {}).get("droppedDirectLabelCount", 0),
     "seed": styledCode["seed"],
     "scifigVersion": "0.2.0"
 }
 
 panel_manifest = {
     "layout": chartPlan["panelBlueprint"]["layout"],
+    "requestedLayout": chartPlan["panelBlueprint"].get("requestedLayout", chartPlan["panelBlueprint"]["layout"]["recipe"]),
+    "finalLayout": chartPlan["panelBlueprint"].get("finalLayout", chartPlan["panelBlueprint"]["layout"]["recipe"]),
     "panels": chartPlan["panelBlueprint"]["panels"],
     "sharedLegend": chartPlan["panelBlueprint"]["sharedLegend"],
     "sharedColorbar": chartPlan["panelBlueprint"]["sharedColorbar"],
-    "palettePlan": chartPlan["palettePlan"]
+    "palettePlan": chartPlan["palettePlan"],
+    "crowdingPlan": chartPlan.get("crowdingPlan", {})
 }
 ```
 
@@ -142,35 +191,38 @@ def export_source_data(chartPlan, dataProfile):
 
 ### Step 4.7: Write Statistical Report
 
-```markdown
-# Statistical Report
+Build the report content from the template:
+
+```python
+stats_report_content = f"""# Statistical Report
 
 ## Figure Overview
-- Primary chart: {primaryChart}
-- Secondary charts: {secondaryCharts}
-- Domain: {domainProfile.selected}
-- Story recipe: {panelBlueprint.layout.recipe}
+- Primary chart: {chartPlan['primaryChart']}
+- Secondary charts: {', '.join(chartPlan['secondaryCharts'])}
+- Domain: {dataProfile['domainHints']['primary']}
+- Story recipe: {chartPlan['panelBlueprint']['layout']['recipe']}
 
 ## Data Summary
-- Structure: {dataProfile.structure}
-- Special patterns: {dataProfile.specialPatterns}
-- N observations: {dataProfile.nObservations}
-- N groups: {dataProfile.nGroups}
+- Structure: {dataProfile['structure']}
+- Special patterns: {', '.join(dataProfile.get('specialPatterns', []))}
+- N observations: {dataProfile['nObservations']}
+- N groups: {dataProfile['nGroups']}
 
 ## Statistical Plan
-- Method: {chartPlan.statMethod}
-- Multiple comparison: {chartPlan.multipleComparison or "None"}
-- Notes: {chartPlan.statNotes}
+- Method: {chartPlan['statMethod']}
+- Multiple comparison: {chartPlan.get('multipleComparison') or 'None'}
+- Notes: {chartPlan.get('statNotes', '')}
 
 ## Methods Sentence
-> {styledCode.statsReport.methods_sentence}
+> {styledCode.get('statsReport', {}).get('methods_sentence', 'See figure caption for statistical details.')}
 
 ## Reproducibility
-- Seed: {seed}
-- Input hash: {inputHash}
-- Journal profile: {journalProfile}
+- Seed: {styledCode['seed']}
+- Input hash: {dataProfile.get('inputHash', 'N/A')}
+- Journal profile: {styledCode['journalProfile']['name']}
 - Requirements: see `output/requirements.txt`
 - Source data: see `output/source_data/`
+"""
 ```
 
 ### Step 4.8: Package `outputBundle`

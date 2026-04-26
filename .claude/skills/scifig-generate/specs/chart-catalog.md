@@ -2,70 +2,221 @@
 
 Expanded chart taxonomy for `scifig-generate`. Use this as the lookup table during Phase 2.
 
+**Status**: ✅ = implemented (66), ⬜ = registered but not yet implemented (49)
+
 ## Core Quantitative Charts
 
-| Chart | Typical triggers | Best use | Notes |
-|-------|------------------|----------|-------|
-| `violin+strip` | grouped numeric values, moderate sample size | Distribution-aware group comparison | Default for 2-6 groups when showing individual points is feasible |
-| `box+strip` | grouped numeric values, larger sample size | Robust summary plus points | Use when distributions are dense |
-| `raincloud` | grouped numeric values with enough observations | Publication-grade density + points + box summary | Strong choice for Cell-like and review-style figures |
-| `beeswarm` | grouped numeric values, low/moderate n | Exact point placement | Good for immunology and cell biology validation panels |
-| `paired_lines` | subject ID plus before/after or matched conditions | Paired response visualization | Prefer over bars for matched designs |
-| `dumbbell` | two values per subject/group | Before/after or treatment delta | Works well for clinical or pharmacology summary panels |
-| `line` | ordered time or dose axis | Mean or median trend | Use with explicit summary choice |
-| `line_ci` | ordered axis plus CI columns or repeated estimates | Trajectory with uncertainty band | Strong default for longitudinal or model estimates |
-| `spaghetti` | repeated subject-level trajectories | Individual longitudinal traces | Overlay with summary only when not overcrowded |
-| `ridgeline` | many related distributions | Cohort or time distribution landscape | Useful in omics or epidemiology density summaries |
+| Chart | Status | Typical triggers | Best use |
+|-------|--------|------------------|----------|
+| `violin+strip` | ✅ | grouped numeric values, moderate n | Distribution-aware group comparison |
+| `box+strip` | ✅ | grouped numeric values, larger n | Robust summary plus points |
+| `raincloud` | ✅ | grouped numeric values, enough obs | Publication-grade density + points + box |
+| `beeswarm` | ✅ | grouped numeric values, low/moderate n | Exact point placement |
+| `paired_lines` | ✅ | subject ID + before/after | Paired response visualization |
+| `dumbbell` | ✅ | two values per subject/group | Before/after delta |
+| `line` | ⬜ | ordered time or dose axis | Mean/median trend |
+| `line_ci` | ✅ | ordered axis + CI/SE | Trajectory with uncertainty band |
+| `spaghetti` | ✅ | repeated subject trajectories | Individual longitudinal traces |
+| `ridge` | ✅ | many related distributions | Cohort density landscape |
 
 ## Omics / High-dimensional Charts
 
-| Chart | Typical triggers | Best use | Notes |
-|-------|------------------|----------|-------|
-| `heatmap+cluster` | matrix-like feature x sample table | Structured abundance/expression map | Default for moderate-size matrices |
-| `heatmap_pure` | matrix-like table, clustering not desired | Ordered matrix with explicit annotation | Better when row/column order matters |
-| `volcano` | fold-change + p-value | Differential analysis overview | Add threshold lines and optional labels |
-| `ma_plot` | mean abundance + fold-change | Differential expression with intensity context | Pair naturally with volcano or heatmap |
-| `pca` | PC columns or reducible matrix | Global structure | Label explained variance when available |
-| `umap` | UMAP columns or embedding request | Single-cell or manifold embedding | Pair with abundance or marker-expression panels |
-| `tsne` | tSNE columns or embedding request | Nonlinear embedding | Use sparingly; document parameters |
-| `enrichment_dotplot` | pathway terms + score + adjusted p-value | Pathway/GSEA summary | Dot size can encode gene ratio or set size |
-| `oncoprint` | mutation matrix / gene x sample events | Cancer genomics summary | Often hero panel in genomics storyboards |
-| `lollipop_mutation` | amino-acid position + mutation frequency | Mutation landscape | Useful with oncoprint or domain map |
-| `manhattan` | chromosome + position + p-value | GWAS association scan | Use alternating chromosome colors |
-| `qq` | p-value only | Association calibration | Pair with Manhattan in genetics |
-| `correlation` | matrix of pairwise associations | Feature association overview | Keep labels sparse and ordering meaningful |
+| Chart | Status | Typical triggers | Best use |
+|-------|--------|------------------|----------|
+| `heatmap+cluster` | ✅ | matrix-like feature x sample | Structured abundance map |
+| `heatmap_pure` | ✅ | matrix, no clustering | Ordered matrix with annotation |
+| `volcano` | ✅ | fold-change + p-value | Differential analysis overview |
+| `ma_plot` | ⬜ | mean abundance + fold-change | Differential expression with intensity |
+| `pca` | ✅ | PC columns or reducible matrix | Global structure |
+| `umap` | ✅ | UMAP columns or embedding | Single-cell / manifold embedding |
+| `tsne` | ⬜ | tSNE columns | Nonlinear embedding |
+| `enrichment_dotplot` | ✅ | pathway terms + score + p-value | Pathway/GSEA summary |
+| `oncoprint` | ⬜ | mutation matrix | Cancer genomics summary |
+| `lollipop_mutation` | ⬜ | AA position + mutation freq | Mutation landscape |
+| `manhattan` | ⬜ | chr + position + p-value | GWAS association scan |
+| `qq` | ⬜ | p-value only | Association calibration |
+| `correlation` | ✅ | pairwise associations matrix | Feature association overview |
 
 ## Clinical / Modeling Charts
 
-| Chart | Typical triggers | Best use | Notes |
-|-------|------------------|----------|-------|
-| `km` | survival time + event + group | Time-to-event outcome | Consider at-risk table when space allows |
-| `forest` | effect estimate + CI bounds | Multivariable or subgroup effects | Common support panel beside KM or ROC |
-| `roc` | score/probability + binary label | Classifier discrimination | Include AUC and confidence interval when available |
-| `pr_curve` | score + binary label with class imbalance | Precision-recall assessment | Prefer when positives are rare |
-| `calibration` | predicted risk + observed outcome | Calibration of risk models | Natural pair with ROC/PR |
-| `waterfall` | ordered patient/response values | Heterogeneous response summary | Common in oncology and pharmacology |
-| `stacked_bar_comp` | compositional outcome by group | Cohort composition | Use only when composition is the real variable |
+| Chart | Status | Typical triggers | Best use |
+|-------|--------|------------------|----------|
+| `km` | ✅ | survival time + event + group | Time-to-event outcome |
+| `forest` | ✅ | effect estimate + CI bounds | Multivariable/subgroup effects |
+| `roc` | ✅ | score + binary label | Classifier discrimination |
+| `pr_curve` | ✅ | score + binary label (imbalanced) | Precision-recall assessment |
+| `calibration` | ✅ | predicted risk + observed outcome | Calibration of risk models |
+| `waterfall` | ✅ | ordered patient/response values | Heterogeneous response summary |
+| `stacked_bar_comp` | ⬜ | compositional outcome by group | Cohort composition |
 
 ## Pharmacology / Mechanistic Charts
 
-| Chart | Typical triggers | Best use | Notes |
-|-------|------------------|----------|-------|
-| `dose_response` | dose/concentration + response | Potency/efficacy curves | Fit 4PL if appropriate and report EC50/IC50 |
-| `paired_lines` | matched pretreatment/post-treatment | Within-subject response | Prefer when samples are paired |
-| `scatter_regression` | x/y continuous mechanistic variables | Correlation or regression evidence | Distinguish fit from summary |
+| Chart | Status | Typical triggers | Best use |
+|-------|--------|------------------|----------|
+| `dose_response` | ✅ | dose/concentration + response | Potency/efficacy curves |
+| `scatter_regression` | ✅ | x/y continuous variables | Correlation / regression evidence |
 
-## Advanced Domain-specific Charts
+## Distribution Variants
 
-| Chart | Typical triggers | Best use | Notes |
-|-------|------------------|----------|-------|
-| `spatial_feature` | x/y coordinates plus expression or cell-state signal | Spatial omics hero/support panel | Combine with UMAP or abundance panels |
-| `composition_dotplot` | category abundances across groups | Cell-type or class composition | Better than stacked bars when many categories exist |
-| `alluvial` | state transitions between stages | Flow between categories | Use cautiously; easy to overload |
+| Chart | Status | Typical triggers | Best use |
+|-------|--------|------------------|----------|
+| `violin_paired` | ✅ | paired data, two conditions | Paired violin comparison |
+| `violin_split` | ✅ | two grouping factors | Split violin halves |
+| `dot_strip` | ✅ | individual observations | Dot strip plot |
+| `histogram` | ✅ | single continuous variable | Frequency distribution |
+| `density` | ✅ | continuous variable, groups | Smooth density overlay |
+| `ecdf` | ✅ | continuous variable | Cumulative distribution |
+| `joyplot` | ✅ | many overlapping distributions | Ridge density plot |
+
+## Time Series Variants
+
+| Chart | Status | Typical triggers | Best use |
+|-------|--------|------------------|----------|
+| `sparkline` | ⬜ | compact time series | Minimal trend indicator |
+| `area` | ⬜ | time series with fill | Filled area trend |
+| `area_stacked` | ⬜ | compositional time series | Stacked area |
+| `streamgraph` | ⬜ | flowing compositional data | Streamgraph |
+| `gantt` | ⬜ | project timeline | Gantt chart |
+| `timeline_annotation` | ⬜ | annotated time points | Timeline with events |
+
+## Statistical / Diagnostic Charts
+
+| Chart | Status | Typical triggers | Best use |
+|-------|--------|------------------|----------|
+| `residual_vs_fitted` | ✅ | regression diagnostics | Residual pattern check |
+| `scale_location` | ✅ | regression diagnostics | Homoscedasticity check |
+| `pp_plot` | ✅ | distribution fit | P-P plot |
+| `bland_altman` | ✅ | method comparison | Agreement assessment |
+| `funnel_plot` | ✅ | meta-analysis | Publication bias check |
+| `pareto_chart` | ✅ | categorical frequency | Pareto analysis |
+| `control_chart` | ✅ | process monitoring | SPC control chart |
+| `box_paired` | ✅ | paired data | Paired box comparison |
+| `mean_diff_plot` | ✅ | paired differences | Mean difference CI |
+| `ci_plot` | ✅ | effect estimates + CI | Confidence interval plot |
+| `cook_distance` | ✅ | regression diagnostics | Influential points |
+| `leverage_plot` | ✅ | regression diagnostics | Leverage detection |
+
+## Matrix / Heatmap Variants
+
+| Chart | Status | Typical triggers | Best use |
+|-------|--------|------------------|----------|
+| `dotplot` | ⬜ | matrix with dot encoding | Dot matrix |
+| `adjacency_matrix` | ⬜ | network adjacency | Graph structure |
+| `heatmap_annotated` | ⬜ | matrix with values | Annotated heatmap |
+| `heatmap_triangular` | ⬜ | symmetric matrix | Triangular heatmap |
+| `heatmap_mirrored` | ⬜ | symmetric matrix | Mirrored heatmap |
+| `cooccurrence_matrix` | ⬜ | co-occurrence data | Co-occurrence heatmap |
+
+## Genomics Extended
+
+| Chart | Status | Typical triggers | Best use |
+|-------|--------|------------------|----------|
+| `circos_karyotype` | ✅ | chromosome data | Circos plot |
+| `gene_structure` | ✅ | gene/exon coordinates | Gene model |
+| `pathway_map` | ✅ | pathway topology | Pathway diagram |
+| `kegg_bar` | ✅ | KEGG enrichment | KEGG bar chart |
+| `go_treemap` | ⬜ | GO enrichment | GO treemap |
+| `chromosome_coverage` | ⬜ | chromosome-wide signal | Coverage plot |
+
+## Clinical Extended
+
+| Chart | Status | Typical triggers | Best use |
+|-------|--------|------------------|----------|
+| `swimmer_plot` | ✅ | patient timeline | Swimmer plot |
+| `risk_ratio_plot` | ✅ | risk ratios + CI | Risk forest plot |
+| `caterpillar_plot` | ⬜ | ranked effects | Caterpillar plot |
+| `tornado_chart` | ⬜ | sensitivity analysis | Tornado diagram |
+| `nomogram` | ⬜ | prediction model | Nomogram |
+| `decision_curve` | ⬜ | net benefit analysis | DCA plot |
+
+## Composition / Hierarchical
+
+| Chart | Status | Typical triggers | Best use |
+|-------|--------|------------------|----------|
+| `treemap` | ✅ | hierarchical proportions | Treemap |
+| `sunburst` | ✅ | hierarchical proportions | Sunburst chart |
+| `waffle_chart` | ⬜ | proportional counts | Waffle chart |
+| `marimekko` | ⬜ | variable-width stacked | Marimekko chart |
+| `stacked_area_comp` | ⬜ | compositional time series | Stacked area composition |
+| `nested_donut` | ⬜ | nested proportions | Nested donut |
+
+## Relationship / Network
+
+| Chart | Status | Typical triggers | Best use |
+|-------|--------|------------------|----------|
+| `chord_diagram` | ⬜ | flow between categories | Chord diagram |
+| `parallel_coordinates` | ⬜ | multivariate profiles | Parallel coordinates |
+| `sankey` | ✅ | flow between stages | Sankey diagram |
+| `radar` | ✅ | multi-attribute comparison | Radar/spider chart |
+
+## Engineering / Materials
+
+| Chart | Status | Typical triggers | Best use |
+|-------|--------|------------------|----------|
+| `stress_strain` | ✅ | stress + strain data | Stress-strain curve |
+| `phase_diagram` | ⬜ | composition + temperature | Phase diagram |
+| `nyquist_plot` | ⬜ | impedance data | Nyquist plot |
+| `xrd_pattern` | ✅ | 2theta + intensity | XRD diffractogram |
+| `ftir_spectrum` | ⬜ | wavenumber + absorbance | FTIR spectrum |
+| `dsc_thermogram` | ⬜ | temperature + heat flow | DSC curve |
+
+## Ecology / Environmental
+
+| Chart | Status | Typical triggers | Best use |
+|-------|--------|------------------|----------|
+| `species_abundance` | ✅ | species + abundance | Abundance bar/dot |
+| `shannon_diversity` | ✅ | diversity index by group | Diversity comparison |
+| `ordination_plot` | ✅ | NMDS/PCoA coordinates | Ordination scatter |
+| `biodiversity_radar` | ✅ | multiple diversity indices | Biodiversity radar |
+
+## Psychology / Social Science
+
+| Chart | Status | Typical triggers | Best use |
+|-------|--------|------------------|----------|
+| `likert_divergent` | ✅ | Likert scale responses | Divergent stacked bar |
+| `likert_stacked` | ✅ | Likert scale responses | Stacked bar |
+| `mediation_path` | ⬜ | mediation analysis | Path diagram |
+| `interaction_plot` | ⬜ | factorial design | Interaction plot |
+
+## Additional Variants
+
+| Chart | Status | Typical triggers | Best use |
+|-------|--------|------------------|----------|
+| `bubble_scatter` | ✅ | x/y + size variable | Bubble chart |
+| `connected_scatter` | ✅ | x/y trajectory | Connected scatter |
+| `stem_plot` | ⬜ | discrete signal | Stem plot |
+| `lollipop_horizontal` | ⬜ | ranked values | Horizontal lollipop |
+| `slope_chart` | ⬜ | before/after ranking | Slope chart |
+| `bump_chart` | ⬜ | ranking over time | Bump chart |
+| `mosaic_plot` | ⬜ | categorical association | Mosaic plot |
+| `clustered_bar` | ✅ | grouped categories | Clustered bar |
+| `diverging_bar` | ⬜ | diverging values | Diverging bar |
+| `grouped_bar` | ✅ | grouped categories | Grouped bar |
+| `heatmap_symmetric` | ⬜ | symmetric matrix | Symmetric heatmap |
+| `violin_grouped` | ⬜ | multiple groups | Grouped violin |
 
 ## Selection Heuristics
 
 1. If the data support a field-standard chart, prefer it over a generic chart.
-2. If the same story can be told with fewer marks, prefer the lower-ink chart.
-3. Use exploratory charts as support panels and inferential charts as hero/validation panels where appropriate.
-4. If a requested chart is visually fashionable but statistically weak for the data structure, recommend a safer alternative and explain the substitution.
+2. Only recommend charts with ✅ status (implemented). Use fallback mapping for ⬜ charts.
+3. If the same story can be told with fewer marks, prefer the lower-ink chart.
+4. Use exploratory charts as support panels and inferential charts as hero/validation panels.
+5. If a requested chart is visually fashionable but statistically weak, recommend a safer alternative.
+
+## Fallback Mapping
+
+When a chart is registered but not implemented, use these fallbacks:
+
+| Unimplemented | Fallback |
+|---------------|----------|
+| `manhattan` | `volcano` |
+| `qq` | `pp_plot` |
+| `tsne` | `umap` |
+| `ma_plot` | `volcano` |
+| `spatial_feature` | `umap` |
+| `oncoprint` | `heatmap_pure` |
+| `lollipop_mutation` | `scatter_regression` |
+| `alluvial` | `sankey` |
+| `ridgeline` | `ridge` |
+| `stacked_bar_comp` | `clustered_bar` |
+| `composition_dotplot` | `bubble_scatter` |

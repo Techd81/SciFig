@@ -16,7 +16,7 @@ cp -r SciFig/.claude/skills/scifig-generate ~/.claude/skills/
 
 - Upload CSV/Excel/matrix data
 - Auto-detect data structure (tidy vs matrix) and scientific domain
-- Recommend publication-grade chart types (35+ charts across 13 domains)
+- Recommend publication-grade chart types (115 registered, 66 with full implementations across 13 domains)
 - Generate Nature/Cell/Science/Lancet/NEJM/JAMA-aligned figure code
 - Apply colorblind-safe palettes and multi-panel composition
 - Export vector graphics (PDF/SVG) with statistical reports
@@ -52,7 +52,7 @@ cp -r SciFig/.claude/skills/scifig-generate ~/.claude/skills/
 
 - 上传 CSV/Excel/矩阵数据
 - 自动识别数据结构（tidy vs matrix）和科研领域
-- 推荐投稿级图表类型（35+ 种图表，13 个领域）
+- 推荐投稿级图表类型（115 种注册，66 种完整实现，13 个领域）
 - 生成 Nature/Cell/Science/Lancet/NEJM/JAMA 风格代码
 - 应用色盲安全配色和多 panel 组图
 - 导出矢量图形（PDF/SVG）和统计报告
