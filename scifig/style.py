@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 # ---------------------------------------------------------------------------
-# Journal profiles — dimensions in mm, fonts in pt, line widths in pt
+# Journal profiles - dimensions in mm, fonts in pt, line widths in pt
 # ---------------------------------------------------------------------------
 
 JOURNAL_PROFILES: dict[str, dict[str, Any]] = {

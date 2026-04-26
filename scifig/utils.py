@@ -37,7 +37,7 @@ def sanitize_columns(df: pd.DataFrame) -> pd.DataFrame:
         Copy with sanitised column names.
     """
     new_names: list[str] = []
-    seen: dict[str, int] = {}
+    seen: set[str] = set()
     for i, col in enumerate(df.columns):
         name = unicodedata.normalize("NFKD", str(col))
         name = _SAFE_RE.sub("_", name).strip("_").lower()
@@ -45,22 +45,25 @@ def sanitize_columns(df: pd.DataFrame) -> pd.DataFrame:
             name = f"col_{name}"
         if not name:
             name = f"col_{i}"
-        # deduplicate: foo, foo_1, foo_2, …
-        if name in seen:
-            seen[name] += 1
-            name = f"{name}_{seen[name]}"
-        else:
-            seen[name] = 0
+        # Deduplicate generated names, including collisions with suffixed names.
+        base = name
+        suffix = 1
+        while name in seen:
+            name = f"{base}_{suffix}"
+            suffix += 1
+        seen.add(name)
         new_names.append(name)
 
-    return df.rename(columns=dict(zip(df.columns, new_names)))
+    result = df.copy()
+    result.columns = new_names
+    return result
 
 
 # ---------------------------------------------------------------------------
 # Font detection
 # ---------------------------------------------------------------------------
 
-# Preferred font order — first available wins
+# Preferred font order - first available wins
 _FONT_CANDIDATES: list[str] = [
     "Arial",
     "Helvetica",

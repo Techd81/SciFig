@@ -138,6 +138,12 @@ figures/
 *.tiff
 *.eps
 
+# Tool-specific local agent/skill install directories
+.agents/
+.claude/
+.codex/
+AGENTS.md
+
 # Internal project files (not for distribution)
 data/
 doc/

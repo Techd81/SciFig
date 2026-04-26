@@ -1,13 +1,13 @@
 [build-system]
 requires = ["setuptools>=68.0", "wheel"]
-build-backend = "setuptools.backends._legacy:_Backend"
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "scifig"
 version = "0.1.0"
 description = "Publication-ready scientific figure generation from experimental data"
 readme = "README.md"
-license = {text = "MIT"}
+license = "MIT"
 requires-python = ">=3.9"
 dependencies = [
     "numpy>=1.24",
@@ -26,5 +26,8 @@ full = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/Techd/SciFig"
-Repository = "https://github.com/Techd/SciFig"
+Homepage = "https://github.com/Techd81/SciFig"
+Repository = "https://github.com/Techd81/SciFig"
+
+[tool.setuptools.packages.find]
+include = ["scifig*"]

@@ -1,9 +1,9 @@
-"""Color palettes for scientific figures — colorblind-safe and publication-ready."""
+"""Color palettes for scientific figures - colorblind-safe and publication-ready."""
 
 from __future__ import annotations
 
 # ---------------------------------------------------------------------------
-# Wong (2011) colorblind-safe palette — 8 colors
+# Wong (2011) colorblind-safe palette - 8 colors
 # Reference: Nature Methods 8, 441 (2011)
 # ---------------------------------------------------------------------------
 
@@ -76,13 +76,44 @@ _ALL_PALETTES: dict[str, list[str]] = {
 }
 
 
+def _hex_to_rgb(color: str) -> tuple[int, int, int]:
+    color = color.lstrip("#")
+    return tuple(int(color[i : i + 2], 16) for i in (0, 2, 4))
+
+
+def _rgb_to_hex(rgb: tuple[int, int, int]) -> str:
+    return "#{:02x}{:02x}{:02x}".format(*rgb)
+
+
+def _interpolate_hex_colors(colors: list[str], n: int) -> list[str]:
+    if n == 1:
+        return [colors[0]]
+
+    rgb_colors = [_hex_to_rgb(color) for color in colors]
+    result: list[str] = []
+    for i in range(n):
+        position = i * (len(rgb_colors) - 1) / (n - 1)
+        lo = int(position)
+        hi = min(lo + 1, len(rgb_colors) - 1)
+        frac = position - lo
+        rgb = tuple(
+            round(
+                rgb_colors[lo][channel] * (1 - frac)
+                + rgb_colors[hi][channel] * frac
+            )
+            for channel in range(3)
+        )
+        result.append(_rgb_to_hex(rgb))
+    return result
+
+
 def get_palette(name: str, n: int | None = None) -> list[str]:
     """Return *n* colors from the named palette.
 
     Parameters
     ----------
     name : str
-        Palette key — e.g. ``"wong"``, ``"cat:bold4"``, ``"seq:blues"``,
+        Palette key, e.g. ``"wong"``, ``"cat:bold4"``, ``"seq:blues"``,
         ``"div:rdbu"``.
     n : int, optional
         Number of colors desired.  For categorical palettes the result is
@@ -111,18 +142,9 @@ def get_palette(name: str, n: int | None = None) -> list[str]:
     if n <= 0:
         return []
 
-    # Categorical — cycle
+    # Categorical: cycle.
     if key in CATEGORICAL or key.startswith("cat:"):
         return [base[i % len(base)] for i in range(n)]
 
-    # Sequential / Diverging — interpolate
-    if n == 1:
-        return [base[0]]
-    result: list[str] = []
-    for i in range(n):
-        frac = i / (n - 1)
-        idx_f = frac * (len(base) - 1)
-        lo = int(idx_f)
-        hi = min(lo + 1, len(base) - 1)
-        result.append(base[lo] if lo == hi else base[lo])  # snap to nearest
-    return result
+    # Sequential and diverging: interpolate in RGB space.
+    return _interpolate_hex_colors(base, n)

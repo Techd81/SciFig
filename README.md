@@ -52,6 +52,14 @@ guidelines.
 - Sequential: blues, viridis, inferno, greens
 - Diverging: rdbu, brbg, coolwarm
 
+## Skills
+
+Reusable workflow skills live under `skills/`, not under tool-specific
+directories such as `.claude/` or `.codex/`. To use the SciFig generation
+workflow with a compatible agent runner, copy `skills/scifig-generate` into
+that runner's local skills directory. See [skills/README.md](skills/README.md)
+for install commands.
+
 ## Documentation
 
 See the [deep research report](doc/deep-research-report.md) for full product
