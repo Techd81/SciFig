@@ -1,69 +1,45 @@
-# SciFig
+# SciFig Generate Skill
 
-Publication-ready scientific figure generation from experimental data.
+SciFig Generate is a reusable agent skill for turning experimental data
+(CSV, Excel, or matrix-like tables) into publication-ready scientific figure
+workflows with journal-style defaults, statistical guardrails, and reproducible
+export plans.
 
-SciFig is an open-source (MIT) system that takes real experimental data
-(CSV / Excel / matrix) and produces high-quality, journal-compliant figures
-with reproducible code.
+This repository is the skill package itself. The repository root contains the
+files an agent runner should load:
+
+- `SKILL.md`
+- `phases/`
+- `specs/`
+- `templates/`
+
+Do not wrap this skill inside another `skills/` directory when publishing this
+repository.
 
 ## Install
 
+Clone this repository directly into your local skills directory.
+
+PowerShell:
+
+```powershell
+git clone https://github.com/Techd81/SciFig.git "$env:USERPROFILE\.claude\skills\scifig-generate"
+git clone https://github.com/Techd81/SciFig.git "$env:USERPROFILE\.codex\skills\scifig-generate"
+```
+
+macOS/Linux:
+
 ```bash
-pip install scifig            # core
-pip install scifig[full]      # + scikit-learn, lifelines, umap-learn, openpyxl
+git clone https://github.com/Techd81/SciFig.git ~/.claude/skills/scifig-generate
+git clone https://github.com/Techd81/SciFig.git ~/.codex/skills/scifig-generate
 ```
 
-## Quick start
+## Scope
 
-```python
-import pandas as pd
-import scifig
-
-# Load data
-df = pd.read_csv("experiment.csv")
-
-# Get a journal style profile
-style = scifig.style.get_journal_profile("nature")
-print(style["single_width_mm"])  # 89
-
-# Pick a colorblind-safe palette
-colors = scifig.palette.get_palette("wong", n=4)
-print(colors)  # ['#000000', '#E69F00', '#56B4E9', '#009E73']
-
-# Sanitise column names for safe code generation
-clean_df = scifig.utils.sanitize_columns(df)
-
-# Detect the best available font
-font = scifig.utils.detect_available_font()
-print(font)
-```
-
-## Journal profiles
-
-Built-in profiles for: **Nature**, **Cell**, **Science**, **The Lancet**,
-**NEJM**, **JAMA**. Each profile encodes single/double column widths, font
-sizes, line widths, and spine visibility matching the target journal's
-guidelines.
-
-## Color palettes
-
-- **Wong (2011)** colorblind-safe palette (8 colors)
-- Okabe-Ito, tab10, bold4, muted6
-- Sequential: blues, viridis, inferno, greens
-- Diverging: rdbu, brbg, coolwarm
-
-## Skills
-
-Reusable workflow skills live under `skills/`, not under tool-specific
-directories such as `.claude/` or `.codex/`. To use the SciFig generation
-workflow with a compatible agent runner, copy `skills/scifig-generate` into
-that runner's local skills directory. See [skills/README.md](skills/README.md)
-for install commands.
-
-## Documentation
-
-See the [deep research report](doc/deep-research-report.md) for full product
-specification, user personas, statistical strategies, and roadmap.
+Keep this repository limited to the skill content and essential repository
+metadata. Runtime packages, tests, workflow scratchpads, generated figures,
+sample data, and tool-specific dot directories belong outside this public skill
+repository unless they are explicitly promoted as part of the skill.
 
 ## License
 
