@@ -3,6 +3,7 @@
 
 import re
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 def sanitize_columns(df):
@@ -93,6 +94,499 @@ def _extract_colors(palette, categories):
 
 def display_label(sanitized_name, col_map):
     return col_map.get(sanitized_name, sanitized_name)
+
+
+def infer_chart_family(chart_type):
+    """Map chart keys to reusable visual-content recipes."""
+    key = str(chart_type or "").replace("+", "_").lower()
+    groups = {
+        "distribution": {
+            "violin_strip", "box_strip", "raincloud", "beeswarm", "paired_lines",
+            "dumbbell", "violin_paired", "violin_split", "dot_strip", "histogram",
+            "density", "ecdf", "ridge", "joyplot", "box_paired", "mean_diff_plot",
+            "ci_plot", "clustered_bar", "grouped_bar", "violin_grouped",
+        },
+        "scatter_embedding": {
+            "scatter_regression", "correlation", "pca", "umap", "tsne",
+            "ordination_plot", "bubble_scatter", "connected_scatter",
+            "residual_vs_fitted", "scale_location", "pp_plot", "leverage_plot",
+            "cook_distance", "bland_altman", "funnel_plot",
+        },
+        "matrix_heatmap": {
+            "heatmap_cluster", "heatmap_pure", "heatmap_annotated",
+            "heatmap_triangular", "heatmap_mirrored", "heatmap_symmetric",
+            "adjacency_matrix", "cooccurrence_matrix", "bubble_matrix",
+            "dotplot", "composition_dotplot",
+        },
+        "time_series": {
+            "line", "line_ci", "spaghetti", "sparkline", "area", "area_stacked",
+            "streamgraph", "gantt", "timeline_annotation", "control_chart",
+            "slope_chart", "bump_chart",
+        },
+        "clinical_diagnostic": {
+            "roc", "pr_curve", "calibration", "km", "forest", "waterfall",
+            "swimmer_plot", "risk_ratio_plot", "caterpillar_plot",
+            "tornado_chart", "nomogram", "decision_curve",
+        },
+        "genomics_enrichment": {
+            "volcano", "ma_plot", "manhattan", "qq", "enrichment_dotplot",
+            "oncoprint", "lollipop_mutation", "circos_karyotype",
+            "gene_structure", "pathway_map", "kegg_bar", "go_treemap",
+            "chromosome_coverage",
+        },
+        "engineering_spectra": {
+            "dose_response", "stress_strain", "phase_diagram", "nyquist_plot",
+            "xrd_pattern", "ftir_spectrum", "dsc_thermogram",
+        },
+        "composition_flow": {
+            "stacked_bar_comp", "alluvial", "treemap", "sunburst",
+            "waffle_chart", "marimekko", "stacked_area_comp",
+            "nested_donut", "chord_diagram", "parallel_coordinates",
+            "sankey", "radar", "pareto_chart", "lollipop_horizontal",
+            "stem_plot", "mosaic_plot", "diverging_bar",
+        },
+        "psych_ecology": {
+            "species_abundance", "shannon_diversity", "biodiversity_radar",
+            "likert_divergent", "likert_stacked", "mediation_path",
+            "interaction_plot",
+        },
+    }
+    for family, keys in groups.items():
+        if key in keys:
+            return family
+    return "generic"
+
+
+def default_visual_content_plan():
+    return {
+        "mode": "nature_cell_dense",
+        "density": "high",
+        "maxCalloutsSingle": 8,
+        "maxInlineStats": 4,
+        "useInsetAxes": True,
+        "noInventedStats": True,
+        "appliedEnhancements": [],
+        "familyByPanel": {},
+        "outsideLayoutElements": False,
+    }
+
+
+def build_visual_content_plan(primaryChart, secondaryCharts=None, dataProfile=None,
+                              workflowPreferences=None, existing=None):
+    """Create the default Nature/Cell dense visual-content contract."""
+    workflowPreferences = workflowPreferences or {}
+    plan = default_visual_content_plan()
+    if existing:
+        plan.update(existing)
+    if workflowPreferences.get("visualContentMode"):
+        plan["mode"] = workflowPreferences["visualContentMode"]
+    if workflowPreferences.get("visualDensity"):
+        plan["density"] = workflowPreferences["visualDensity"]
+
+    charts = [primaryChart] + list(secondaryCharts or [])
+    plan["familyByChart"] = {chart: infer_chart_family(chart) for chart in charts if chart}
+    plan.setdefault("appliedEnhancements", [])
+    plan.setdefault("familyByPanel", {})
+    return plan
+
+
+def _ensure_visual_content_plan(chartPlan, dataProfile=None, workflowPreferences=None):
+    existing = chartPlan.get("visualContentPlan", {})
+    primary = chartPlan.get("primaryChart")
+    secondary = chartPlan.get("secondaryCharts", [])
+    visual = build_visual_content_plan(
+        primary,
+        secondary,
+        dataProfile=dataProfile,
+        workflowPreferences=workflowPreferences,
+        existing=existing,
+    )
+    chartPlan["visualContentPlan"] = visual
+    return visual
+
+
+def _df_from_profile(dataProfile):
+    if isinstance(dataProfile, dict):
+        return dataProfile.get("df")
+    return None
+
+
+def _role(dataProfile, *names):
+    roles = dataProfile.get("semanticRoles", {}) if isinstance(dataProfile, dict) else {}
+    for name in names:
+        if roles.get(name):
+            return roles[name]
+    return None
+
+
+def _numeric_values(df, col):
+    if df is None or col is None or col not in df:
+        return np.array([])
+    values = np.asarray(df[col].dropna(), dtype=float)
+    return values[np.isfinite(values)]
+
+
+def _display_col(col, col_map):
+    return display_label(col, col_map) if col_map else str(col)
+
+
+def _record_visual(plan, panel_id, family, enhancement):
+    entry = f"{panel_id}:{family}:{enhancement}"
+    if entry not in plan["appliedEnhancements"]:
+        plan["appliedEnhancements"].append(entry)
+    plan["familyByPanel"][panel_id] = family
+
+
+def _add_metric_box(ax, lines, visualPlan):
+    clean = [str(line) for line in lines if line is not None and str(line).strip()]
+    if not clean:
+        return None
+    text = "\n".join(clean[:visualPlan.get("maxInlineStats", 4)])
+    artist = ax.text(
+        1.015, 1.0, text,
+        transform=ax.transAxes,
+        ha="left",
+        va="top",
+        fontsize=5,
+        color="#222222",
+        clip_on=False,
+        bbox={
+            "boxstyle": "round,pad=0.25",
+            "facecolor": "white",
+            "edgecolor": "#B8B8B8",
+            "linewidth": 0.35,
+            "alpha": 0.94,
+        },
+    )
+    artist.set_gid("scifig_metric_box")
+    visualPlan["outsideLayoutElements"] = True
+    return artist
+
+
+def _add_summary_inset(ax, values, visualPlan, color="#4C78A8"):
+    if not visualPlan.get("useInsetAxes", True):
+        return None
+    values = np.asarray(values, dtype=float)
+    values = values[np.isfinite(values)]
+    if len(values) < 5:
+        return None
+    inset = ax.inset_axes([1.015, 0.06, 0.28, 0.24], transform=ax.transAxes)
+    inset.hist(values, bins=min(12, max(5, int(np.sqrt(len(values))))),
+               color=color, alpha=0.82, edgecolor="white", linewidth=0.25)
+    inset.axvline(np.nanmedian(values), color="black", lw=0.6)
+    inset.set_xticks([])
+    inset.set_yticks([])
+    for spine in inset.spines.values():
+        spine.set_linewidth(0.35)
+        spine.set_edgecolor("#777777")
+    inset.set_title("dist.", fontsize=4, pad=1)
+    inset.set_gid("scifig_inset")
+    visualPlan["outsideLayoutElements"] = True
+    return inset
+
+
+def _maybe_reference_zero(ax):
+    x0, x1 = ax.get_xlim()
+    y0, y1 = ax.get_ylim()
+    if x0 < 0 < x1:
+        ax.axvline(0, color="#A0A0A0", lw=0.45, ls="--", zorder=0)
+    if y0 < 0 < y1:
+        ax.axhline(0, color="#A0A0A0", lw=0.45, ls="--", zorder=0)
+
+
+def _enhance_distribution(ax, dataProfile, visualPlan, palette, col_map):
+    df = _df_from_profile(dataProfile)
+    group_col = _role(dataProfile, "group", "condition")
+    value_col = _role(dataProfile, "value", "y")
+    values = _numeric_values(df, value_col)
+    if len(values) == 0:
+        return []
+
+    enhancements = ["distribution_summary"]
+    groups = []
+    if group_col and df is not None and group_col in df:
+        groups = list(df[group_col].dropna().unique())
+    if groups:
+        for i, group in enumerate(groups[:8]):
+            subset = _numeric_values(df[df[group_col] == group], value_col)
+            if len(subset) == 0:
+                continue
+            median = float(np.nanmedian(subset))
+            q1, q3 = np.nanpercentile(subset, [25, 75])
+            mean = float(np.nanmean(subset))
+            ax.vlines(i, q1, q3, color="black", lw=1.0, zorder=7)
+            ax.scatter([i], [mean], marker="D", s=18, facecolor="white",
+                       edgecolor="black", linewidth=0.45, zorder=8)
+            ax.text(i, -0.12, f"n={len(subset)}", transform=ax.get_xaxis_transform(),
+                    ha="center", va="top", fontsize=5, clip_on=False, color="#333333")
+        if len(groups) == 2:
+            a = _numeric_values(df[df[group_col] == groups[0]], value_col)
+            b = _numeric_values(df[df[group_col] == groups[1]], value_col)
+            pooled = np.sqrt((np.nanvar(a) + np.nanvar(b)) / 2) if len(a) and len(b) else 0
+            if pooled > 0:
+                effect = (np.nanmean(b) - np.nanmean(a)) / pooled
+                _add_metric_box(ax, [f"n={len(values)}", f"median={np.nanmedian(values):.3g}", f"d={effect:.2f}"], visualPlan)
+            else:
+                _add_metric_box(ax, [f"n={len(values)}", f"median={np.nanmedian(values):.3g}"], visualPlan)
+        else:
+            _add_metric_box(ax, [f"groups={len(groups)}", f"n={len(values)}", f"median={np.nanmedian(values):.3g}"], visualPlan)
+    else:
+        ax.axvline(np.nanmedian(values), color="black", lw=0.7, ls="--")
+        _add_metric_box(ax, [f"n={len(values)}", f"median={np.nanmedian(values):.3g}", f"IQR={np.nanpercentile(values, 75) - np.nanpercentile(values, 25):.3g}"], visualPlan)
+    _add_summary_inset(ax, values, visualPlan, color=palette.get("categorical", ["#4C78A8"])[0])
+    return enhancements
+
+
+def _enhance_scatter(ax, dataProfile, visualPlan, palette, col_map):
+    df = _df_from_profile(dataProfile)
+    x_col = _role(dataProfile, "x", "time", "score")
+    y_col = _role(dataProfile, "y", "value")
+    x = _numeric_values(df, x_col)
+    y = _numeric_values(df, y_col)
+    if len(x) == 0 or len(y) == 0 or len(x) != len(y):
+        _maybe_reference_zero(ax)
+        _add_metric_box(ax, ["exploratory view"], visualPlan)
+        return ["reference_context"]
+
+    _maybe_reference_zero(ax)
+    enhancements = ["scatter_context"]
+    if len(x) >= 3 and np.nanstd(x) > 0 and np.nanstd(y) > 0:
+        slope, intercept = np.polyfit(x, y, 1)
+        xs = np.linspace(np.nanmin(x), np.nanmax(x), 100)
+        ax.plot(xs, slope * xs + intercept, color="black", lw=0.75,
+                alpha=0.65, label="_nolegend_", zorder=5)
+        r = np.corrcoef(x, y)[0, 1]
+        _add_metric_box(ax, [f"n={len(x)}", f"r={r:.2f}", f"slope={slope:.2g}"], visualPlan)
+        enhancements.append("trend_summary")
+    label_col = _role(dataProfile, "feature_id", "label", "gene")
+    if label_col and df is not None and label_col in df and len(y) > 0:
+        budget = min(visualPlan.get("maxCalloutsSingle", 8), 5, len(y))
+        top_idx = np.argsort(np.abs(y - np.nanmedian(y)))[-budget:]
+        for idx in top_idx:
+            label = str(df.iloc[idx][label_col])[:18]
+            ax.annotate(label, (x[idx], y[idx]), xytext=(4, 4),
+                        textcoords="offset points", fontsize=4.5,
+                        arrowprops={"arrowstyle": "-", "lw": 0.25, "color": "#555555"})
+        enhancements.append("top_point_callouts")
+    return enhancements
+
+
+def _enhance_matrix(ax, dataProfile, visualPlan, palette, col_map):
+    df = _df_from_profile(dataProfile)
+    numeric = None
+    if df is not None:
+        try:
+            numeric = df.select_dtypes(include="number")
+        except AttributeError:
+            numeric = None
+    if numeric is not None and numeric.size:
+        vals = numeric.to_numpy(dtype=float)
+        _add_metric_box(ax, [f"matrix={vals.shape[0]}x{vals.shape[1]}", f"range={np.nanmin(vals):.2g}..{np.nanmax(vals):.2g}"], visualPlan)
+        if vals.shape[0] <= 6 and vals.shape[1] <= 6:
+            for i in range(vals.shape[0]):
+                for j in range(vals.shape[1]):
+                    ax.text(j + 0.5, i + 0.5, f"{vals[i, j]:.2g}",
+                            ha="center", va="center", fontsize=4.5, color="#111111")
+            return ["matrix_summary", "cell_value_labels"]
+        return ["matrix_summary"]
+    _add_metric_box(ax, ["matrix view"], visualPlan)
+    return ["matrix_summary"]
+
+
+def _enhance_time_series(ax, dataProfile, visualPlan, palette, col_map):
+    enhancements = []
+    for line in ax.lines[:visualPlan.get("maxInlineStats", 4)]:
+        x = np.asarray(line.get_xdata(), dtype=float)
+        y = np.asarray(line.get_ydata(), dtype=float)
+        if len(x) < 2 or len(y) < 2:
+            continue
+        label = line.get_label()
+        if not label or label.startswith("_"):
+            label = "series"
+        ax.text(x[-1], y[-1], str(label)[:16], fontsize=5, ha="left",
+                va="center", color=line.get_color(), clip_on=False)
+        peak_idx = int(np.nanargmax(y))
+        ax.scatter([x[peak_idx]], [y[peak_idx]], s=14, facecolor="white",
+                   edgecolor=line.get_color(), linewidth=0.6, zorder=7)
+        enhancements.append("endpoint_and_peak_labels")
+    if ax.lines:
+        _add_metric_box(ax, [f"series={len(ax.lines)}", "endpoints labeled"], visualPlan)
+    return enhancements or ["time_context"]
+
+
+def _auc_from_scores(labels, scores):
+    labels = np.asarray(labels, dtype=float)
+    scores = np.asarray(scores, dtype=float)
+    mask = np.isfinite(labels) & np.isfinite(scores)
+    labels = labels[mask]
+    scores = scores[mask]
+    pos = labels == 1
+    neg = labels == 0
+    n_pos, n_neg = int(pos.sum()), int(neg.sum())
+    if n_pos == 0 or n_neg == 0:
+        return None
+    order = np.argsort(scores)
+    ranks = np.empty_like(order, dtype=float)
+    ranks[order] = np.arange(1, len(scores) + 1)
+    return (ranks[pos].sum() - n_pos * (n_pos + 1) / 2) / (n_pos * n_neg)
+
+
+def _enhance_clinical(ax, dataProfile, visualPlan, palette, col_map, chart_type):
+    df = _df_from_profile(dataProfile)
+    score_col = _role(dataProfile, "score", "x")
+    label_col = _role(dataProfile, "label", "event")
+    scores = _numeric_values(df, score_col)
+    labels = _numeric_values(df, label_col)
+    lines = []
+    if chart_type in ("roc", "calibration") and ax.get_xlim()[0] <= 0 <= ax.get_xlim()[1]:
+        ax.plot([0, 1], [0, 1], color="#999999", lw=0.55, ls="--", label="_nolegend_")
+    if len(scores) == len(labels) and len(scores):
+        auc = _auc_from_scores(labels, scores)
+        if auc is not None:
+            lines.append(f"AUC={auc:.2f}")
+        lines.append(f"n={len(scores)}")
+    elif df is not None:
+        try:
+            lines.append(f"n={len(df)}")
+        except TypeError:
+            pass
+    _add_metric_box(ax, lines or ["clinical summary"], visualPlan)
+    return ["clinical_metric_summary"]
+
+
+def _enhance_genomics(ax, dataProfile, visualPlan, palette, col_map, chart_type):
+    df = _df_from_profile(dataProfile)
+    fc_col = _role(dataProfile, "log2fc", "effect", "x")
+    p_col = _role(dataProfile, "nlogp", "padj", "pvalue", "y")
+    label_col = _role(dataProfile, "gene", "feature_id", "label")
+    x = _numeric_values(df, fc_col)
+    y_raw = _numeric_values(df, p_col)
+    if len(x) == 0 or len(y_raw) == 0 or len(x) != len(y_raw):
+        _add_metric_box(ax, ["genomics context"], visualPlan)
+        return ["genomics_context"]
+    y = y_raw
+    p_name = str(p_col).lower() if p_col else ""
+    if "padj" in p_name or "pvalue" in p_name:
+        y = -np.log10(np.clip(y_raw, 1e-300, 1.0))
+    ax.axvline(-1, color="#888888", lw=0.5, ls="--")
+    ax.axvline(1, color="#888888", lw=0.5, ls="--")
+    ax.axhline(1.3, color="#888888", lw=0.5, ls="--")
+    hits = int(np.sum((np.abs(x) >= 1) & (y >= 1.3)))
+    if label_col and df is not None and label_col in df:
+        budget = min(visualPlan.get("maxCalloutsSingle", 8), 6, len(y))
+        for idx in np.argsort(y)[-budget:]:
+            ax.annotate(str(df.iloc[idx][label_col])[:18], (x[idx], y[idx]),
+                        xytext=(3, 3), textcoords="offset points", fontsize=4.5,
+                        arrowprops={"arrowstyle": "-", "lw": 0.25, "color": "#555555"})
+    _add_metric_box(ax, [f"features={len(x)}", f"hits={hits}", "|log2FC|>=1", "FDR/p>=line"], visualPlan)
+    return ["threshold_lines", "top_feature_callouts", "hit_summary"]
+
+
+def _enhance_engineering(ax, dataProfile, visualPlan, palette, col_map):
+    df = _df_from_profile(dataProfile)
+    x_col = _role(dataProfile, "x", "dose", "time")
+    y_col = _role(dataProfile, "y", "response", "value")
+    x = _numeric_values(df, x_col)
+    y = _numeric_values(df, y_col)
+    if len(x) and len(y) and len(x) == len(y):
+        peak_idx = int(np.nanargmax(y))
+        ax.scatter([x[peak_idx]], [y[peak_idx]], s=20, facecolor="white",
+                   edgecolor="black", linewidth=0.6, zorder=8)
+        ax.annotate(f"peak {y[peak_idx]:.2g}", (x[peak_idx], y[peak_idx]),
+                    xytext=(5, 5), textcoords="offset points", fontsize=4.8,
+                    arrowprops={"arrowstyle": "-", "lw": 0.3, "color": "#555555"})
+        _add_metric_box(ax, [f"n={len(y)}", f"peak={y[peak_idx]:.3g}", f"range={np.nanmin(y):.2g}..{np.nanmax(y):.2g}"], visualPlan)
+        return ["peak_annotation", "range_summary"]
+    _add_metric_box(ax, ["engineering summary"], visualPlan)
+    return ["engineering_context"]
+
+
+def _enhance_composition(ax, dataProfile, visualPlan, palette, col_map):
+    df = _df_from_profile(dataProfile)
+    group_col = _role(dataProfile, "group", "feature_id", "label")
+    value_col = _role(dataProfile, "value", "y")
+    values = _numeric_values(df, value_col)
+    lines = []
+    if len(values):
+        total = float(np.nansum(values))
+        lines.extend([f"total={total:.3g}", f"items={len(values)}"])
+    if group_col and df is not None and group_col in df:
+        lines.append(f"categories={df[group_col].nunique()}")
+    _add_metric_box(ax, lines or ["composition summary"], visualPlan)
+    return ["composition_summary"]
+
+
+def _enhance_psych_ecology(ax, dataProfile, visualPlan, palette, col_map):
+    _maybe_reference_zero(ax)
+    df = _df_from_profile(dataProfile)
+    value_col = _role(dataProfile, "value", "y")
+    values = _numeric_values(df, value_col)
+    if len(values):
+        _add_metric_box(ax, [f"n={len(values)}", f"mean={np.nanmean(values):.3g}", f"median={np.nanmedian(values):.3g}"], visualPlan)
+    else:
+        _add_metric_box(ax, ["rank/proportion view"], visualPlan)
+    return ["reference_band", "descriptive_summary"]
+
+
+def _enhance_generic(ax, dataProfile, visualPlan, palette, col_map):
+    df = _df_from_profile(dataProfile)
+    n = None
+    if df is not None:
+        try:
+            n = len(df)
+        except TypeError:
+            n = None
+    _maybe_reference_zero(ax)
+    _add_metric_box(ax, [f"n={n}" if n is not None else "descriptive view"], visualPlan)
+    return ["descriptive_context"]
+
+
+def apply_visual_content_pass(fig, axes, chartPlan, dataProfile, journalProfile, palette, col_map=None):
+    """Add Nature/Cell-style information density after base plotting."""
+    visualPlan = _ensure_visual_content_plan(chartPlan, dataProfile=dataProfile)
+    if visualPlan.get("mode") in ("off", "none"):
+        return {"appliedEnhancementCount": 0, "families": {}}
+
+    panel_lookup = {
+        panel.get("id"): panel.get("chart")
+        for panel in chartPlan.get("panelBlueprint", {}).get("panels", [])
+        if isinstance(panel, dict)
+    }
+    families = {}
+    for panel_id, ax in axes.items():
+        chart_type = panel_lookup.get(panel_id) or chartPlan.get("primaryChart")
+        family = infer_chart_family(chart_type)
+        families[panel_id] = family
+        if family == "distribution":
+            enhancements = _enhance_distribution(ax, dataProfile, visualPlan, palette, col_map)
+        elif family == "scatter_embedding":
+            enhancements = _enhance_scatter(ax, dataProfile, visualPlan, palette, col_map)
+        elif family == "matrix_heatmap":
+            enhancements = _enhance_matrix(ax, dataProfile, visualPlan, palette, col_map)
+        elif family == "time_series":
+            enhancements = _enhance_time_series(ax, dataProfile, visualPlan, palette, col_map)
+        elif family == "clinical_diagnostic":
+            enhancements = _enhance_clinical(ax, dataProfile, visualPlan, palette, col_map, str(chart_type or ""))
+        elif family == "genomics_enrichment":
+            enhancements = _enhance_genomics(ax, dataProfile, visualPlan, palette, col_map, str(chart_type or ""))
+        elif family == "engineering_spectra":
+            enhancements = _enhance_engineering(ax, dataProfile, visualPlan, palette, col_map)
+        elif family == "composition_flow":
+            enhancements = _enhance_composition(ax, dataProfile, visualPlan, palette, col_map)
+        elif family == "psych_ecology":
+            enhancements = _enhance_psych_ecology(ax, dataProfile, visualPlan, palette, col_map)
+        else:
+            enhancements = _enhance_generic(ax, dataProfile, visualPlan, palette, col_map)
+
+        for enhancement in enhancements:
+            _record_visual(visualPlan, panel_id, family, enhancement)
+
+    chartPlan["visualContentPlan"] = visualPlan
+    return {
+        "appliedEnhancementCount": len(visualPlan.get("appliedEnhancements", [])),
+        "families": families,
+        "outsideLayoutElements": visualPlan.get("outsideLayoutElements", False),
+    }
 
 
 def default_crowding_plan():
@@ -419,6 +913,8 @@ def apply_crowding_management(fig, axes, chartPlan, journalProfile):
         )
 
     apply_subplot_margins(fig, legend_mode_used, has_colorbar=shared_colorbar_applied, legend=legend)
+    if chartPlan.get("visualContentPlan", {}).get("outsideLayoutElements"):
+        fig.subplots_adjust(right=min(fig.subplotpars.right, 0.78))
 
     crowdingPlan["droppedDirectLabelCount"] = dropped_direct_labels
     crowdingPlan["legendScope"] = "figure"

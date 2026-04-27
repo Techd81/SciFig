@@ -431,8 +431,11 @@ Each generator should:
 - Write figures, source-data friendly tables, and metadata hooks
 - Return its axis object when used inside multi-panel composition
 - Apply `apply_chart_polish(ax, chart_type)` after drawing data
+- Leave Nature/Cell dense overlays to `apply_visual_content_pass(...)` so all implemented charts share the same information-density contract
 
 ### Post-plot polish function (call after every chart generator)
+
+Generator functions draw the base chart and apply minimal polish only. The generated script then runs `apply_visual_content_pass(...)` before crowding management so content density is controlled centrally instead of being reimplemented chart-by-chart.
 
 ```python
 def apply_chart_polish(ax, chart_type):
@@ -517,6 +520,7 @@ If direct labels still exceed the budget, keep only the highest-priority labels 
 
 import re
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 def sanitize_columns(df):
@@ -607,6 +611,499 @@ def _extract_colors(palette, categories):
 
 def display_label(sanitized_name, col_map):
     return col_map.get(sanitized_name, sanitized_name)
+
+
+def infer_chart_family(chart_type):
+    """Map chart keys to reusable visual-content recipes."""
+    key = str(chart_type or "").replace("+", "_").lower()
+    groups = {
+        "distribution": {
+            "violin_strip", "box_strip", "raincloud", "beeswarm", "paired_lines",
+            "dumbbell", "violin_paired", "violin_split", "dot_strip", "histogram",
+            "density", "ecdf", "ridge", "joyplot", "box_paired", "mean_diff_plot",
+            "ci_plot", "clustered_bar", "grouped_bar", "violin_grouped",
+        },
+        "scatter_embedding": {
+            "scatter_regression", "correlation", "pca", "umap", "tsne",
+            "ordination_plot", "bubble_scatter", "connected_scatter",
+            "residual_vs_fitted", "scale_location", "pp_plot", "leverage_plot",
+            "cook_distance", "bland_altman", "funnel_plot",
+        },
+        "matrix_heatmap": {
+            "heatmap_cluster", "heatmap_pure", "heatmap_annotated",
+            "heatmap_triangular", "heatmap_mirrored", "heatmap_symmetric",
+            "adjacency_matrix", "cooccurrence_matrix", "bubble_matrix",
+            "dotplot", "composition_dotplot",
+        },
+        "time_series": {
+            "line", "line_ci", "spaghetti", "sparkline", "area", "area_stacked",
+            "streamgraph", "gantt", "timeline_annotation", "control_chart",
+            "slope_chart", "bump_chart",
+        },
+        "clinical_diagnostic": {
+            "roc", "pr_curve", "calibration", "km", "forest", "waterfall",
+            "swimmer_plot", "risk_ratio_plot", "caterpillar_plot",
+            "tornado_chart", "nomogram", "decision_curve",
+        },
+        "genomics_enrichment": {
+            "volcano", "ma_plot", "manhattan", "qq", "enrichment_dotplot",
+            "oncoprint", "lollipop_mutation", "circos_karyotype",
+            "gene_structure", "pathway_map", "kegg_bar", "go_treemap",
+            "chromosome_coverage",
+        },
+        "engineering_spectra": {
+            "dose_response", "stress_strain", "phase_diagram", "nyquist_plot",
+            "xrd_pattern", "ftir_spectrum", "dsc_thermogram",
+        },
+        "composition_flow": {
+            "stacked_bar_comp", "alluvial", "treemap", "sunburst",
+            "waffle_chart", "marimekko", "stacked_area_comp",
+            "nested_donut", "chord_diagram", "parallel_coordinates",
+            "sankey", "radar", "pareto_chart", "lollipop_horizontal",
+            "stem_plot", "mosaic_plot", "diverging_bar",
+        },
+        "psych_ecology": {
+            "species_abundance", "shannon_diversity", "biodiversity_radar",
+            "likert_divergent", "likert_stacked", "mediation_path",
+            "interaction_plot",
+        },
+    }
+    for family, keys in groups.items():
+        if key in keys:
+            return family
+    return "generic"
+
+
+def default_visual_content_plan():
+    return {
+        "mode": "nature_cell_dense",
+        "density": "high",
+        "maxCalloutsSingle": 8,
+        "maxInlineStats": 4,
+        "useInsetAxes": True,
+        "noInventedStats": True,
+        "appliedEnhancements": [],
+        "familyByPanel": {},
+        "outsideLayoutElements": False,
+    }
+
+
+def build_visual_content_plan(primaryChart, secondaryCharts=None, dataProfile=None,
+                              workflowPreferences=None, existing=None):
+    """Create the default Nature/Cell dense visual-content contract."""
+    workflowPreferences = workflowPreferences or {}
+    plan = default_visual_content_plan()
+    if existing:
+        plan.update(existing)
+    if workflowPreferences.get("visualContentMode"):
+        plan["mode"] = workflowPreferences["visualContentMode"]
+    if workflowPreferences.get("visualDensity"):
+        plan["density"] = workflowPreferences["visualDensity"]
+
+    charts = [primaryChart] + list(secondaryCharts or [])
+    plan["familyByChart"] = {chart: infer_chart_family(chart) for chart in charts if chart}
+    plan.setdefault("appliedEnhancements", [])
+    plan.setdefault("familyByPanel", {})
+    return plan
+
+
+def _ensure_visual_content_plan(chartPlan, dataProfile=None, workflowPreferences=None):
+    existing = chartPlan.get("visualContentPlan", {})
+    primary = chartPlan.get("primaryChart")
+    secondary = chartPlan.get("secondaryCharts", [])
+    visual = build_visual_content_plan(
+        primary,
+        secondary,
+        dataProfile=dataProfile,
+        workflowPreferences=workflowPreferences,
+        existing=existing,
+    )
+    chartPlan["visualContentPlan"] = visual
+    return visual
+
+
+def _df_from_profile(dataProfile):
+    if isinstance(dataProfile, dict):
+        return dataProfile.get("df")
+    return None
+
+
+def _role(dataProfile, *names):
+    roles = dataProfile.get("semanticRoles", {}) if isinstance(dataProfile, dict) else {}
+    for name in names:
+        if roles.get(name):
+            return roles[name]
+    return None
+
+
+def _numeric_values(df, col):
+    if df is None or col is None or col not in df:
+        return np.array([])
+    values = np.asarray(df[col].dropna(), dtype=float)
+    return values[np.isfinite(values)]
+
+
+def _display_col(col, col_map):
+    return display_label(col, col_map) if col_map else str(col)
+
+
+def _record_visual(plan, panel_id, family, enhancement):
+    entry = f"{panel_id}:{family}:{enhancement}"
+    if entry not in plan["appliedEnhancements"]:
+        plan["appliedEnhancements"].append(entry)
+    plan["familyByPanel"][panel_id] = family
+
+
+def _add_metric_box(ax, lines, visualPlan):
+    clean = [str(line) for line in lines if line is not None and str(line).strip()]
+    if not clean:
+        return None
+    text = "\n".join(clean[:visualPlan.get("maxInlineStats", 4)])
+    artist = ax.text(
+        1.015, 1.0, text,
+        transform=ax.transAxes,
+        ha="left",
+        va="top",
+        fontsize=5,
+        color="#222222",
+        clip_on=False,
+        bbox={
+            "boxstyle": "round,pad=0.25",
+            "facecolor": "white",
+            "edgecolor": "#B8B8B8",
+            "linewidth": 0.35,
+            "alpha": 0.94,
+        },
+    )
+    artist.set_gid("scifig_metric_box")
+    visualPlan["outsideLayoutElements"] = True
+    return artist
+
+
+def _add_summary_inset(ax, values, visualPlan, color="#4C78A8"):
+    if not visualPlan.get("useInsetAxes", True):
+        return None
+    values = np.asarray(values, dtype=float)
+    values = values[np.isfinite(values)]
+    if len(values) < 5:
+        return None
+    inset = ax.inset_axes([1.015, 0.06, 0.28, 0.24], transform=ax.transAxes)
+    inset.hist(values, bins=min(12, max(5, int(np.sqrt(len(values))))),
+               color=color, alpha=0.82, edgecolor="white", linewidth=0.25)
+    inset.axvline(np.nanmedian(values), color="black", lw=0.6)
+    inset.set_xticks([])
+    inset.set_yticks([])
+    for spine in inset.spines.values():
+        spine.set_linewidth(0.35)
+        spine.set_edgecolor("#777777")
+    inset.set_title("dist.", fontsize=4, pad=1)
+    inset.set_gid("scifig_inset")
+    visualPlan["outsideLayoutElements"] = True
+    return inset
+
+
+def _maybe_reference_zero(ax):
+    x0, x1 = ax.get_xlim()
+    y0, y1 = ax.get_ylim()
+    if x0 < 0 < x1:
+        ax.axvline(0, color="#A0A0A0", lw=0.45, ls="--", zorder=0)
+    if y0 < 0 < y1:
+        ax.axhline(0, color="#A0A0A0", lw=0.45, ls="--", zorder=0)
+
+
+def _enhance_distribution(ax, dataProfile, visualPlan, palette, col_map):
+    df = _df_from_profile(dataProfile)
+    group_col = _role(dataProfile, "group", "condition")
+    value_col = _role(dataProfile, "value", "y")
+    values = _numeric_values(df, value_col)
+    if len(values) == 0:
+        return []
+
+    enhancements = ["distribution_summary"]
+    groups = []
+    if group_col and df is not None and group_col in df:
+        groups = list(df[group_col].dropna().unique())
+    if groups:
+        for i, group in enumerate(groups[:8]):
+            subset = _numeric_values(df[df[group_col] == group], value_col)
+            if len(subset) == 0:
+                continue
+            median = float(np.nanmedian(subset))
+            q1, q3 = np.nanpercentile(subset, [25, 75])
+            mean = float(np.nanmean(subset))
+            ax.vlines(i, q1, q3, color="black", lw=1.0, zorder=7)
+            ax.scatter([i], [mean], marker="D", s=18, facecolor="white",
+                       edgecolor="black", linewidth=0.45, zorder=8)
+            ax.text(i, -0.12, f"n={len(subset)}", transform=ax.get_xaxis_transform(),
+                    ha="center", va="top", fontsize=5, clip_on=False, color="#333333")
+        if len(groups) == 2:
+            a = _numeric_values(df[df[group_col] == groups[0]], value_col)
+            b = _numeric_values(df[df[group_col] == groups[1]], value_col)
+            pooled = np.sqrt((np.nanvar(a) + np.nanvar(b)) / 2) if len(a) and len(b) else 0
+            if pooled > 0:
+                effect = (np.nanmean(b) - np.nanmean(a)) / pooled
+                _add_metric_box(ax, [f"n={len(values)}", f"median={np.nanmedian(values):.3g}", f"d={effect:.2f}"], visualPlan)
+            else:
+                _add_metric_box(ax, [f"n={len(values)}", f"median={np.nanmedian(values):.3g}"], visualPlan)
+        else:
+            _add_metric_box(ax, [f"groups={len(groups)}", f"n={len(values)}", f"median={np.nanmedian(values):.3g}"], visualPlan)
+    else:
+        ax.axvline(np.nanmedian(values), color="black", lw=0.7, ls="--")
+        _add_metric_box(ax, [f"n={len(values)}", f"median={np.nanmedian(values):.3g}", f"IQR={np.nanpercentile(values, 75) - np.nanpercentile(values, 25):.3g}"], visualPlan)
+    _add_summary_inset(ax, values, visualPlan, color=palette.get("categorical", ["#4C78A8"])[0])
+    return enhancements
+
+
+def _enhance_scatter(ax, dataProfile, visualPlan, palette, col_map):
+    df = _df_from_profile(dataProfile)
+    x_col = _role(dataProfile, "x", "time", "score")
+    y_col = _role(dataProfile, "y", "value")
+    x = _numeric_values(df, x_col)
+    y = _numeric_values(df, y_col)
+    if len(x) == 0 or len(y) == 0 or len(x) != len(y):
+        _maybe_reference_zero(ax)
+        _add_metric_box(ax, ["exploratory view"], visualPlan)
+        return ["reference_context"]
+
+    _maybe_reference_zero(ax)
+    enhancements = ["scatter_context"]
+    if len(x) >= 3 and np.nanstd(x) > 0 and np.nanstd(y) > 0:
+        slope, intercept = np.polyfit(x, y, 1)
+        xs = np.linspace(np.nanmin(x), np.nanmax(x), 100)
+        ax.plot(xs, slope * xs + intercept, color="black", lw=0.75,
+                alpha=0.65, label="_nolegend_", zorder=5)
+        r = np.corrcoef(x, y)[0, 1]
+        _add_metric_box(ax, [f"n={len(x)}", f"r={r:.2f}", f"slope={slope:.2g}"], visualPlan)
+        enhancements.append("trend_summary")
+    label_col = _role(dataProfile, "feature_id", "label", "gene")
+    if label_col and df is not None and label_col in df and len(y) > 0:
+        budget = min(visualPlan.get("maxCalloutsSingle", 8), 5, len(y))
+        top_idx = np.argsort(np.abs(y - np.nanmedian(y)))[-budget:]
+        for idx in top_idx:
+            label = str(df.iloc[idx][label_col])[:18]
+            ax.annotate(label, (x[idx], y[idx]), xytext=(4, 4),
+                        textcoords="offset points", fontsize=4.5,
+                        arrowprops={"arrowstyle": "-", "lw": 0.25, "color": "#555555"})
+        enhancements.append("top_point_callouts")
+    return enhancements
+
+
+def _enhance_matrix(ax, dataProfile, visualPlan, palette, col_map):
+    df = _df_from_profile(dataProfile)
+    numeric = None
+    if df is not None:
+        try:
+            numeric = df.select_dtypes(include="number")
+        except AttributeError:
+            numeric = None
+    if numeric is not None and numeric.size:
+        vals = numeric.to_numpy(dtype=float)
+        _add_metric_box(ax, [f"matrix={vals.shape[0]}x{vals.shape[1]}", f"range={np.nanmin(vals):.2g}..{np.nanmax(vals):.2g}"], visualPlan)
+        if vals.shape[0] <= 6 and vals.shape[1] <= 6:
+            for i in range(vals.shape[0]):
+                for j in range(vals.shape[1]):
+                    ax.text(j + 0.5, i + 0.5, f"{vals[i, j]:.2g}",
+                            ha="center", va="center", fontsize=4.5, color="#111111")
+            return ["matrix_summary", "cell_value_labels"]
+        return ["matrix_summary"]
+    _add_metric_box(ax, ["matrix view"], visualPlan)
+    return ["matrix_summary"]
+
+
+def _enhance_time_series(ax, dataProfile, visualPlan, palette, col_map):
+    enhancements = []
+    for line in ax.lines[:visualPlan.get("maxInlineStats", 4)]:
+        x = np.asarray(line.get_xdata(), dtype=float)
+        y = np.asarray(line.get_ydata(), dtype=float)
+        if len(x) < 2 or len(y) < 2:
+            continue
+        label = line.get_label()
+        if not label or label.startswith("_"):
+            label = "series"
+        ax.text(x[-1], y[-1], str(label)[:16], fontsize=5, ha="left",
+                va="center", color=line.get_color(), clip_on=False)
+        peak_idx = int(np.nanargmax(y))
+        ax.scatter([x[peak_idx]], [y[peak_idx]], s=14, facecolor="white",
+                   edgecolor=line.get_color(), linewidth=0.6, zorder=7)
+        enhancements.append("endpoint_and_peak_labels")
+    if ax.lines:
+        _add_metric_box(ax, [f"series={len(ax.lines)}", "endpoints labeled"], visualPlan)
+    return enhancements or ["time_context"]
+
+
+def _auc_from_scores(labels, scores):
+    labels = np.asarray(labels, dtype=float)
+    scores = np.asarray(scores, dtype=float)
+    mask = np.isfinite(labels) & np.isfinite(scores)
+    labels = labels[mask]
+    scores = scores[mask]
+    pos = labels == 1
+    neg = labels == 0
+    n_pos, n_neg = int(pos.sum()), int(neg.sum())
+    if n_pos == 0 or n_neg == 0:
+        return None
+    order = np.argsort(scores)
+    ranks = np.empty_like(order, dtype=float)
+    ranks[order] = np.arange(1, len(scores) + 1)
+    return (ranks[pos].sum() - n_pos * (n_pos + 1) / 2) / (n_pos * n_neg)
+
+
+def _enhance_clinical(ax, dataProfile, visualPlan, palette, col_map, chart_type):
+    df = _df_from_profile(dataProfile)
+    score_col = _role(dataProfile, "score", "x")
+    label_col = _role(dataProfile, "label", "event")
+    scores = _numeric_values(df, score_col)
+    labels = _numeric_values(df, label_col)
+    lines = []
+    if chart_type in ("roc", "calibration") and ax.get_xlim()[0] <= 0 <= ax.get_xlim()[1]:
+        ax.plot([0, 1], [0, 1], color="#999999", lw=0.55, ls="--", label="_nolegend_")
+    if len(scores) == len(labels) and len(scores):
+        auc = _auc_from_scores(labels, scores)
+        if auc is not None:
+            lines.append(f"AUC={auc:.2f}")
+        lines.append(f"n={len(scores)}")
+    elif df is not None:
+        try:
+            lines.append(f"n={len(df)}")
+        except TypeError:
+            pass
+    _add_metric_box(ax, lines or ["clinical summary"], visualPlan)
+    return ["clinical_metric_summary"]
+
+
+def _enhance_genomics(ax, dataProfile, visualPlan, palette, col_map, chart_type):
+    df = _df_from_profile(dataProfile)
+    fc_col = _role(dataProfile, "log2fc", "effect", "x")
+    p_col = _role(dataProfile, "nlogp", "padj", "pvalue", "y")
+    label_col = _role(dataProfile, "gene", "feature_id", "label")
+    x = _numeric_values(df, fc_col)
+    y_raw = _numeric_values(df, p_col)
+    if len(x) == 0 or len(y_raw) == 0 or len(x) != len(y_raw):
+        _add_metric_box(ax, ["genomics context"], visualPlan)
+        return ["genomics_context"]
+    y = y_raw
+    p_name = str(p_col).lower() if p_col else ""
+    if "padj" in p_name or "pvalue" in p_name:
+        y = -np.log10(np.clip(y_raw, 1e-300, 1.0))
+    ax.axvline(-1, color="#888888", lw=0.5, ls="--")
+    ax.axvline(1, color="#888888", lw=0.5, ls="--")
+    ax.axhline(1.3, color="#888888", lw=0.5, ls="--")
+    hits = int(np.sum((np.abs(x) >= 1) & (y >= 1.3)))
+    if label_col and df is not None and label_col in df:
+        budget = min(visualPlan.get("maxCalloutsSingle", 8), 6, len(y))
+        for idx in np.argsort(y)[-budget:]:
+            ax.annotate(str(df.iloc[idx][label_col])[:18], (x[idx], y[idx]),
+                        xytext=(3, 3), textcoords="offset points", fontsize=4.5,
+                        arrowprops={"arrowstyle": "-", "lw": 0.25, "color": "#555555"})
+    _add_metric_box(ax, [f"features={len(x)}", f"hits={hits}", "|log2FC|>=1", "FDR/p>=line"], visualPlan)
+    return ["threshold_lines", "top_feature_callouts", "hit_summary"]
+
+
+def _enhance_engineering(ax, dataProfile, visualPlan, palette, col_map):
+    df = _df_from_profile(dataProfile)
+    x_col = _role(dataProfile, "x", "dose", "time")
+    y_col = _role(dataProfile, "y", "response", "value")
+    x = _numeric_values(df, x_col)
+    y = _numeric_values(df, y_col)
+    if len(x) and len(y) and len(x) == len(y):
+        peak_idx = int(np.nanargmax(y))
+        ax.scatter([x[peak_idx]], [y[peak_idx]], s=20, facecolor="white",
+                   edgecolor="black", linewidth=0.6, zorder=8)
+        ax.annotate(f"peak {y[peak_idx]:.2g}", (x[peak_idx], y[peak_idx]),
+                    xytext=(5, 5), textcoords="offset points", fontsize=4.8,
+                    arrowprops={"arrowstyle": "-", "lw": 0.3, "color": "#555555"})
+        _add_metric_box(ax, [f"n={len(y)}", f"peak={y[peak_idx]:.3g}", f"range={np.nanmin(y):.2g}..{np.nanmax(y):.2g}"], visualPlan)
+        return ["peak_annotation", "range_summary"]
+    _add_metric_box(ax, ["engineering summary"], visualPlan)
+    return ["engineering_context"]
+
+
+def _enhance_composition(ax, dataProfile, visualPlan, palette, col_map):
+    df = _df_from_profile(dataProfile)
+    group_col = _role(dataProfile, "group", "feature_id", "label")
+    value_col = _role(dataProfile, "value", "y")
+    values = _numeric_values(df, value_col)
+    lines = []
+    if len(values):
+        total = float(np.nansum(values))
+        lines.extend([f"total={total:.3g}", f"items={len(values)}"])
+    if group_col and df is not None and group_col in df:
+        lines.append(f"categories={df[group_col].nunique()}")
+    _add_metric_box(ax, lines or ["composition summary"], visualPlan)
+    return ["composition_summary"]
+
+
+def _enhance_psych_ecology(ax, dataProfile, visualPlan, palette, col_map):
+    _maybe_reference_zero(ax)
+    df = _df_from_profile(dataProfile)
+    value_col = _role(dataProfile, "value", "y")
+    values = _numeric_values(df, value_col)
+    if len(values):
+        _add_metric_box(ax, [f"n={len(values)}", f"mean={np.nanmean(values):.3g}", f"median={np.nanmedian(values):.3g}"], visualPlan)
+    else:
+        _add_metric_box(ax, ["rank/proportion view"], visualPlan)
+    return ["reference_band", "descriptive_summary"]
+
+
+def _enhance_generic(ax, dataProfile, visualPlan, palette, col_map):
+    df = _df_from_profile(dataProfile)
+    n = None
+    if df is not None:
+        try:
+            n = len(df)
+        except TypeError:
+            n = None
+    _maybe_reference_zero(ax)
+    _add_metric_box(ax, [f"n={n}" if n is not None else "descriptive view"], visualPlan)
+    return ["descriptive_context"]
+
+
+def apply_visual_content_pass(fig, axes, chartPlan, dataProfile, journalProfile, palette, col_map=None):
+    """Add Nature/Cell-style information density after base plotting."""
+    visualPlan = _ensure_visual_content_plan(chartPlan, dataProfile=dataProfile)
+    if visualPlan.get("mode") in ("off", "none"):
+        return {"appliedEnhancementCount": 0, "families": {}}
+
+    panel_lookup = {
+        panel.get("id"): panel.get("chart")
+        for panel in chartPlan.get("panelBlueprint", {}).get("panels", [])
+        if isinstance(panel, dict)
+    }
+    families = {}
+    for panel_id, ax in axes.items():
+        chart_type = panel_lookup.get(panel_id) or chartPlan.get("primaryChart")
+        family = infer_chart_family(chart_type)
+        families[panel_id] = family
+        if family == "distribution":
+            enhancements = _enhance_distribution(ax, dataProfile, visualPlan, palette, col_map)
+        elif family == "scatter_embedding":
+            enhancements = _enhance_scatter(ax, dataProfile, visualPlan, palette, col_map)
+        elif family == "matrix_heatmap":
+            enhancements = _enhance_matrix(ax, dataProfile, visualPlan, palette, col_map)
+        elif family == "time_series":
+            enhancements = _enhance_time_series(ax, dataProfile, visualPlan, palette, col_map)
+        elif family == "clinical_diagnostic":
+            enhancements = _enhance_clinical(ax, dataProfile, visualPlan, palette, col_map, str(chart_type or ""))
+        elif family == "genomics_enrichment":
+            enhancements = _enhance_genomics(ax, dataProfile, visualPlan, palette, col_map, str(chart_type or ""))
+        elif family == "engineering_spectra":
+            enhancements = _enhance_engineering(ax, dataProfile, visualPlan, palette, col_map)
+        elif family == "composition_flow":
+            enhancements = _enhance_composition(ax, dataProfile, visualPlan, palette, col_map)
+        elif family == "psych_ecology":
+            enhancements = _enhance_psych_ecology(ax, dataProfile, visualPlan, palette, col_map)
+        else:
+            enhancements = _enhance_generic(ax, dataProfile, visualPlan, palette, col_map)
+
+        for enhancement in enhancements:
+            _record_visual(visualPlan, panel_id, family, enhancement)
+
+    chartPlan["visualContentPlan"] = visualPlan
+    return {
+        "appliedEnhancementCount": len(visualPlan.get("appliedEnhancements", [])),
+        "families": families,
+        "outsideLayoutElements": visualPlan.get("outsideLayoutElements", False),
+    }
 
 
 def default_crowding_plan():
@@ -933,6 +1430,8 @@ def apply_crowding_management(fig, axes, chartPlan, journalProfile):
         )
 
     apply_subplot_margins(fig, legend_mode_used, has_colorbar=shared_colorbar_applied, legend=legend)
+    if chartPlan.get("visualContentPlan", {}).get("outsideLayoutElements"):
+        fig.subplots_adjust(right=min(fig.subplotpars.right, 0.78))
 
     crowdingPlan["droppedDirectLabelCount"] = dropped_direct_labels
     crowdingPlan["legendScope"] = "figure"
@@ -1041,6 +1540,8 @@ def gen_multipanel(chartPlan, journalProfile, colorSystem, dataProfile, rcParams
                 gen_func(dataProfile["df"], dataProfile, chartPlan, rcParams,
                          colorSystem, col_map=col_map, ax=ax)
 
+    apply_visual_content_pass(fig, axes, chartPlan, dataProfile, journalProfile,
+                              colorSystem, col_map=col_map)
     apply_crowding_management(fig, axes, chartPlan, journalProfile)
 
     for panel in panels:
@@ -1277,7 +1778,7 @@ def gen_umap(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=Non
     return ax
 ```
 
-If a chart is in `CHART_GENERATORS` but not yet backed by a dedicated implementation, emit a template-backed skeleton and note the gap in `styledCode["generatorCoverage"]`.
+All charts in `CHART_GENERATORS` are currently backed by dedicated implementations. If a future registry entry is added before its generator lands, emit a template-backed skeleton and note the gap in `styledCode["generatorCoverage"]`.
 
 ### Step 3.5: Build Reporting Helpers
 
@@ -1322,7 +1823,7 @@ statsReport = build_stats_report(chartPlan, dataProfile)
 def _build_generator_code(needed_names):
     """Return Python source for the needed generator functions.
     If a generator has a full implementation (from Step 3.4d), include it.
-    Otherwise emit a stub that raises NotImplementedError."""
+    Otherwise emit a stub that raises NotImplementedError for future registry drift."""
     # Map of generator name -> function body source (populated from Step 3.4d definitions)
     # Each generator signature: gen_xxx(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=None) -> ax
     generator_sources = {}  # Populated at runtime from the implemented generators
@@ -1370,7 +1871,7 @@ if is_multipanel:
     # Multi-panel mode: use gen_multipanel to create a single figure with shared axes
     primary_call = f"""# Multi-panel figure
 dataProfile_dict = {{"semanticRoles": {{{roles_code}}}, "df": df}}
-chartPlan = {{"primaryChart": "{chartPlan['primaryChart']}", "secondaryCharts": {chartPlan.get("secondaryCharts", [])}, "panelBlueprint": {repr(chartPlan.get("panelBlueprint", {}))}, "crowdingPlan": {repr(chartPlan.get("crowdingPlan", {}))}}}
+    chartPlan = {{"primaryChart": "{chartPlan['primaryChart']}", "secondaryCharts": {chartPlan.get("secondaryCharts", [])}, "panelBlueprint": {repr(chartPlan.get("panelBlueprint", {}))}, "crowdingPlan": {repr(chartPlan.get("crowdingPlan", {}))}, "visualContentPlan": {repr(chartPlan.get("visualContentPlan", {}))}}}
 palette = {repr(colorSystem)}
 
 fig = gen_multipanel(chartPlan, journalProfile, palette, dataProfile_dict, rcParams, col_map=col_map)
@@ -1382,11 +1883,12 @@ else:
     # Single panel mode: generate individual figures
     primary_call = f"""# Primary chart: {chartPlan['primaryChart']}
 dataProfile = {{"semanticRoles": {{{roles_code}}}, "df": df}}
-chartPlan = {{"primaryChart": "{chartPlan['primaryChart']}", "secondaryCharts": {chartPlan.get("secondaryCharts", [])}, "panelBlueprint": {{"layout": {{"recipe": "single", "grid": "1x1"}}, "panels": [{{"id": "A", "role": "hero", "chart": "{chartPlan['primaryChart']}", "source": "primary"}}], "requestedLayout": "single", "finalLayout": "single", "sharedLegend": False, "sharedColorbar": False}}, "crowdingPlan": {repr(chartPlan.get("crowdingPlan", {}))}}}
+    chartPlan = {{"primaryChart": "{chartPlan['primaryChart']}", "secondaryCharts": {chartPlan.get("secondaryCharts", [])}, "panelBlueprint": {{"layout": {{"recipe": "single", "grid": "1x1"}}, "panels": [{{"id": "A", "role": "hero", "chart": "{chartPlan['primaryChart']}", "source": "primary"}}], "requestedLayout": "single", "finalLayout": "single", "sharedLegend": False, "sharedColorbar": False}}, "crowdingPlan": {repr(chartPlan.get("crowdingPlan", {}))}, "visualContentPlan": {repr(chartPlan.get("visualContentPlan", {}))}}}
 palette = {repr(colorSystem)}
 
 fig, ax = plt.subplots(figsize=({journalProfile['single_width_mm']}*MM, 60*MM), constrained_layout=False)
-ax = {primary_gen}(df, dataProfile, chartPlan, rcParams, palette, col_map=col_map)
+ax = {primary_gen}(df, dataProfile, chartPlan, rcParams, palette, col_map=col_map, ax=ax)
+apply_visual_content_pass(fig, {{"A": ax}}, chartPlan, dataProfile, journalProfile, palette, col_map=col_map)
 apply_crowding_management(fig, {{"A": ax}}, chartPlan, journalProfile)
 {savefig_lines}
 plt.close()
@@ -1403,9 +1905,10 @@ plt.close()
             ])
             secondary_calls += f"""
 # Secondary chart: {sec_chart}
-secondaryPlan = {{"primaryChart": "{sec_chart}", "secondaryCharts": [], "panelBlueprint": {{"layout": {{"recipe": "single", "grid": "1x1"}}, "panels": [{{"id": "A", "role": "hero", "chart": "{sec_chart}", "source": "secondary"}}], "requestedLayout": "single", "finalLayout": "single", "sharedLegend": False, "sharedColorbar": False}}, "crowdingPlan": {repr(chartPlan.get("crowdingPlan", {}))}}
+secondaryPlan = {{"primaryChart": "{sec_chart}", "secondaryCharts": [], "panelBlueprint": {{"layout": {{"recipe": "single", "grid": "1x1"}}, "panels": [{{"id": "A", "role": "hero", "chart": "{sec_chart}", "source": "secondary"}}], "requestedLayout": "single", "finalLayout": "single", "sharedLegend": False, "sharedColorbar": False}}, "crowdingPlan": {repr(chartPlan.get("crowdingPlan", {}))}, "visualContentPlan": {repr(chartPlan.get("visualContentPlan", {}))}}
 fig, ax = plt.subplots(figsize=({journalProfile['single_width_mm']}*MM, 60*MM), constrained_layout=False)
-ax = {sec_gen}(df, dataProfile, secondaryPlan, rcParams, palette, col_map=col_map)
+ax = {sec_gen}(df, dataProfile, secondaryPlan, rcParams, palette, col_map=col_map, ax=ax)
+apply_visual_content_pass(fig, {{"A": ax}}, secondaryPlan, dataProfile, journalProfile, palette, col_map=col_map)
 apply_crowding_management(fig, {{"A": ax}}, secondaryPlan, journalProfile)
 {sec_savefig_lines}
 plt.close()
@@ -1470,6 +1973,7 @@ styledCode = {
     "figureSpec": figureSpec,
     "panelGeometry": panelGeometry,
     "colorSystem": colorSystem,
+    "visualContentPlan": chartPlan.get("visualContentPlan", {}),
     "statsReport": statsReport,
     "generatorCoverage": {
         "primary": chartPlan["primaryChart"],
@@ -1484,7 +1988,7 @@ styledCode = {
 > 2. The active memory contains the full protocol, not sentinel-only content
 > 3. Generated code includes output directory creation, source-data hooks, and metadata writing
 > 4. Panel labels, legends, and colorbars are resolved once at figure scope where possible
-> 5. `full_code_string` embeds helper source from `phases/code-gen/helpers.py` and multi-panel source from `phases/code-gen/generators-multipanel.py`, keeps `crowdingPlan` attached to `chartPlan`, passes `col_map` to generators, and writes `savefig` calls for all `workflowPreferences["exportFormats"]`, using `workflowPreferences["rasterDpi"]` for raster outputs
+> 5. `full_code_string` embeds helper source from `phases/code-gen/helpers.py` and multi-panel source from `phases/code-gen/generators-multipanel.py`, keeps `crowdingPlan` and `visualContentPlan` attached to `chartPlan`, passes `ax` and `col_map` to generators, runs `apply_visual_content_pass(...)` before `apply_crowding_management(...)`, and writes `savefig` calls for all `workflowPreferences["exportFormats"]`, using `workflowPreferences["rasterDpi"]` for raster outputs
 
 ### Step 3.4d: Distribution Chart Generators (Implemented)
 
@@ -6488,6 +6992,572 @@ def gen_violin_grouped(df, dataProfile, chartPlan, rcParams, palette, col_map=No
               frameon=False, loc="upper left", bbox_to_anchor=(1.02, 1), borderaxespad=0)
     if standalone:
         apply_chart_polish(ax, "violin_grouped")
+    return ax
+
+
+def gen_line(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=None):
+    """Simple line chart for ordered time, dose, or index trends."""
+    standalone = ax is None
+    plt.rcParams.update(rcParams)
+    roles = dataProfile.get("semanticRoles", {})
+    x_col = roles.get("x") or roles.get("time") or roles.get("dose") or roles.get("condition")
+    y_col = roles.get("value") or roles.get("y") or roles.get("response")
+    group_col = roles.get("group")
+
+    numeric_cols = df.select_dtypes(include="number").columns.tolist()
+    if y_col is None:
+        y_col = numeric_cols[-1] if numeric_cols else None
+    if y_col is None:
+        raise ValueError("line requires a numeric 'value' or 'y' column")
+
+    if standalone:
+        fig, ax = plt.subplots(figsize=(89 * (1 / 25.4), 55 * (1 / 25.4)),
+                           constrained_layout=True)
+
+    fallback = palette.get("categorical", ["#1F4E79", "#C8553D", "#4C956C", "#F2A541"])
+    if x_col is None:
+        x_vals = np.arange(len(df))
+        if group_col and group_col in df.columns:
+            color_map = _extract_colors(palette, df[group_col].dropna().unique())
+            for i, (name, grp) in enumerate(df.groupby(group_col)):
+                ordered = grp.reset_index(drop=True)
+                ax.plot(np.arange(len(ordered)), ordered[y_col], marker="o", markersize=3,
+                        lw=0.9, color=color_map.get(name, fallback[i % len(fallback)]),
+                        label=str(name))
+        else:
+            ax.plot(x_vals, df[y_col], marker="o", markersize=3, lw=0.9, color=fallback[0])
+        ax.set_xlabel("Index")
+    elif group_col and group_col in df.columns:
+        color_map = _extract_colors(palette, df[group_col].dropna().unique())
+        for i, (name, grp) in enumerate(df.groupby(group_col)):
+            ordered = grp.sort_values(x_col)
+            ax.plot(ordered[x_col], ordered[y_col], marker="o", markersize=3,
+                    lw=0.9, color=color_map.get(name, fallback[i % len(fallback)]),
+                    label=str(name))
+        ax.legend(loc="upper left", bbox_to_anchor=(1.02, 1), borderaxespad=0,
+                  frameon=False, fontsize=5)
+        ax.set_xlabel(_display_col(x_col, col_map))
+    else:
+        ordered = df.sort_values(x_col)
+        ax.plot(ordered[x_col], ordered[y_col], marker="o", markersize=3,
+                lw=0.9, color=fallback[0])
+        ax.set_xlabel(_display_col(x_col, col_map))
+
+    ax.set_ylabel(_display_col(y_col, col_map))
+    if standalone:
+        apply_chart_polish(ax, "line")
+    return ax
+
+
+def gen_ma_plot(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=None):
+    """MA plot: average abundance/intensity versus log2 fold change."""
+    standalone = ax is None
+    plt.rcParams.update(rcParams)
+    roles = dataProfile.get("semanticRoles", {})
+    mean_col = roles.get("mean") or roles.get("baseMean") or roles.get("abundance") or roles.get("x")
+    fc_col = roles.get("log2fc") or roles.get("fold_change") or roles.get("effect") or roles.get("y")
+    p_col = roles.get("padj") or roles.get("p_value") or roles.get("pvalue")
+
+    numeric_cols = df.select_dtypes(include="number").columns.tolist()
+    if mean_col is None and numeric_cols:
+        mean_col = numeric_cols[0]
+    if fc_col is None and len(numeric_cols) > 1:
+        fc_col = numeric_cols[1]
+    if mean_col is None or fc_col is None:
+        raise ValueError("ma_plot requires mean abundance and log2 fold-change columns")
+
+    if standalone:
+        fig, ax = plt.subplots(figsize=(89 * (1 / 25.4), 65 * (1 / 25.4)),
+                           constrained_layout=True)
+
+    mean_vals = df[mean_col].astype(float).clip(lower=1e-12)
+    fc_vals = df[fc_col].astype(float)
+    sig = np.zeros(len(df), dtype=bool)
+    if p_col and p_col in df.columns:
+        sig = df[p_col].astype(float) < 0.05
+    sig = sig & (np.abs(fc_vals) >= 1)
+
+    ax.scatter(np.log10(mean_vals[~sig]), fc_vals[~sig], s=9, c="#B8B8B8",
+               alpha=0.55, linewidth=0, label=f"NS ({int((~sig).sum())})")
+    ax.scatter(np.log10(mean_vals[sig]), fc_vals[sig], s=13, c="#C8553D",
+               alpha=0.8, edgecolors="white", linewidth=0.25,
+               label=f"Changed ({int(sig.sum())})")
+    ax.axhline(0, color="black", lw=0.55)
+    ax.axhline(1, color="#777777", lw=0.45, ls="--")
+    ax.axhline(-1, color="#777777", lw=0.45, ls="--")
+    ax.set_xlabel(f"log10({_display_col(mean_col, col_map)})")
+    ax.set_ylabel(_display_col(fc_col, col_map))
+    ax.legend(loc="upper left", bbox_to_anchor=(1.02, 1), borderaxespad=0,
+              frameon=False, fontsize=5)
+    if standalone:
+        apply_chart_polish(ax, "ma_plot")
+    return ax
+
+
+def gen_tsne(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=None):
+    """t-SNE embedding scatter, using supplied tSNE coordinates when present."""
+    standalone = ax is None
+    plt.rcParams.update(rcParams)
+    roles = dataProfile.get("semanticRoles", {})
+    x_col = roles.get("tsne_1") or roles.get("tsne1") or roles.get("x")
+    y_col = roles.get("tsne_2") or roles.get("tsne2") or roles.get("y")
+    group_col = roles.get("group") or roles.get("cell_type")
+
+    numeric_cols = df.select_dtypes(include="number").columns.tolist()
+    if x_col is None or y_col is None:
+        if len(numeric_cols) < 2:
+            raise ValueError("tsne requires tSNE coordinates or at least two numeric columns")
+        matrix = df[numeric_cols].fillna(0).to_numpy(dtype=float)
+        matrix = matrix - matrix.mean(axis=0, keepdims=True)
+        _, _, vt = np.linalg.svd(matrix, full_matrices=False)
+        coords = matrix @ vt[:2].T
+        x_vals, y_vals = coords[:, 0], coords[:, 1]
+        x_label, y_label = "tSNE 1 (fallback embedding)", "tSNE 2 (fallback embedding)"
+    else:
+        x_vals, y_vals = df[x_col].astype(float).values, df[y_col].astype(float).values
+        x_label, y_label = "tSNE 1", "tSNE 2"
+
+    if standalone:
+        fig, ax = plt.subplots(figsize=(89 * (1 / 25.4), 65 * (1 / 25.4)),
+                           constrained_layout=True)
+
+    if group_col and group_col in df.columns:
+        categories = df[group_col].dropna().unique().tolist()
+        color_map = _extract_colors(palette, categories)
+        for cat in categories:
+            mask = df[group_col] == cat
+            ax.scatter(x_vals[mask], y_vals[mask], s=12, alpha=0.75,
+                       color=color_map[cat], edgecolors="white", linewidth=0.25,
+                       label=str(cat))
+        ax.legend(loc="upper left", bbox_to_anchor=(1.02, 1), borderaxespad=0,
+                  frameon=False, fontsize=5)
+    else:
+        ax.scatter(x_vals, y_vals, s=12, alpha=0.75,
+                   color=palette.get("categorical", ["#1F4E79"])[0],
+                   edgecolors="white", linewidth=0.25)
+
+    ax.set_xlabel(x_label)
+    ax.set_ylabel(y_label)
+    if standalone:
+        apply_chart_polish(ax, "tsne")
+    return ax
+
+
+def gen_oncoprint(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=None):
+    """Oncoprint-style alteration matrix for gene-by-sample mutation calls."""
+    standalone = ax is None
+    plt.rcParams.update(rcParams)
+    roles = dataProfile.get("semanticRoles", {})
+    gene_col = roles.get("gene") or roles.get("feature_id") or roles.get("row")
+    sample_col = roles.get("sample") or roles.get("subject_id") or roles.get("column")
+    alteration_col = roles.get("alteration") or roles.get("mutation") or roles.get("value")
+
+    if gene_col and sample_col and alteration_col:
+        mat = df.pivot_table(index=gene_col, columns=sample_col, values=alteration_col,
+                             aggfunc=lambda x: ";".join(sorted(set(map(str, x)))))
+    else:
+        mat = df.copy()
+        if gene_col and gene_col in mat.columns:
+            mat = mat.set_index(gene_col)
+
+    mat = mat.fillna("")
+    genes = list(mat.index)[:40]
+    samples = list(mat.columns)[:80]
+    mat = mat.loc[genes, samples]
+    alteration_types = sorted({str(v) for v in mat.to_numpy().ravel() if str(v) not in ("", "0", "nan", "False")})
+    if not alteration_types:
+        alteration_types = ["altered"]
+    code_map = {alt: i + 1 for i, alt in enumerate(alteration_types)}
+    codes = np.zeros(mat.shape, dtype=float)
+    for i in range(mat.shape[0]):
+        for j in range(mat.shape[1]):
+            value = str(mat.iat[i, j])
+            if value in code_map:
+                codes[i, j] = code_map[value]
+            elif value not in ("", "0", "nan", "False"):
+                codes[i, j] = 1
+
+    if standalone:
+        fig, ax = plt.subplots(figsize=(183 * (1 / 25.4), max(55, 3 * len(genes)) * (1 / 25.4)),
+                           constrained_layout=True)
+
+    cmap_colors = ["#F2F2F2"] + palette.get("categorical", ["#1F4E79", "#C8553D", "#4C956C", "#F2A541"])
+    from matplotlib.colors import ListedColormap, BoundaryNorm
+    cmap = ListedColormap(cmap_colors[:len(alteration_types) + 1])
+    norm = BoundaryNorm(np.arange(-0.5, len(alteration_types) + 1.5), cmap.N)
+    ax.imshow(codes, aspect="auto", interpolation="nearest", cmap=cmap, norm=norm)
+    ax.set_yticks(range(len(genes)))
+    ax.set_yticklabels(genes, fontsize=5)
+    ax.set_xticks([])
+    ax.set_xlabel(f"Samples (n={len(samples)})")
+    ax.set_ylabel("Genes")
+    handles = [plt.Rectangle((0, 0), 1, 1, facecolor=cmap_colors[i + 1]) for i in range(len(alteration_types))]
+    ax.legend(handles, alteration_types, loc="upper left", bbox_to_anchor=(1.02, 1),
+              borderaxespad=0, frameon=False, fontsize=5)
+    if standalone:
+        apply_chart_polish(ax, "oncoprint")
+    return ax
+
+
+def gen_lollipop_mutation(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=None):
+    """Mutation lollipop plot: protein/genomic position versus mutation frequency."""
+    standalone = ax is None
+    plt.rcParams.update(rcParams)
+    roles = dataProfile.get("semanticRoles", {})
+    pos_col = roles.get("position") or roles.get("aa_position") or roles.get("x")
+    count_col = roles.get("count") or roles.get("frequency") or roles.get("value") or roles.get("y")
+    label_col = roles.get("label") or roles.get("mutation") or roles.get("feature_id")
+
+    if pos_col is None or count_col is None:
+        raise ValueError("lollipop_mutation requires 'position' and 'count'/'frequency' columns")
+
+    plot_df = df[[c for c in [pos_col, count_col, label_col] if c and c in df.columns]].dropna().sort_values(pos_col)
+    if standalone:
+        fig, ax = plt.subplots(figsize=(183 * (1 / 25.4), 55 * (1 / 25.4)),
+                           constrained_layout=True)
+
+    color = palette.get("categorical", ["#C8553D"])[0]
+    ax.hlines(0, plot_df[pos_col].min(), plot_df[pos_col].max(), color="#333333", lw=1.0)
+    ax.vlines(plot_df[pos_col], 0, plot_df[count_col], color=color, lw=0.8, alpha=0.75)
+    sizes = 25 + 40 * (plot_df[count_col] / plot_df[count_col].max())
+    ax.scatter(plot_df[pos_col], plot_df[count_col], s=sizes, color=color,
+               edgecolor="white", linewidth=0.35, zorder=3)
+    if label_col:
+        for _, row in plot_df.nlargest(min(8, len(plot_df)), count_col).iterrows():
+            ax.annotate(str(row[label_col])[:16], (row[pos_col], row[count_col]),
+                        xytext=(0, 4), textcoords="offset points",
+                        ha="center", va="bottom", fontsize=4.5,
+                        arrowprops=dict(arrowstyle="-", lw=0.25, color="#555555"))
+    ax.set_xlabel("Position")
+    ax.set_ylabel("Mutation frequency")
+    ax.set_ylim(bottom=0)
+    if standalone:
+        apply_chart_polish(ax, "lollipop_mutation")
+    return ax
+
+
+def gen_manhattan(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=None):
+    """Manhattan plot for chromosome-position association scans."""
+    standalone = ax is None
+    plt.rcParams.update(rcParams)
+    roles = dataProfile.get("semanticRoles", {})
+    chrom_col = roles.get("chromosome") or roles.get("chr") or roles.get("group")
+    pos_col = roles.get("position") or roles.get("x")
+    p_col = roles.get("pvalue") or roles.get("p_value") or roles.get("padj") or roles.get("y")
+
+    if chrom_col is None or pos_col is None or p_col is None:
+        raise ValueError("manhattan requires chromosome, position, and p-value columns")
+
+    plot_df = df[[chrom_col, pos_col, p_col]].dropna().copy()
+    plot_df[p_col] = plot_df[p_col].astype(float).clip(lower=1e-300, upper=1.0)
+    chroms = sorted(plot_df[chrom_col].unique(), key=lambda x: str(x))
+    offset = 0
+    ticks, ticklabels = [], []
+    xs = np.zeros(len(plot_df))
+    for chrom in chroms:
+        idx = plot_df[chrom_col] == chrom
+        sub_pos = plot_df.loc[idx, pos_col].astype(float)
+        xs[idx.to_numpy()] = sub_pos + offset
+        ticks.append(offset + (sub_pos.min() + sub_pos.max()) / 2)
+        ticklabels.append(str(chrom))
+        offset += sub_pos.max() + max(sub_pos.max() * 0.04, 1)
+    plot_df["_x"] = xs
+    plot_df["_nlogp"] = -np.log10(plot_df[p_col])
+
+    if standalone:
+        fig, ax = plt.subplots(figsize=(183 * (1 / 25.4), 60 * (1 / 25.4)),
+                           constrained_layout=True)
+
+    colors = palette.get("categorical", ["#1F4E79", "#C8553D"])
+    for i, chrom in enumerate(chroms):
+        sub = plot_df[plot_df[chrom_col] == chrom]
+        ax.scatter(sub["_x"], sub["_nlogp"], s=6, color=colors[i % len(colors)],
+                   alpha=0.72, linewidth=0)
+    ax.axhline(-np.log10(5e-8), color="#333333", lw=0.5, ls="--")
+    ax.axhline(-np.log10(1e-5), color="#999999", lw=0.45, ls=":")
+    ax.set_xticks(ticks)
+    ax.set_xticklabels(ticklabels, fontsize=5)
+    ax.set_xlabel("Chromosome")
+    ax.set_ylabel("-log10(p-value)")
+    if standalone:
+        apply_chart_polish(ax, "manhattan")
+    return ax
+
+
+def gen_qq(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=None):
+    """Q-Q plot for p-value calibration in association tests."""
+    standalone = ax is None
+    plt.rcParams.update(rcParams)
+    roles = dataProfile.get("semanticRoles", {})
+    p_col = roles.get("pvalue") or roles.get("p_value") or roles.get("padj") or roles.get("value")
+    if p_col is None:
+        numeric_cols = df.select_dtypes(include="number").columns.tolist()
+        p_col = numeric_cols[0] if numeric_cols else None
+    if p_col is None:
+        raise ValueError("qq requires a p-value column")
+
+    pvals = np.sort(df[p_col].dropna().astype(float).clip(lower=1e-300, upper=1.0).values)
+    n = len(pvals)
+    expected = -np.log10((np.arange(1, n + 1) - 0.5) / n)
+    observed = -np.log10(pvals)
+
+    if standalone:
+        fig, ax = plt.subplots(figsize=(70 * (1 / 25.4), 70 * (1 / 25.4)),
+                           constrained_layout=True)
+
+    ax.scatter(expected, observed, s=9, alpha=0.65, color=palette.get("categorical", ["#1F4E79"])[0],
+               edgecolors="white", linewidth=0.25)
+    lim = max(expected.max(), observed.max()) * 1.05
+    ax.plot([0, lim], [0, lim], color="#333333", lw=0.6, ls="--")
+    ax.set_xlim(0, lim)
+    ax.set_ylim(0, lim)
+    ax.set_xlabel("Expected -log10(p)")
+    ax.set_ylabel("Observed -log10(p)")
+    if standalone:
+        apply_chart_polish(ax, "qq")
+    return ax
+
+
+def gen_spatial_feature(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=None):
+    """Spatial feature plot with spot coordinates colored by expression/value."""
+    standalone = ax is None
+    plt.rcParams.update(rcParams)
+    roles = dataProfile.get("semanticRoles", {})
+    x_col = roles.get("spatial_x") or roles.get("x")
+    y_col = roles.get("spatial_y") or roles.get("y")
+    value_col = roles.get("value") or roles.get("feature") or roles.get("score")
+    group_col = roles.get("group")
+    numeric_cols = df.select_dtypes(include="number").columns.tolist()
+    if x_col is None and len(numeric_cols) >= 1:
+        x_col = numeric_cols[0]
+    if y_col is None and len(numeric_cols) >= 2:
+        y_col = numeric_cols[1]
+    if x_col is None or y_col is None:
+        raise ValueError("spatial_feature requires spatial x/y coordinates")
+
+    if standalone:
+        fig, ax = plt.subplots(figsize=(80 * (1 / 25.4), 80 * (1 / 25.4)),
+                           constrained_layout=True)
+
+    if value_col and value_col in df.columns:
+        sc = ax.scatter(df[x_col], df[y_col], c=df[value_col], cmap="viridis",
+                        s=12, alpha=0.85, linewidth=0)
+        cbar = plt.colorbar(sc, ax=ax, shrink=0.65, pad=0.02)
+        cbar.set_label(_display_col(value_col, col_map), fontsize=5)
+    elif group_col and group_col in df.columns:
+        categories = df[group_col].dropna().unique().tolist()
+        color_map = _extract_colors(palette, categories)
+        for cat in categories:
+            sub = df[df[group_col] == cat]
+            ax.scatter(sub[x_col], sub[y_col], color=color_map[cat], s=12,
+                       alpha=0.85, linewidth=0, label=str(cat))
+        ax.legend(loc="upper left", bbox_to_anchor=(1.02, 1), borderaxespad=0,
+                  frameon=False, fontsize=5)
+    else:
+        ax.scatter(df[x_col], df[y_col], color=palette.get("categorical", ["#1F4E79"])[0],
+                   s=12, alpha=0.85, linewidth=0)
+    ax.set_xlabel(_display_col(x_col, col_map))
+    ax.set_ylabel(_display_col(y_col, col_map))
+    ax.set_aspect("equal", adjustable="datalim")
+    if standalone:
+        apply_chart_polish(ax, "spatial_feature")
+    return ax
+
+
+def gen_composition_dotplot(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=None):
+    """Composition dot plot: group-by-feature proportions encoded by size and color."""
+    standalone = ax is None
+    plt.rcParams.update(rcParams)
+    roles = dataProfile.get("semanticRoles", {})
+    feature_col = roles.get("feature_id") or roles.get("feature") or roles.get("label")
+    group_col = roles.get("group") or roles.get("sample")
+    value_col = roles.get("value") or roles.get("proportion") or roles.get("fraction")
+    if feature_col is None or group_col is None or value_col is None:
+        raise ValueError("composition_dotplot requires feature, group, and value columns")
+
+    pivot = df.pivot_table(index=feature_col, columns=group_col, values=value_col,
+                           aggfunc="sum", fill_value=0)
+    features = pivot.index.tolist()
+    groups = pivot.columns.tolist()
+    if standalone:
+        fig, ax = plt.subplots(figsize=(max(89, 8 * len(groups)) * (1 / 25.4),
+                                    max(60, 5 * len(features)) * (1 / 25.4)),
+                           constrained_layout=True)
+
+    vmax = pivot.to_numpy().max() or 1
+    for i, feature in enumerate(features):
+        for j, group in enumerate(groups):
+            value = pivot.loc[feature, group]
+            ax.scatter(j, i, s=12 + 120 * value / vmax, c=value, cmap="viridis",
+                       vmin=0, vmax=vmax, edgecolor="white", linewidth=0.25)
+    ax.set_xticks(range(len(groups)))
+    ax.set_xticklabels(groups, rotation=45, ha="right", fontsize=5)
+    ax.set_yticks(range(len(features)))
+    ax.set_yticklabels(features, fontsize=5)
+    ax.set_xlabel(_display_col(group_col, col_map))
+    ax.set_ylabel(_display_col(feature_col, col_map))
+    if standalone:
+        apply_chart_polish(ax, "composition_dotplot")
+    return ax
+
+
+def gen_bubble_matrix(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=None):
+    """Bubble matrix with row/column categories and numeric bubble magnitude."""
+    standalone = ax is None
+    plt.rcParams.update(rcParams)
+    roles = dataProfile.get("semanticRoles", {})
+    row_col = roles.get("row") or roles.get("feature_id") or roles.get("y") or roles.get("label")
+    col_col = roles.get("column") or roles.get("group") or roles.get("x")
+    value_col = roles.get("value") or roles.get("size")
+    if row_col is None or col_col is None or value_col is None:
+        raise ValueError("bubble_matrix requires row, column, and value columns")
+
+    pivot = df.pivot_table(index=row_col, columns=col_col, values=value_col,
+                           aggfunc="mean", fill_value=0)
+    rows = pivot.index.tolist()
+    cols = pivot.columns.tolist()
+    values = pivot.to_numpy(dtype=float)
+    vmax = np.nanmax(np.abs(values)) or 1
+    if standalone:
+        fig, ax = plt.subplots(figsize=(max(80, 7 * len(cols)) * (1 / 25.4),
+                                    max(60, 5 * len(rows)) * (1 / 25.4)),
+                           constrained_layout=True)
+
+    for i, row in enumerate(rows):
+        for j, col in enumerate(cols):
+            value = pivot.loc[row, col]
+            ax.scatter(j, i, s=10 + 150 * abs(value) / vmax, c=value,
+                       cmap="coolwarm", vmin=-vmax, vmax=vmax,
+                       edgecolor="white", linewidth=0.25)
+    ax.set_xticks(range(len(cols)))
+    ax.set_xticklabels(cols, rotation=45, ha="right", fontsize=5)
+    ax.set_yticks(range(len(rows)))
+    ax.set_yticklabels(rows, fontsize=5)
+    ax.invert_yaxis()
+    ax.set_xlabel(_display_col(col_col, col_map))
+    ax.set_ylabel(_display_col(row_col, col_map))
+    if standalone:
+        apply_chart_polish(ax, "bubble_matrix")
+    return ax
+
+
+def gen_stacked_bar_comp(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=None):
+    """Stacked composition bar chart with optional within-bar normalization."""
+    standalone = ax is None
+    plt.rcParams.update(rcParams)
+    roles = dataProfile.get("semanticRoles", {})
+    x_col = roles.get("x") or roles.get("sample") or roles.get("group")
+    stack_col = roles.get("stack") or roles.get("category") or roles.get("feature_id")
+    value_col = roles.get("value") or roles.get("proportion") or roles.get("count")
+    if x_col is None or stack_col is None or value_col is None:
+        raise ValueError("stacked_bar_comp requires x/group, stack/category, and value columns")
+
+    pivot = df.pivot_table(index=x_col, columns=stack_col, values=value_col,
+                           aggfunc="sum", fill_value=0)
+    row_sums = pivot.sum(axis=1).replace(0, 1)
+    if row_sums.max() > 1.5:
+        pivot = pivot.div(row_sums, axis=0)
+    categories = pivot.columns.tolist()
+    color_map = _extract_colors(palette, categories)
+    if standalone:
+        fig, ax = plt.subplots(figsize=(max(89, 7 * len(pivot)) * (1 / 25.4), 60 * (1 / 25.4)),
+                           constrained_layout=True)
+
+    bottom = np.zeros(len(pivot))
+    x = np.arange(len(pivot))
+    for cat in categories:
+        vals = pivot[cat].values
+        ax.bar(x, vals, bottom=bottom, color=color_map.get(cat, "#999999"),
+               edgecolor="white", linewidth=0.35, width=0.72, label=str(cat))
+        bottom += vals
+    ax.set_xticks(x)
+    ax.set_xticklabels(pivot.index.astype(str), rotation=45, ha="right", fontsize=5)
+    ax.set_ylabel("Proportion" if pivot.to_numpy().max() <= 1.0 else _display_col(value_col, col_map))
+    ax.legend(loc="upper left", bbox_to_anchor=(1.02, 1), borderaxespad=0,
+              frameon=False, fontsize=5)
+    if standalone:
+        apply_chart_polish(ax, "stacked_bar_comp")
+    return ax
+
+
+def gen_alluvial(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=None):
+    """Two-stage alluvial flow diagram between source and target categories."""
+    standalone = ax is None
+    plt.rcParams.update(rcParams)
+    roles = dataProfile.get("semanticRoles", {})
+    source_col = roles.get("source") or roles.get("from") or roles.get("feature_id")
+    target_col = roles.get("target") or roles.get("to") or roles.get("group")
+    value_col = roles.get("value") or roles.get("count")
+    if source_col is None or target_col is None:
+        raise ValueError("alluvial requires source and target columns")
+
+    flows = df.copy()
+    if value_col is None or value_col not in flows.columns:
+        flows["_value"] = 1.0
+        value_col = "_value"
+    flows = flows.groupby([source_col, target_col], as_index=False)[value_col].sum()
+    sources = flows[source_col].dropna().unique().tolist()
+    targets = flows[target_col].dropna().unique().tolist()
+    total = flows[value_col].sum() or 1.0
+
+    if standalone:
+        fig, ax = plt.subplots(figsize=(120 * (1 / 25.4), 70 * (1 / 25.4)),
+                           constrained_layout=True)
+
+    colors = _extract_colors(palette, sources)
+    src_totals = flows.groupby(source_col)[value_col].sum().reindex(sources).fillna(0)
+    tgt_totals = flows.groupby(target_col)[value_col].sum().reindex(targets).fillna(0)
+
+    def _spans(labels, totals):
+        spans = {}
+        cursor = 0.0
+        gap = 0.025
+        usable = 1.0 - gap * max(len(labels) - 1, 0)
+        for label in labels:
+            height = usable * totals[label] / total
+            spans[label] = [cursor, cursor + height]
+            cursor += height + gap
+        return spans
+
+    src_spans = _spans(sources, src_totals)
+    tgt_spans = _spans(targets, tgt_totals)
+    src_cursor = {k: v[0] for k, v in src_spans.items()}
+    tgt_cursor = {k: v[0] for k, v in tgt_spans.items()}
+
+    for label, (y0, y1) in src_spans.items():
+        ax.add_patch(plt.Rectangle((0.05, y0), 0.08, y1 - y0,
+                                   facecolor=colors.get(label, "#999999"),
+                                   edgecolor="white", linewidth=0.4))
+        ax.text(0.035, (y0 + y1) / 2, str(label), ha="right", va="center", fontsize=5)
+    for label, (y0, y1) in tgt_spans.items():
+        ax.add_patch(plt.Rectangle((0.87, y0), 0.08, y1 - y0,
+                                   facecolor="#D9D9D9", edgecolor="white", linewidth=0.4))
+        ax.text(0.965, (y0 + y1) / 2, str(label), ha="left", va="center", fontsize=5)
+
+    for _, row in flows.iterrows():
+        source = row[source_col]
+        target = row[target_col]
+        height = row[value_col] / total * (1.0 - 0.025 * max(len(sources) - 1, 0))
+        y0s, y1s = src_cursor[source], src_cursor[source] + height
+        y0t, y1t = tgt_cursor[target], tgt_cursor[target] + height
+        src_cursor[source] = y1s
+        tgt_cursor[target] = y1t
+        verts = [(0.13, y0s), (0.45, y0s), (0.55, y0t), (0.87, y0t),
+                 (0.87, y1t), (0.55, y1t), (0.45, y1s), (0.13, y1s)]
+        from matplotlib.path import Path
+        from matplotlib.patches import PathPatch
+        path = Path(verts + [verts[0]],
+                    [Path.MOVETO, Path.CURVE4, Path.CURVE4, Path.CURVE4,
+                     Path.LINETO, Path.CURVE4, Path.CURVE4, Path.CURVE4,
+                     Path.CLOSEPOLY])
+        ax.add_patch(PathPatch(path, facecolor=colors.get(source, "#999999"),
+                               edgecolor="none", alpha=0.35))
+
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    ax.axis("off")
+    if standalone:
+        apply_chart_polish(ax, "alluvial")
     return ax
 ```
 **Usage notes for multi-panel composition:**

@@ -1,7 +1,7 @@
 # Phase 2: Chart Recommendation, Statistics, And Panel Blueprint
 
 > **COMPACT SENTINEL [Phase 2: recommend-stats]**
-> This phase contains 7 execution steps (Step 2.1 - 2.7).
+> This phase contains 9 execution steps (Step 2.1 - 2.9).
 > If you can read this sentinel but cannot find the full Step protocol below, context has been compressed.
 > Recovery: `Read("phases/02-recommend-stats.md")`
 
@@ -13,6 +13,7 @@ Resolve the domain playbook, expand chart coverage, choose inferential or descri
 - Recommend a primary chart plus domain-appropriate secondary charts
 - Select a conservative statistical plan that matches the data design
 - Build a reusable `panelBlueprint` for multi-panel assembly
+- Build a `visualContentPlan` for Nature/Cell-style information density
 - Build a stable `palettePlan` aligned with journal and domain semantics
 
 ## Execution
@@ -74,56 +75,46 @@ def recommend_chart_bundle(dataProfile, workflowPreferences):
     n_obs = dataProfile["nObservations"]
     domain = dataProfile["domainHints"]["primary"]
 
-    # Implemented-only filter: only recommend charts with real gen_ functions
+    # Implemented-only filter: every registered chart key has a real gen_ function.
     IMPLEMENTED_CHARTS = {
-        "violin+strip", "box+strip", "raincloud", "beeswarm", "paired_lines",
-        "dumbbell", "line_ci", "spaghetti", "heatmap+cluster", "heatmap_pure",
-        "volcano", "pca", "umap", "roc", "pr_curve", "calibration", "km",
-        "forest", "waterfall", "dose_response", "scatter_regression", "correlation",
-        "violin_paired", "violin_split", "dot_strip", "histogram", "density",
-        "ecdf", "ridge", "bland_altman", "funnel_plot", "pareto_chart",
-        "control_chart", "box_paired", "mean_diff_plot", "ci_plot",
-        "cook_distance", "leverage_plot", "pp_plot", "residual_vs_fitted",
-        "scale_location", "circos_karyotype", "gene_structure", "pathway_map",
-        "kegg_bar", "treemap", "sunburst", "swimmer_plot", "risk_ratio_plot",
-        "sankey", "radar", "likert_divergent", "likert_stacked",
-        "clustered_bar", "grouped_bar", "ordination_plot", "biodiversity_radar",
-        "bubble_scatter", "connected_scatter", "species_abundance",
-        "shannon_diversity", "stress_strain", "xrd_pattern", "enrichment_dotplot"
+        # Mirrors phases/code-gen/registry.py; every registered key has a gen_ implementation.
+        "violin_strip", "box_strip", "raincloud", "beeswarm", "paired_lines",
+        "dumbbell", "line", "line_ci", "spaghetti", "heatmap_cluster",
+        "heatmap_pure", "volcano", "ma_plot", "pca", "umap",
+        "tsne", "enrichment_dotplot", "oncoprint", "lollipop_mutation", "roc",
+        "pr_curve", "calibration", "km", "forest", "waterfall",
+        "dose_response", "scatter_regression", "correlation", "manhattan", "qq",
+        "spatial_feature", "composition_dotplot", "ridge", "bubble_matrix", "stacked_bar_comp",
+        "alluvial", "violin_paired", "violin_split", "dot_strip", "histogram",
+        "density", "ecdf", "joyplot", "sparkline", "area",
+        "area_stacked", "streamgraph", "gantt", "timeline_annotation", "residual_vs_fitted",
+        "scale_location", "cook_distance", "leverage_plot", "pp_plot", "bland_altman",
+        "funnel_plot", "pareto_chart", "control_chart", "box_paired", "mean_diff_plot",
+        "ci_plot", "dotplot", "adjacency_matrix", "heatmap_annotated", "heatmap_triangular",
+        "heatmap_mirrored", "cooccurrence_matrix", "circos_karyotype", "gene_structure", "pathway_map",
+        "kegg_bar", "go_treemap", "chromosome_coverage", "swimmer_plot", "risk_ratio_plot",
+        "caterpillar_plot", "tornado_chart", "nomogram", "decision_curve", "treemap",
+        "sunburst", "waffle_chart", "marimekko", "stacked_area_comp", "nested_donut",
+        "chord_diagram", "parallel_coordinates", "sankey", "radar", "stress_strain",
+        "phase_diagram", "nyquist_plot", "xrd_pattern", "ftir_spectrum", "dsc_thermogram",
+        "species_abundance", "shannon_diversity", "ordination_plot", "biodiversity_radar", "likert_divergent",
+        "likert_stacked", "mediation_path", "interaction_plot", "bubble_scatter", "connected_scatter",
+        "stem_plot", "lollipop_horizontal", "slope_chart", "bump_chart", "mosaic_plot",
+        "clustered_bar", "diverging_bar", "grouped_bar", "heatmap_symmetric", "violin_grouped",
+        "violin+strip", "box+strip", "heatmap+cluster"
     }
 
     def _safe(chart):
         """Return chart if implemented, else closest fallback."""
-        if chart in IMPLEMENTED_CHARTS:
+        key = str(chart or "").replace("+", "_")
+        if chart in IMPLEMENTED_CHARTS or key in IMPLEMENTED_CHARTS:
             return chart
         FALLBACKS = {
-            "manhattan": "volcano", "qq": "pp_plot", "tsne": "umap",
-            "ma_plot": "volcano", "spatial_feature": "umap",
-            "oncoprint": "heatmap_pure", "lollipop_mutation": "scatter_regression",
-            "alluvial": "sankey", "ridgeline": "ridge",
-            "stacked_bar_comp": "clustered_bar", "composition_dotplot": "bubble_scatter",
-            "go_treemap": "treemap", "chromosome_coverage": "circos_karyotype",
-            "nomogram": "forest", "decision_curve": "calibration",
-            "caterpillar_plot": "forest", "tornado_chart": "pareto_chart",
-            "interaction_plot": "line_ci", "mediation_path": "scatter_regression",
-            "likert_stacked": "likert_divergent", "marimekko": "treemap",
-            "nested_donut": "sunburst", "stacked_area_comp": "sankey",
-            "chord_diagram": "sankey", "parallel_coordinates": "radar",
-            "nyquist_plot": "scatter_regression", "phase_diagram": "heatmap_pure",
-            "ftir_spectrum": "xrd_pattern", "dsc_thermogram": "xrd_pattern",
-            "mosaic_plot": "clustered_bar", "bump_chart": "connected_scatter",
-            "slope_chart": "dumbbell", "stem_plot": "line_ci",
-            "lollipop_horizontal": "pareto_chart", "diverging_bar": "grouped_bar",
-            "heatmap_symmetric": "correlation", "heatmap_triangular": "correlation",
-            "heatmap_mirrored": "correlation", "heatmap_annotated": "heatmap_pure",
-            "adjacency_matrix": "heatmap_pure", "cooccurrence_matrix": "correlation",
-            "dotplot": "bubble_scatter", "joyplot": "ridge",
-            "sparkline": "line_ci", "area": "line_ci", "area_stacked": "line_ci",
-            "streamgraph": "line_ci", "gantt": "swimmer_plot",
-            "timeline_annotation": "line_ci", "waffle_chart": "treemap",
-            "box_paired": "box+strip"
+            # Keep only non-registry aliases here; registered keys should not be downgraded.
+            "ridgeline": "ridge",
+            "dot+box": "box+strip"
         }
-        return FALLBACKS.get(chart, "box+strip")
+        return FALLBACKS.get(key, "box+strip")
 
     # Direct pattern matches
     if "genomic_association" in patterns:
@@ -396,7 +387,94 @@ def build_crowding_plan(primaryChart, secondaryCharts, dataProfile, workflowPref
     }
 ```
 
-### Step 2.7: Build `palettePlan`
+### Step 2.7: Build `visualContentPlan`
+
+```python
+def infer_visual_chart_family(chart_type):
+    key = str(chart_type or "").replace("+", "_").lower()
+    family_map = {
+        "distribution": {
+            "violin_strip", "box_strip", "raincloud", "beeswarm", "paired_lines",
+            "dumbbell", "violin_paired", "violin_split", "dot_strip", "histogram",
+            "density", "ecdf", "ridge", "joyplot", "box_paired", "mean_diff_plot",
+            "ci_plot", "clustered_bar", "grouped_bar", "violin_grouped",
+        },
+        "scatter_embedding": {
+            "scatter_regression", "correlation", "pca", "umap", "tsne",
+            "ordination_plot", "bubble_scatter", "connected_scatter",
+            "residual_vs_fitted", "scale_location", "pp_plot", "leverage_plot",
+            "cook_distance", "bland_altman", "funnel_plot",
+        },
+        "matrix_heatmap": {
+            "heatmap_cluster", "heatmap_pure", "heatmap_annotated",
+            "heatmap_triangular", "heatmap_mirrored", "heatmap_symmetric",
+            "adjacency_matrix", "cooccurrence_matrix", "bubble_matrix",
+            "dotplot", "composition_dotplot",
+        },
+        "time_series": {
+            "line", "line_ci", "spaghetti", "sparkline", "area", "area_stacked",
+            "streamgraph", "gantt", "timeline_annotation", "control_chart",
+            "slope_chart", "bump_chart",
+        },
+        "clinical_diagnostic": {
+            "roc", "pr_curve", "calibration", "km", "forest", "waterfall",
+            "swimmer_plot", "risk_ratio_plot", "caterpillar_plot",
+            "tornado_chart", "nomogram", "decision_curve",
+        },
+        "genomics_enrichment": {
+            "volcano", "ma_plot", "manhattan", "qq", "enrichment_dotplot",
+            "oncoprint", "lollipop_mutation", "circos_karyotype",
+            "gene_structure", "pathway_map", "kegg_bar", "go_treemap",
+            "chromosome_coverage",
+        },
+        "engineering_spectra": {
+            "dose_response", "stress_strain", "phase_diagram", "nyquist_plot",
+            "xrd_pattern", "ftir_spectrum", "dsc_thermogram",
+        },
+        "composition_flow": {
+            "stacked_bar_comp", "alluvial", "treemap", "sunburst",
+            "waffle_chart", "marimekko", "stacked_area_comp",
+            "nested_donut", "chord_diagram", "parallel_coordinates",
+            "sankey", "radar", "pareto_chart", "lollipop_horizontal",
+            "stem_plot", "mosaic_plot", "diverging_bar",
+        },
+        "psych_ecology": {
+            "species_abundance", "shannon_diversity", "biodiversity_radar",
+            "likert_divergent", "likert_stacked", "mediation_path",
+            "interaction_plot",
+        },
+    }
+    for family, charts in family_map.items():
+        if key in charts:
+            return family
+    return "generic"
+
+
+def build_visual_content_plan(primaryChart, secondaryCharts, dataProfile, workflowPreferences):
+    charts = [primaryChart] + list(secondaryCharts or [])
+    mode = workflowPreferences.get("visualContentMode", "nature_cell_dense")
+    density = workflowPreferences.get("visualDensity", "high")
+
+    return {
+        "mode": mode,
+        "density": density,
+        "maxCalloutsSingle": 8,
+        "maxInlineStats": 4,
+        "useInsetAxes": True,
+        "noInventedStats": True,
+        "familyByChart": {chart: infer_visual_chart_family(chart) for chart in charts if chart},
+        "appliedEnhancements": [],
+        "familyByPanel": {},
+        "outsideLayoutElements": False,
+        "notes": [
+            "do_not_add_new_chart_types",
+            "statistics_must_be_data_derived",
+            "nature_cell_information_density"
+        ]
+    }
+```
+
+### Step 2.8: Build `palettePlan`
 
 ```python
 def build_palette_plan(primaryChart, dataProfile, workflowPreferences):
@@ -428,7 +506,7 @@ def build_palette_plan(primaryChart, dataProfile, workflowPreferences):
     return plan
 ```
 
-### Step 2.8: Assemble `chartPlan` And Confirm With User
+### Step 2.9: Assemble `chartPlan` And Confirm With User
 
 ```python
 domainProfile = resolve_domain(dataProfile, workflowPreferences)
@@ -437,6 +515,7 @@ statPlan = select_statistical_plan(dataProfile, primaryChart, workflowPreference
 annotations = configure_annotations(dataProfile, primaryChart, statPlan)
 panelBlueprint = build_panel_blueprint(primaryChart, secondaryCharts, dataProfile, workflowPreferences)
 crowdingPlan = build_crowding_plan(primaryChart, secondaryCharts, dataProfile, workflowPreferences, panelBlueprint)
+visualContentPlan = build_visual_content_plan(primaryChart, secondaryCharts, dataProfile, workflowPreferences)
 palettePlan = build_palette_plan(primaryChart, dataProfile, workflowPreferences)
 
 chartPlan = {
@@ -450,9 +529,10 @@ chartPlan = {
     "annotations": annotations,
     "panelBlueprint": panelBlueprint,
     "crowdingPlan": crowdingPlan,
+    "visualContentPlan": visualContentPlan,
     "palettePlan": palettePlan,
     "journalOverrides": {},
-    "rationale": "Selected using semantic roles, special patterns, domain hints, requested story mode, and clarity-first crowding control."
+    "rationale": "Selected using semantic roles, special patterns, domain hints, requested story mode, clarity-first crowding control, and Nature/Cell dense visual content."
 }
 ```
 

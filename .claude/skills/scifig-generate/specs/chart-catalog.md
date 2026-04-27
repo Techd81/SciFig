@@ -2,7 +2,7 @@
 
 Expanded chart taxonomy for `scifig-generate`. Use this as the lookup table during Phase 2.
 
-**Status**: ✅ = implemented (66), ⬜ = registered but not yet implemented (49)
+**Status**: ✅ = implemented (115); every registered chart has a dedicated `gen_` implementation.
 
 ## Core Quantitative Charts
 
@@ -14,7 +14,7 @@ Expanded chart taxonomy for `scifig-generate`. Use this as the lookup table duri
 | `beeswarm` | ✅ | grouped numeric values, low/moderate n | Exact point placement |
 | `paired_lines` | ✅ | subject ID + before/after | Paired response visualization |
 | `dumbbell` | ✅ | two values per subject/group | Before/after delta |
-| `line` | ⬜ | ordered time or dose axis | Mean/median trend |
+| `line` | ✅ | ordered time or dose axis | Mean/median trend |
 | `line_ci` | ✅ | ordered axis + CI/SE | Trajectory with uncertainty band |
 | `spaghetti` | ✅ | repeated subject trajectories | Individual longitudinal traces |
 | `ridge` | ✅ | many related distributions | Cohort density landscape |
@@ -26,15 +26,15 @@ Expanded chart taxonomy for `scifig-generate`. Use this as the lookup table duri
 | `heatmap+cluster` | ✅ | matrix-like feature x sample | Structured abundance map |
 | `heatmap_pure` | ✅ | matrix, no clustering | Ordered matrix with annotation |
 | `volcano` | ✅ | fold-change + p-value | Differential analysis overview |
-| `ma_plot` | ⬜ | mean abundance + fold-change | Differential expression with intensity |
+| `ma_plot` | ✅ | mean abundance + fold-change | Differential expression with intensity |
 | `pca` | ✅ | PC columns or reducible matrix | Global structure |
 | `umap` | ✅ | UMAP columns or embedding | Single-cell / manifold embedding |
-| `tsne` | ⬜ | tSNE columns | Nonlinear embedding |
+| `tsne` | ✅ | tSNE columns | Nonlinear embedding |
 | `enrichment_dotplot` | ✅ | pathway terms + score + p-value | Pathway/GSEA summary |
-| `oncoprint` | ⬜ | mutation matrix | Cancer genomics summary |
-| `lollipop_mutation` | ⬜ | AA position + mutation freq | Mutation landscape |
-| `manhattan` | ⬜ | chr + position + p-value | GWAS association scan |
-| `qq` | ⬜ | p-value only | Association calibration |
+| `oncoprint` | ✅ | mutation matrix | Cancer genomics summary |
+| `lollipop_mutation` | ✅ | AA position + mutation freq | Mutation landscape |
+| `manhattan` | ✅ | chr + position + p-value | GWAS association scan |
+| `qq` | ✅ | p-value only | Association calibration |
 | `correlation` | ✅ | pairwise associations matrix | Feature association overview |
 
 ## Clinical / Modeling Charts
@@ -47,7 +47,7 @@ Expanded chart taxonomy for `scifig-generate`. Use this as the lookup table duri
 | `pr_curve` | ✅ | score + binary label (imbalanced) | Precision-recall assessment |
 | `calibration` | ✅ | predicted risk + observed outcome | Calibration of risk models |
 | `waterfall` | ✅ | ordered patient/response values | Heterogeneous response summary |
-| `stacked_bar_comp` | ⬜ | compositional outcome by group | Cohort composition |
+| `stacked_bar_comp` | ✅ | compositional outcome by group | Cohort composition |
 
 ## Pharmacology / Mechanistic Charts
 
@@ -72,12 +72,12 @@ Expanded chart taxonomy for `scifig-generate`. Use this as the lookup table duri
 
 | Chart | Status | Typical triggers | Best use |
 |-------|--------|------------------|----------|
-| `sparkline` | ⬜ | compact time series | Minimal trend indicator |
-| `area` | ⬜ | time series with fill | Filled area trend |
-| `area_stacked` | ⬜ | compositional time series | Stacked area |
-| `streamgraph` | ⬜ | flowing compositional data | Streamgraph |
-| `gantt` | ⬜ | project timeline | Gantt chart |
-| `timeline_annotation` | ⬜ | annotated time points | Timeline with events |
+| `sparkline` | ✅ | compact time series | Minimal trend indicator |
+| `area` | ✅ | time series with fill | Filled area trend |
+| `area_stacked` | ✅ | compositional time series | Stacked area |
+| `streamgraph` | ✅ | flowing compositional data | Streamgraph |
+| `gantt` | ✅ | project timeline | Gantt chart |
+| `timeline_annotation` | ✅ | annotated time points | Timeline with events |
 
 ## Statistical / Diagnostic Charts
 
@@ -100,12 +100,12 @@ Expanded chart taxonomy for `scifig-generate`. Use this as the lookup table duri
 
 | Chart | Status | Typical triggers | Best use |
 |-------|--------|------------------|----------|
-| `dotplot` | ⬜ | matrix with dot encoding | Dot matrix |
-| `adjacency_matrix` | ⬜ | network adjacency | Graph structure |
-| `heatmap_annotated` | ⬜ | matrix with values | Annotated heatmap |
-| `heatmap_triangular` | ⬜ | symmetric matrix | Triangular heatmap |
-| `heatmap_mirrored` | ⬜ | symmetric matrix | Mirrored heatmap |
-| `cooccurrence_matrix` | ⬜ | co-occurrence data | Co-occurrence heatmap |
+| `dotplot` | ✅ | matrix with dot encoding | Dot matrix |
+| `adjacency_matrix` | ✅ | network adjacency | Graph structure |
+| `heatmap_annotated` | ✅ | matrix with values | Annotated heatmap |
+| `heatmap_triangular` | ✅ | symmetric matrix | Triangular heatmap |
+| `heatmap_mirrored` | ✅ | symmetric matrix | Mirrored heatmap |
+| `cooccurrence_matrix` | ✅ | co-occurrence data | Co-occurrence heatmap |
 
 ## Genomics Extended
 
@@ -115,8 +115,8 @@ Expanded chart taxonomy for `scifig-generate`. Use this as the lookup table duri
 | `gene_structure` | ✅ | gene/exon coordinates | Gene model |
 | `pathway_map` | ✅ | pathway topology | Pathway diagram |
 | `kegg_bar` | ✅ | KEGG enrichment | KEGG bar chart |
-| `go_treemap` | ⬜ | GO enrichment | GO treemap |
-| `chromosome_coverage` | ⬜ | chromosome-wide signal | Coverage plot |
+| `go_treemap` | ✅ | GO enrichment | GO treemap |
+| `chromosome_coverage` | ✅ | chromosome-wide signal | Coverage plot |
 
 ## Clinical Extended
 
@@ -124,10 +124,10 @@ Expanded chart taxonomy for `scifig-generate`. Use this as the lookup table duri
 |-------|--------|------------------|----------|
 | `swimmer_plot` | ✅ | patient timeline | Swimmer plot |
 | `risk_ratio_plot` | ✅ | risk ratios + CI | Risk forest plot |
-| `caterpillar_plot` | ⬜ | ranked effects | Caterpillar plot |
-| `tornado_chart` | ⬜ | sensitivity analysis | Tornado diagram |
-| `nomogram` | ⬜ | prediction model | Nomogram |
-| `decision_curve` | ⬜ | net benefit analysis | DCA plot |
+| `caterpillar_plot` | ✅ | ranked effects | Caterpillar plot |
+| `tornado_chart` | ✅ | sensitivity analysis | Tornado diagram |
+| `nomogram` | ✅ | prediction model | Nomogram |
+| `decision_curve` | ✅ | net benefit analysis | DCA plot |
 
 ## Composition / Hierarchical
 
@@ -135,17 +135,17 @@ Expanded chart taxonomy for `scifig-generate`. Use this as the lookup table duri
 |-------|--------|------------------|----------|
 | `treemap` | ✅ | hierarchical proportions | Treemap |
 | `sunburst` | ✅ | hierarchical proportions | Sunburst chart |
-| `waffle_chart` | ⬜ | proportional counts | Waffle chart |
-| `marimekko` | ⬜ | variable-width stacked | Marimekko chart |
-| `stacked_area_comp` | ⬜ | compositional time series | Stacked area composition |
-| `nested_donut` | ⬜ | nested proportions | Nested donut |
+| `waffle_chart` | ✅ | proportional counts | Waffle chart |
+| `marimekko` | ✅ | variable-width stacked | Marimekko chart |
+| `stacked_area_comp` | ✅ | compositional time series | Stacked area composition |
+| `nested_donut` | ✅ | nested proportions | Nested donut |
 
 ## Relationship / Network
 
 | Chart | Status | Typical triggers | Best use |
 |-------|--------|------------------|----------|
-| `chord_diagram` | ⬜ | flow between categories | Chord diagram |
-| `parallel_coordinates` | ⬜ | multivariate profiles | Parallel coordinates |
+| `chord_diagram` | ✅ | flow between categories | Chord diagram |
+| `parallel_coordinates` | ✅ | multivariate profiles | Parallel coordinates |
 | `sankey` | ✅ | flow between stages | Sankey diagram |
 | `radar` | ✅ | multi-attribute comparison | Radar/spider chart |
 
@@ -154,11 +154,11 @@ Expanded chart taxonomy for `scifig-generate`. Use this as the lookup table duri
 | Chart | Status | Typical triggers | Best use |
 |-------|--------|------------------|----------|
 | `stress_strain` | ✅ | stress + strain data | Stress-strain curve |
-| `phase_diagram` | ⬜ | composition + temperature | Phase diagram |
-| `nyquist_plot` | ⬜ | impedance data | Nyquist plot |
+| `phase_diagram` | ✅ | composition + temperature | Phase diagram |
+| `nyquist_plot` | ✅ | impedance data | Nyquist plot |
 | `xrd_pattern` | ✅ | 2theta + intensity | XRD diffractogram |
-| `ftir_spectrum` | ⬜ | wavenumber + absorbance | FTIR spectrum |
-| `dsc_thermogram` | ⬜ | temperature + heat flow | DSC curve |
+| `ftir_spectrum` | ✅ | wavenumber + absorbance | FTIR spectrum |
+| `dsc_thermogram` | ✅ | temperature + heat flow | DSC curve |
 
 ## Ecology / Environmental
 
@@ -175,8 +175,8 @@ Expanded chart taxonomy for `scifig-generate`. Use this as the lookup table duri
 |-------|--------|------------------|----------|
 | `likert_divergent` | ✅ | Likert scale responses | Divergent stacked bar |
 | `likert_stacked` | ✅ | Likert scale responses | Stacked bar |
-| `mediation_path` | ⬜ | mediation analysis | Path diagram |
-| `interaction_plot` | ⬜ | factorial design | Interaction plot |
+| `mediation_path` | ✅ | mediation analysis | Path diagram |
+| `interaction_plot` | ✅ | factorial design | Interaction plot |
 
 ## Additional Variants
 
@@ -184,39 +184,30 @@ Expanded chart taxonomy for `scifig-generate`. Use this as the lookup table duri
 |-------|--------|------------------|----------|
 | `bubble_scatter` | ✅ | x/y + size variable | Bubble chart |
 | `connected_scatter` | ✅ | x/y trajectory | Connected scatter |
-| `stem_plot` | ⬜ | discrete signal | Stem plot |
-| `lollipop_horizontal` | ⬜ | ranked values | Horizontal lollipop |
-| `slope_chart` | ⬜ | before/after ranking | Slope chart |
-| `bump_chart` | ⬜ | ranking over time | Bump chart |
-| `mosaic_plot` | ⬜ | categorical association | Mosaic plot |
+| `stem_plot` | ✅ | discrete signal | Stem plot |
+| `lollipop_horizontal` | ✅ | ranked values | Horizontal lollipop |
+| `slope_chart` | ✅ | before/after ranking | Slope chart |
+| `bump_chart` | ✅ | ranking over time | Bump chart |
+| `mosaic_plot` | ✅ | categorical association | Mosaic plot |
 | `clustered_bar` | ✅ | grouped categories | Clustered bar |
-| `diverging_bar` | ⬜ | diverging values | Diverging bar |
+| `diverging_bar` | ✅ | diverging values | Diverging bar |
 | `grouped_bar` | ✅ | grouped categories | Grouped bar |
-| `heatmap_symmetric` | ⬜ | symmetric matrix | Symmetric heatmap |
-| `violin_grouped` | ⬜ | multiple groups | Grouped violin |
+| `heatmap_symmetric` | ✅ | symmetric matrix | Symmetric heatmap |
+| `violin_grouped` | ✅ | multiple groups | Grouped violin |
 
 ## Selection Heuristics
 
 1. If the data support a field-standard chart, prefer it over a generic chart.
-2. Only recommend charts with ✅ status (implemented). Use fallback mapping for ⬜ charts.
+2. Only recommend charts present in the registry. If future registry entries are added before implementation, use a documented fallback until the generator lands.
 3. If the same story can be told with fewer marks, prefer the lower-ink chart.
 4. Use exploratory charts as support panels and inferential charts as hero/validation panels.
 5. If a requested chart is visually fashionable but statistically weak, recommend a safer alternative.
 
-## Fallback Mapping
+## Alias Fallbacks
 
-When a chart is registered but not implemented, use these fallbacks:
+All registered chart keys are implemented. Keep fallbacks only for non-registry aliases or user wording variants:
 
-| Unimplemented | Fallback |
-|---------------|----------|
-| `manhattan` | `volcano` |
-| `qq` | `pp_plot` |
-| `tsne` | `umap` |
-| `ma_plot` | `volcano` |
-| `spatial_feature` | `umap` |
-| `oncoprint` | `heatmap_pure` |
-| `lollipop_mutation` | `scatter_regression` |
-| `alluvial` | `sankey` |
+| Alias | Use |
+|-------|-----|
 | `ridgeline` | `ridge` |
-| `stacked_bar_comp` | `clustered_bar` |
-| `composition_dotplot` | `bubble_scatter` |
+| `dot+box` | `box+strip` |

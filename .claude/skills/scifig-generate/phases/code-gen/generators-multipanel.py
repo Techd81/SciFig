@@ -71,6 +71,8 @@ def gen_multipanel(chartPlan, journalProfile, colorSystem, dataProfile, rcParams
                 gen_func(dataProfile["df"], dataProfile, chartPlan, rcParams,
                          colorSystem, col_map=col_map, ax=ax)
 
+    apply_visual_content_pass(fig, axes, chartPlan, dataProfile, journalProfile,
+                              colorSystem, col_map=col_map)
     apply_crowding_management(fig, axes, chartPlan, journalProfile)
 
     for panel in panels:

@@ -601,9 +601,11 @@ Phase 4: Export, Source Data, Statistical Report
 7. If legend space is tight, adjust columns, shorten labels, reduce spacing, increase margins, or reflow panels before allowing any legend to overlap curves, bars, points, error bars, confidence bands, grids, or heatmap cells.
 8. Use shared legends or shared colorbars when panels encode the same semantics.
 9. Multi-panel figures must have an explicit panel blueprint before code generation.
-10. Prefer vector export and generate source-data friendly artifacts for quantitative panels.
-11. If domain inference is weak, fall back to general biomedical rules instead of overfitting to a guessed specialty.
-12. If statistical assumptions are uncertain, downgrade to a conservative or descriptive choice and explain why.
+10. For implemented single-panel charts, increase Nature/Cell-style information density through data-derived summaries, reference lines, callouts, insets, sample-size labels, and effect-size context before adding new chart types.
+11. Do not invent statistics for visual impact. Every p-value, AUC, effect size, threshold count, or fitted parameter must come from the supplied data or a documented upstream result.
+12. Prefer vector export and generate source-data friendly artifacts for quantitative panels.
+13. If domain inference is weak, fall back to general biomedical rules instead of overfitting to a guessed specialty.
+14. If statistical assumptions are uncertain, downgrade to a conservative or descriptive choice and explain why.
 
 ## Input Processing
 
