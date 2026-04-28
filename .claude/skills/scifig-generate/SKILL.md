@@ -43,7 +43,9 @@ End-to-end workflow for turning real experimental data into submission-ready sci
 3. **Narrative multi-panel design**: Treat multi-panel figures as a story with hero, support, validation, and mechanism panels rather than a loose grid of unrelated plots.
 4. **Palette governance**: Prefer restrained, colorblind-safe palettes; keep semantic mappings consistent across panels; avoid rainbow and uncontrolled red-green contrasts.
 5. **Statistical honesty**: No inferential claims without replicate or cohort meaning. When data only support descriptive visualization, say so.
-6. **Reproducibility-first**: Every figure should be exportable as code plus metadata, source-data manifests, and methods-ready statistical descriptions.
+6. **Policy-driven defaults**: Thresholds for scale, crowding, visual density, render retries, and export QA come from shared workflow policies rather than ad-hoc literals.
+7. **Agent-assisted quality gates**: Use read-only Agents for complex schema review, chart/stat planning, layout/palette audit, generated-code review, and rendered QA.
+8. **Reproducibility-first**: Every figure should be exportable as code plus metadata, source-data manifests, render-QA evidence, and methods-ready statistical descriptions.
 
 ## Interactive Preference Collection
 
@@ -547,22 +549,22 @@ When `workflowPreferences["interactionMode"] == "auto"`:
 Phase 1: Data Input, Structure Detection, Domain Signals
    -> Ref: phases/01-data-detect.md
       Input: file path + workflowPreferences
-      Output: dataProfile (schema, semantic roles, domainHints, risks, panelCandidates)
+      Output: dataProfile (schema, semantic roles, domainHints, risks, panelCandidates, audit)
 
 Phase 2: Chart Recommendation, Stats, Panel Blueprint
    -> Ref: phases/02-recommend-stats.md
       Input: dataProfile + workflowPreferences
-      Output: chartPlan (primary/secondary charts, stats, panelBlueprint, crowdingPlan, palettePlan)
+      Output: chartPlan (primary/secondary charts, stats, panelBlueprint, crowdingPlan, visualContentPlan, palettePlan, delegationReports)
 
 Phase 3: Code Generation, Journal Styling, Multi-panel Composition
    -> Ref: phases/03-code-gen-style.md
       Input: chartPlan + dataProfile + workflowPreferences
-      Output: styledCode (pythonCode, journalProfile, colorSystem, figureSpec, panelGeometry)
+      Output: styledCode (pythonCode, journalProfile, colorSystem, figureSpec, panelGeometry, codeReview)
 
 Phase 4: Export, Source Data, Statistical Report
    -> Ref: phases/04-export-report.md
       Input: styledCode + chartPlan + dataProfile + workflowPreferences
-      Output: outputBundle (figures, code, source data, reports, metadata)
+      Output: outputBundle (figures, code, source data, reports, metadata, renderQa)
 ```
 
 **Phase Reference Documents** (read on-demand):
@@ -581,6 +583,7 @@ Phase 4: Export, Source Data, Statistical Report
 | Journal  | [specs/journal-profiles.md](specs/journal-profiles.md)                 | Nature/Cell/Science-aligned style tokens                  |
 | Charts   | [specs/chart-catalog.md](specs/chart-catalog.md)                       | Expanded chart family taxonomy and triggers               |
 | Domains  | [specs/domain-playbooks.md](specs/domain-playbooks.md)                 | Domain-specific plotting, stats, and panel guidance       |
+| Policies | [specs/workflow-policies.md](specs/workflow-policies.md)               | Shared thresholds, visual impact, performance, QA, agents |
 | Layouts  | [templates/panel-layout-recipes.md](templates/panel-layout-recipes.md) | Reusable multi-panel story recipes                        |
 | Palettes | [templates/palette-presets.md](templates/palette-presets.md)           | Reusable categorical/sequential/diverging palette presets |
 
@@ -589,6 +592,21 @@ Phase 4: Export, Source Data, Statistical Report
 1. `TodoWrite in_progress` -> preserve full content
 2. `TodoWrite completed` -> safe to compress to summary
 3. If a sentinel remains without the full step protocol -> `Read("phases/0N-xxx.md")` before continuing
+
+## Agent Delegation Policy
+
+Do not spawn any Agent before the data-status, file-path, and mode gates are complete. After those gates, delegate only when complexity or risk justifies the overhead, and keep agent work read-only unless the coordinator explicitly asks for a rewritten artifact.
+
+| Agent | Phase | Trigger | Output |
+| ----- | ----- | ------- | ------ |
+| `data-profile-auditor` | 1 | matrix/large data, high missingness, weak replicates, ambiguous roles/domain, survival or dose-response gaps | `dataProfile.audit` |
+| `chart-stats-planner` | 2 | inferential claims, custom domain, high-stakes clinical/statistical charting | `chartPlan.delegationReports.stats` |
+| `panel-layout-auditor` | 2 | more than two panels, shared legend/colorbar, long labels, many groups | `chartPlan.delegationReports.layout` |
+| `palette-journal-auditor` | 2 | many categories, domain semantic colors, grayscale-safe request, journal submission | `chartPlan.delegationReports.palette` |
+| `code-reviewer` | 3 | before Phase 3 completes | `styledCode.codeReview` |
+| `rendered-qa` | 4 | after code execution and before outputBundle | `outputBundle.renderQa` |
+
+Blocking agent findings must route back to the owning phase before advancing. Never bury them in final notes.
 
 ## Core Rules
 
@@ -606,6 +624,8 @@ Phase 4: Export, Source Data, Statistical Report
 12. Prefer vector export and generate source-data friendly artifacts for quantitative panels.
 13. If domain inference is weak, fall back to general biomedical rules instead of overfitting to a guessed specialty.
 14. If statistical assumptions are uncertain, downgrade to a conservative or descriptive choice and explain why.
+15. If rendered QA reports overlap, blank/tiny output, in-axes legends, non-editable vector text, or missing formats, return to Phase 3 or Phase 2 before declaring completion.
+16. Use `specs/workflow-policies.md` for thresholds and budgets; do not add new magic numbers in phase logic without naming the policy.
 
 ## Input Processing
 
@@ -638,6 +658,7 @@ Phase 1 -> dataProfile = {
   riskFlags,
   panelCandidates,
   warnings
+  audit
 }
   ->
 Phase 2 -> chartPlan = {
@@ -648,7 +669,9 @@ Phase 2 -> chartPlan = {
   annotations,
   panelBlueprint,
   crowdingPlan,
+  visualContentPlan,
   palettePlan,
+  delegationReports,
   journalOverrides,
   rationale
 }
@@ -660,6 +683,7 @@ Phase 3 -> styledCode = {
   colorSystem,
   panelGeometry,
   statsReport,
+  codeReview,
   seed
 }
   ->
@@ -670,7 +694,8 @@ Phase 4 -> outputBundle = {
   sourceData,
   panelManifest,
   requirements,
-  metadata
+  metadata,
+  renderQa
 }
 ```
 
@@ -683,6 +708,7 @@ Phase 1 starts:
      -> [pending] Detect structure and semantic roles
      -> [pending] Infer domain hints and panel candidates
      -> [pending] Assess risks and build dataProfile
+     -> [pending] Run data-profile-auditor if complexity triggers fire
 
 Phase 1 ends:
   -> [completed] Phase 1: dataProfile ready
@@ -691,7 +717,8 @@ Phase 2 starts:
   -> [in_progress] Phase 2: chart, stats, panel blueprint
      -> [pending] Resolve domain playbook
      -> [pending] Recommend chart family and stats
-     -> [pending] Build panel blueprint and palette plan
+     -> [pending] Build panel blueprint, visual content, and palette plan
+     -> [pending] Run chart/layout/palette agents if plan complexity triggers fire
 
 Phase 2 ends:
   -> [completed] Phase 2: chartPlan locked
@@ -702,9 +729,9 @@ Collapse completed sub-tasks back to phase-level summaries before the next phase
 ## Post-Phase Updates
 
 - After Phase 1: If domain inference is high confidence, note the selected domain playbook and any field-specific warnings.
-- After Phase 2: Freeze the chart vocabulary, panel blueprint, and palette plan unless the user requests revision.
-- After Phase 3: Validate syntax, imports, and layout consistency before export.
-- After Phase 4: Summarize how the user can iterate without re-running Phase 1.
+- After Phase 2: Freeze the chart vocabulary, panel blueprint, visual-content plan, and palette plan unless the user requests revision.
+- After Phase 3: Validate syntax, imports, code-review findings, generator coverage, and layout consistency before export.
+- After Phase 4: Summarize render QA and how the user can iterate without re-running Phase 1.
 
 ## Error Handling
 
@@ -713,6 +740,7 @@ Collapse completed sub-tasks back to phase-level summaries before the next phase
 - Overcrowded multi-panel plan -> reduce to fewer panels or use a hero-plus-support recipe.
 - Palette collision -> fall back to journal-safe muted palette with grayscale-safe accents.
 - Weak statistical support -> switch to descriptive mode or a more conservative test.
+- Rendered QA failure -> return to Phase 3 for layout/style/code or Phase 2 for an overpacked plan.
 
 ## Coordinator Checklist
 
@@ -726,7 +754,9 @@ Collapse completed sub-tasks back to phase-level summaries before the next phase
 - Read chart/domain/journal references only when needed.
 - Keep the active phase marked `in_progress`.
 - Before Phase 3, ensure the panel blueprint and palette plan are explicit.
-- Before Phase 4, ensure code generation includes source-data and metadata hooks.
+- Before Phase 3, resolve blocking chart/stat/layout/palette agent findings.
+- Before Phase 4, ensure code generation includes source-data, render-QA, and metadata hooks.
+- Before completion, require `renderQa.hardFail == false` and `legendOutsidePlotArea == true`.
 
 ## Related Commands
 

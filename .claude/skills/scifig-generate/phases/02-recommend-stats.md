@@ -24,6 +24,7 @@ Use these files as on-demand references during decision making:
 
 - `specs/chart-catalog.md`
 - `specs/domain-playbooks.md`
+- `specs/workflow-policies.md`
 - `templates/panel-layout-recipes.md`
 - `templates/palette-presets.md`
 
@@ -67,6 +68,15 @@ def resolve_domain(dataProfile, workflowPreferences):
 Use structure, semantic roles, and domain cues together. Prefer field-standard figures where the schema strongly implies them.
 
 ```python
+DATA_SCALE_POLICY = {
+    "point_density_full_max": 400,
+    "point_density_alpha_max": 1000,
+    "clusterable_matrix_rows": 500,
+    "rare_positive_rate": 0.20,
+    "legend_bottom_group_max": 8,
+}
+
+
 def recommend_chart_bundle(dataProfile, workflowPreferences):
     roles = dataProfile["semanticRoles"]
     cols = [c.lower() for c in dataProfile["columnNames"]]
@@ -140,7 +150,7 @@ def recommend_chart_bundle(dataProfile, workflowPreferences):
         label_col = dataProfile["df"][roles["label"]]
         if pd.api.types.is_numeric_dtype(label_col):
             pos_rate = label_col.mean()
-            return "pr_curve" if n_obs > 0 and pos_rate < 0.2 else "roc", ["calibration", "box+strip"]
+            return "pr_curve" if n_obs > 0 and pos_rate < DATA_SCALE_POLICY["rare_positive_rate"] else "roc", ["calibration", "box+strip"]
         return "roc", ["calibration", "box+strip"]
     if "subject_id" in roles and "time" in roles:
         return "spaghetti", ["line_ci", "paired_lines"]
@@ -247,8 +257,37 @@ def _dedupe_charts(charts):
     return ordered
 
 
+def _layout_label_burden(dataProfile):
+    df = dataProfile.get("df")
+    roles = dataProfile.get("semanticRoles", {})
+    if df is None:
+        return 0
+    burden = 0
+    for role in ("group", "condition", "label", "category"):
+        col = roles.get(role)
+        if col and col in df:
+            labels = [str(v) for v in df[col].dropna().unique()]
+            burden += sum(1 for label in labels if len(label) > 24)
+    return min(burden, 6)
+
+
+def _layout_legend_burden(n_groups, label_burden):
+    if n_groups >= 12:
+        return 6 + label_burden
+    if n_groups >= 8:
+        return 4 + label_burden
+    if n_groups >= 6:
+        return 2 + label_burden
+    return label_burden
+
+
 def build_panel_blueprint(primaryChart, secondaryCharts, dataProfile, workflowPreferences):
+    scale_policy = globals().get("DATA_SCALE_POLICY", {
+        "legend_bottom_group_max": 8,
+    })
     story = workflowPreferences.get("storyMode", "comparison_pair")
+    if workflowPreferences.get("journalStyle") == "cell" and story == "auto":
+        story = "hero_plus_stacked_support"
     crowding_policy = workflowPreferences.get("crowdingPolicy", "auto_simplify")
     panel_candidates = dataProfile["panelCandidates"]
     candidate_pool = _dedupe_charts(
@@ -297,11 +336,23 @@ def build_panel_blueprint(primaryChart, secondaryCharts, dataProfile, workflowPr
         "heatmap_mirrored", "heatmap_symmetric", "spatial_feature", "correlation"
     }
     n_groups = dataProfile.get("nGroups") or 1
+    label_burden = _layout_label_burden(dataProfile)
+    legend_burden = _layout_legend_burden(n_groups, label_burden)
+    colorbar_burden = 2 if any(panel["chart"] in continuous_scale_charts for panel in panels) else 0
+    layout_score = len(panels) * 2 + legend_burden + label_burden + colorbar_burden
     notes = ["keep_semantic_colors_consistent", "hero_panel_priority", "deduplicate_support_panels"]
+    reflow_reasons = []
     if story != requested_story:
         notes.append(f"degraded_from_{requested_story}_to_{story}")
+        reflow_reasons.append("insufficient_support_panels")
     if crowding_policy == "auto_simplify":
         notes.append("clarity_first_crowding_policy")
+    if n_groups > scale_policy["legend_bottom_group_max"]:
+        notes.append("high_legend_burden")
+        reflow_reasons.append("many_groups")
+    if label_burden:
+        notes.append("long_label_burden")
+        reflow_reasons.append("long_labels")
 
     return {
         "layout": layout,
@@ -313,23 +364,34 @@ def build_panel_blueprint(primaryChart, secondaryCharts, dataProfile, workflowPr
         "axisLinkGroups": [["A", "B"]] if len(panels) >= 2 else [],
         "legendMode": "shared_auto",
         "colorbarMode": "shared_single" if any(panel["chart"] in continuous_scale_charts for panel in panels) else "none",
+        "layoutScore": layout_score,
+        "legendBurden": legend_burden,
+        "labelBurden": label_burden,
+        "reflowReasons": reflow_reasons,
         "notes": notes
     }
 ```
+
+`_layout_label_burden` should count labels over 24 characters in semantic role columns; `_layout_legend_burden` should increase when groups exceed 6, 8, or 12. A lower layout score wins even if it drops a support panel. Never keep a four-panel plan only because four panels were requested.
 
 ### Step 2.6: Build `crowdingPlan`
 
 ```python
 def build_crowding_plan(primaryChart, secondaryCharts, dataProfile, workflowPreferences, panelBlueprint):
+    scale_policy = globals().get("DATA_SCALE_POLICY", {
+        "point_density_full_max": 400,
+        "point_density_alpha_max": 1000,
+        "legend_bottom_group_max": 8,
+    })
     policy = workflowPreferences.get("crowdingPolicy", "auto_simplify")
     n_obs = dataProfile.get("nObservations") or 0
     n_groups = dataProfile.get("nGroups") or 1
     final_layout = panelBlueprint.get("finalLayout", panelBlueprint["layout"]["recipe"])
     panel_count = len(panelBlueprint.get("panels", []))
 
-    if n_obs <= 400:
+    if n_obs <= scale_policy["point_density_full_max"]:
         point_density_mode = "full_points"
-    elif n_obs <= 1000:
+    elif n_obs <= scale_policy["point_density_alpha_max"]:
         point_density_mode = "alpha_jitter_small_markers"
     else:
         point_density_mode = "summary_or_thin_points"
@@ -337,7 +399,7 @@ def build_crowding_plan(primaryChart, secondaryCharts, dataProfile, workflowPref
     if panelBlueprint.get("sharedLegend", False):
         if panelBlueprint.get("sharedColorbar", False):
             legend_mode = "bottom_center"
-        elif n_groups <= 8:
+        elif n_groups <= scale_policy["legend_bottom_group_max"]:
             legend_mode = "bottom_center"
         else:
             legend_mode = "outside_right"
@@ -380,6 +442,8 @@ def build_crowding_plan(primaryChart, secondaryCharts, dataProfile, workflowPref
         "maxDirectLabelsSupport": 4 if policy == "preserve_information" else 3,
         "maxBracketGroups": 3 if policy == "preserve_information" else 2,
         "pointDensityMode": point_density_mode,
+        "renderRetryLimit": 5,
+        "layoutReflowRequiredOnOverlap": True,
         "annotationMode": "compact" if policy == "auto_simplify" else "full",
         "simplifyIfCrowded": policy != "preserve_information",
         "simplificationsApplied": simplifications,
@@ -451,21 +515,41 @@ def infer_visual_chart_family(chart_type):
 
 
 def build_visual_content_plan(primaryChart, secondaryCharts, dataProfile, workflowPreferences):
+    scale_policy = globals().get("DATA_SCALE_POLICY", {
+        "point_density_alpha_max": 1000,
+        "legend_bottom_group_max": 8,
+    })
     charts = [primaryChart] + list(secondaryCharts or [])
     mode = workflowPreferences.get("visualContentMode", "nature_cell_dense")
     density = workflowPreferences.get("visualDensity", "high")
+    n_obs = dataProfile.get("nObservations") or 0
+    n_groups = dataProfile.get("nGroups") or 0
+    max_callouts = 8
+    if n_obs > scale_policy["point_density_alpha_max"]:
+        max_callouts = 6
+        point_annotation_mode = "summary_plus_extremes"
+    elif n_groups > scale_policy["legend_bottom_group_max"]:
+        max_callouts = 5
+        point_annotation_mode = "group_summary"
+    else:
+        point_annotation_mode = "direct_when_legible"
 
     return {
         "mode": mode,
         "density": density,
-        "maxCalloutsSingle": 8,
+        "impactLevel": workflowPreferences.get("visualImpactLevel", "editorial_science"),
+        "maxCalloutsSingle": max_callouts,
+        "maxCalloutsSupport": 4,
         "maxInlineStats": 4,
         "useInsetAxes": True,
         "noInventedStats": True,
+        "statProvenanceRequired": True,
+        "pointAnnotationMode": point_annotation_mode,
         "familyByChart": {chart: infer_visual_chart_family(chart) for chart in charts if chart},
         "appliedEnhancements": [],
         "familyByPanel": {},
-        "outsideLayoutElements": False,
+        "outsideLayoutElements": True,
+        "statProvenance": [],
         "notes": [
             "do_not_add_new_chart_types",
             "statistics_must_be_data_derived",
@@ -489,15 +573,24 @@ def build_palette_plan(primaryChart, dataProfile, workflowPreferences):
         "semanticMap": {
             "control": "#1F4E79",
             "treatment": "#C8553D",
+            "treated": "#C8553D",
+            "drug": "#C8553D",
             "rescue": "#4C956C"
         },
         "grayscaleCheck": True,
-        "sharedAcrossPanels": True
+        "sharedAcrossPanels": True,
+        "deterministicCategoryOrder": True,
+        "overflowEncoding": "marker_or_linestyle",
+        "minGrayscaleDelta": 0.18,
+        "contrastAuditRequired": True
     }
 
     if color_mode == "domain_semantic":
         if domain == "clinical_diagnostics_survival":
+            plan["categoricalPreset"] = "clinical_survival"
             plan["sequentialPreset"] = "seq_warm"
+        if domain == "genomics_transcriptomics":
+            plan["categoricalPreset"] = "genomics_categorical"
         if domain == "single_cell_spatial":
             plan["categoricalPreset"] = "journal_muted_8"
     if color_mode == "strict_grayscale_safe":
@@ -518,6 +611,12 @@ crowdingPlan = build_crowding_plan(primaryChart, secondaryCharts, dataProfile, w
 visualContentPlan = build_visual_content_plan(primaryChart, secondaryCharts, dataProfile, workflowPreferences)
 palettePlan = build_palette_plan(primaryChart, dataProfile, workflowPreferences)
 
+delegationReports = {
+    "stats": chartPlanReview.get("stats") if "chartPlanReview" in globals() else None,
+    "layout": chartPlanReview.get("layout") if "chartPlanReview" in globals() else None,
+    "palette": chartPlanReview.get("palette") if "chartPlanReview" in globals() else None,
+}
+
 chartPlan = {
     "domainProfile": domainProfile,
     "primaryChart": primaryChart,
@@ -531,10 +630,19 @@ chartPlan = {
     "crowdingPlan": crowdingPlan,
     "visualContentPlan": visualContentPlan,
     "palettePlan": palettePlan,
+    "delegationReports": delegationReports,
     "journalOverrides": {},
-    "rationale": "Selected using semantic roles, special patterns, domain hints, requested story mode, clarity-first crowding control, and Nature/Cell dense visual content."
+    "rationale": "Selected using semantic roles, special patterns, domain hints, requested story mode, layout scoring, clarity-first crowding control, palette contrast policy, and Nature/Cell dense visual content."
 }
 ```
+
+Before locking `chartPlan`, optionally use read-only agents when the plan is complex:
+
+- `chart-stats-planner`: validate chart/stat fit, replicate meaning, and no invented inferential claims.
+- `panel-layout-auditor`: validate support-panel dedupe, layout score, legend burden, axis linking, and reflow fallbacks.
+- `palette-journal-auditor`: validate semantic color mapping, grayscale contrast, journal profile fit, and overflow marker/linestyle fallback.
+
+Any blocking finding must be resolved in Phase 2 before Phase 3 starts.
 
 Present the summary:
 

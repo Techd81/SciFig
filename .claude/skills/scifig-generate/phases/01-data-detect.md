@@ -9,6 +9,7 @@ Read the input file, determine the structural pattern, extract semantic roles, i
 - Map a richer set of semantic roles beyond `group` and `value`
 - Infer domain hints such as genomics, clinical survival, pharmacology, or single-cell
 - Pre-compute panel candidates and risk flags for later phase decisions
+- Attach scale-policy and optional data-profile audit fields for complex datasets
 
 ## Execution
 
@@ -319,6 +320,13 @@ def build_panel_candidates(df, roles, special_patterns, domain_hints):
 ### Step 1.6: Risk Assessment
 
 ```python
+DATA_SCALE_POLICY = {
+    "high_missing_rate_pct": 10,
+    "overplotting_rows": 400,
+    "large_matrix_rows": 2000,
+}
+
+
 def assess_risks(df, roles, structure, special_patterns):
     warnings = []
     risk_flags = []
@@ -330,7 +338,7 @@ def assess_risks(df, roles, structure, special_patterns):
         cols_with_missing = [c for c in df.columns if missing[c] > 0]
         pct = total_missing / (len(df) * len(df.columns)) * 100
         warnings.append(f"MISSING_VALUES: {total_missing} cells ({pct:.1f}%) in columns: {', '.join(cols_with_missing[:5])}")
-        if pct > 10:
+        if pct > DATA_SCALE_POLICY["high_missing_rate_pct"]:
             risk_flags.append("high_missing_rate")
         # Warn specifically about missing group/value columns
         group_col = roles.get("group")
@@ -344,7 +352,7 @@ def assess_risks(df, roles, structure, special_patterns):
         warnings.append("NO_REPLICATE_DEFINITION")
         risk_flags.append("weak_inferential_support")
 
-    if "group" in roles and "value" in roles and len(df) > 400:
+    if "group" in roles and "value" in roles and len(df) > DATA_SCALE_POLICY["overplotting_rows"]:
         warnings.append("OVERPLOTTING_RISK")
         risk_flags.append("consider_summary_or_alpha_control")
 
@@ -355,13 +363,39 @@ def assess_risks(df, roles, structure, special_patterns):
     if "dose_response" in special_patterns and "dose" not in roles:
         warnings.append("DOSE_RESPONSE_WITHOUT_EXPLICIT_DOSE_COLUMN")
 
-    if structure == "matrix" and df.shape[0] > 2000:
+    if structure == "matrix" and df.shape[0] > DATA_SCALE_POLICY["large_matrix_rows"]:
         warnings.append("LARGE_MATRIX_CLUSTERING_RISK")
 
     return risk_flags, warnings
 ```
 
-### Step 1.7: Build `dataProfile`
+### Step 1.7: Optional Data Profile Audit
+
+After semantic roles and risks are computed, use a read-only `data-profile-auditor` Agent when the dataset is complex:
+
+- `structure == "matrix"` or `LARGE_MATRIX_CLUSTERING_RISK`
+- `high_missing_rate`
+- `weak_inferential_support`
+- no clear `group`, `value`, `x`, or `y` role for a requested quantitative chart
+- ambiguous or custom domain routing
+- survival or dose-response cues with missing required roles
+- many groups, many columns, or very long category labels
+
+The agent returns JSON into `dataProfile["audit"]`:
+
+```json
+{
+  "schemaConfidence": "high|medium|low",
+  "roleConflicts": [],
+  "requiredClarifications": [],
+  "recommendedScalePolicy": {},
+  "blocking": false
+}
+```
+
+If `blocking=true`, stop before Phase 2 and ask the minimum clarification needed. Do not invent roles or inferential design to proceed.
+
+### Step 1.8: Build `dataProfile`
 
 ```python
 structure = detect_structure(df)
@@ -393,6 +427,13 @@ dataProfile = {
     },
     "riskFlags": risk_flags,
     "warnings": warnings,
+    "scalePolicy": DATA_SCALE_POLICY,
+    "audit": dataProfileAudit if "dataProfileAudit" in globals() else {
+        "schemaConfidence": "high" if not risk_flags else "medium",
+        "roleConflicts": [],
+        "requiredClarifications": [],
+        "blocking": False
+    },
     "filePath": file_path,
     "df": df
 }

@@ -202,6 +202,9 @@ Expanded chart taxonomy for `scifig-generate`. Use this as the lookup table duri
 3. If the same story can be told with fewer marks, prefer the lower-ink chart.
 4. Use exploratory charts as support panels and inferential charts as hero/validation panels.
 5. If a requested chart is visually fashionable but statistically weak, recommend a safer alternative.
+6. Score multi-panel candidates with `specs/workflow-policies.md` before code generation; long labels, many groups, shared legends, and colorbars can force a simpler recipe.
+7. For high-impact output, add data-derived overlays and visual-content pass enhancements before inventing a new chart key.
+8. When chart/stat fit is uncertain, use a read-only planning agent and resolve blocking findings before Phase 3.
 
 ## Alias Fallbacks
 

@@ -7,13 +7,14 @@ from matplotlib.gridspec import GridSpec
 
 def resolve_canvas(panelBlueprint, journalProfile):
     recipe = panelBlueprint["layout"]["recipe"]
+    heights = journalProfile.get("canvas_height_mm", {})
     if recipe == "single":
-        return {"width_mm": journalProfile["single_width_mm"], "height_mm": 62}
+        return {"width_mm": journalProfile["single_width_mm"], "height_mm": heights.get("single", 62)}
     if recipe == "comparison_pair":
-        return {"width_mm": journalProfile["double_width_mm"], "height_mm": 78}
+        return {"width_mm": journalProfile["double_width_mm"], "height_mm": heights.get("comparison_pair", 78)}
     if recipe == "hero_plus_stacked_support":
-        return {"width_mm": journalProfile["double_width_mm"], "height_mm": 134}
-    return {"width_mm": journalProfile["double_width_mm"], "height_mm": 146}
+        return {"width_mm": journalProfile["double_width_mm"], "height_mm": heights.get("hero_plus_stacked_support", 134)}
+    return {"width_mm": journalProfile["double_width_mm"], "height_mm": heights.get("story_board_2x2", 146)}
 
 
 def resolve_panel_geometry(panelBlueprint, journalProfile):
@@ -78,7 +79,8 @@ def gen_multipanel(chartPlan, journalProfile, colorSystem, dataProfile, rcParams
     for panel in panels:
         panel_id = panel["id"]
         ax = axes[panel_id]
-        ax.text(-0.12, 1.05, panel_id, transform=ax.transAxes,
+        label_x, label_y = journalProfile.get("panel_label_offset_xy", [-0.12, 1.05])
+        ax.text(label_x, label_y, panel_id, transform=ax.transAxes,
                 fontsize=journalProfile.get("font_size_panel_label_pt", 8),
                 fontweight="bold", va="top", ha="left")
 

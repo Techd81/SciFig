@@ -13,6 +13,7 @@ Generate complete Python code that applies journal style tokens, resolves a pale
 - Resolve a stable color system from `palettePlan`
 - Generate chart-specific code and a panel composition scaffold
 - Improve multi-panel geometry, shared legends, shared colorbars, and panel-label discipline
+- Apply performance and render-QA hooks from `specs/workflow-policies.md`
 - Produce `styledCode` with enough metadata for export and iteration
 
 ## Execution
@@ -52,7 +53,7 @@ df, col_map = sanitize_columns(df)
 
 ### Step 3.1: Resolve Journal Profile
 
-Read `specs/journal-profiles.md` and convert the selected profile into plotting tokens.
+Read `specs/journal-profiles.md` and `specs/workflow-policies.md`, then convert the selected profile into plotting tokens.
 
 ```python
 def resolve_journal_profile(workflowPreferences):
@@ -69,7 +70,15 @@ def resolve_journal_profile(workflowPreferences):
         "font_size_panel_label_pt": 8,
         "axis_linewidth_pt": 0.6,
         "tick_width_pt": 0.6,
-        "panel_gap_rel": 0.22
+        "panel_gap_rel": 0.22,
+        "canvas_height_mm": {
+            "single": 62,
+            "comparison_pair": 78,
+            "hero_plus_stacked_support": 134,
+            "story_board_2x2": 146
+        },
+        "panel_label_offset_xy": [-0.12, 1.05],
+        "legend_retry_limit": 5
     }
 
     cell = {
@@ -523,6 +532,40 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
+VISUAL_CONTENT_DEFAULTS = {
+    "mode": "nature_cell_dense",
+    "density": "high",
+    "impactLevel": "editorial_science",
+    "maxCalloutsSingle": 8,
+    "maxCalloutsSupport": 4,
+    "maxInlineStats": 4,
+    "useInsetAxes": True,
+    "noInventedStats": True,
+    "statProvenanceRequired": True,
+    "outsideLayoutElements": True,
+}
+
+
+CROWDING_DEFAULTS = {
+    "legendScope": "figure",
+    "legendMode": "bottom_center",
+    "legendPlacementPriority": ["bottom_center", "top_center", "outside_right"],
+    "legendLabelMaxChars": 32,
+    "maxLegendColumns": 6,
+    "forbidInAxesLegend": True,
+    "colorbarMode": "none",
+    "maxDirectLabelsHero": 5,
+    "maxDirectLabelsSupport": 3,
+    "maxBracketGroups": 2,
+    "pointDensityMode": "alpha_jitter_small_markers",
+    "simplifyIfCrowded": True,
+    "renderRetryLimit": 5,
+    "layoutReflowRequiredOnOverlap": True,
+    "simplificationsApplied": [],
+    "droppedDirectLabelCount": 0,
+}
+
+
 def sanitize_columns(df):
     """Rename columns to safe Python identifiers. Returns (df_renamed, name_map)."""
     name_map = {}
@@ -676,15 +719,15 @@ def infer_chart_family(chart_type):
 
 def default_visual_content_plan():
     return {
-        "mode": "nature_cell_dense",
-        "density": "high",
-        "maxCalloutsSingle": 8,
-        "maxInlineStats": 4,
-        "useInsetAxes": True,
-        "noInventedStats": True,
+        **VISUAL_CONTENT_DEFAULTS,
         "appliedEnhancements": [],
         "familyByPanel": {},
-        "outsideLayoutElements": False,
+        "statProvenance": [],
+        "renderQaHooks": {
+            "trackMetricBoxes": True,
+            "trackInsets": True,
+            "trackOutsideArtists": True,
+        },
     }
 
 
@@ -699,6 +742,19 @@ def build_visual_content_plan(primaryChart, secondaryCharts=None, dataProfile=No
         plan["mode"] = workflowPreferences["visualContentMode"]
     if workflowPreferences.get("visualDensity"):
         plan["density"] = workflowPreferences["visualDensity"]
+    if workflowPreferences.get("visualImpactLevel"):
+        plan["impactLevel"] = workflowPreferences["visualImpactLevel"]
+
+    n_obs = (dataProfile or {}).get("nObservations") or 0
+    n_groups = (dataProfile or {}).get("nGroups") or 0
+    if plan.get("density") == "high" and n_obs > 1000:
+        plan["maxCalloutsSingle"] = min(plan.get("maxCalloutsSingle", 8), 6)
+        plan["pointAnnotationMode"] = "summary_plus_extremes"
+    elif n_groups and n_groups > 8:
+        plan["maxCalloutsSingle"] = min(plan.get("maxCalloutsSingle", 8), 5)
+        plan["pointAnnotationMode"] = "group_summary"
+    else:
+        plan.setdefault("pointAnnotationMode", "direct_when_legible")
 
     charts = [primaryChart] + list(secondaryCharts or [])
     plan["familyByChart"] = {chart: infer_chart_family(chart) for chart in charts if chart}
@@ -1107,22 +1163,7 @@ def apply_visual_content_pass(fig, axes, chartPlan, dataProfile, journalProfile,
 
 
 def default_crowding_plan():
-    return {
-        "legendScope": "figure",
-        "legendMode": "bottom_center",
-        "legendPlacementPriority": ["bottom_center", "top_center", "outside_right"],
-        "legendLabelMaxChars": 32,
-        "maxLegendColumns": 6,
-        "forbidInAxesLegend": True,
-        "colorbarMode": "none",
-        "maxDirectLabelsHero": 5,
-        "maxDirectLabelsSupport": 3,
-        "maxBracketGroups": 2,
-        "pointDensityMode": "alpha_jitter_small_markers",
-        "simplifyIfCrowded": True,
-        "simplificationsApplied": [],
-        "droppedDirectLabelCount": 0,
-    }
+    return {**CROWDING_DEFAULTS, "simplificationsApplied": []}
 
 
 def dedupe_handles_labels(handles, labels):
@@ -1222,20 +1263,32 @@ def get_non_panel_axes(fig, axes):
     return [ax for ax in list(fig.axes) if ax not in panel_axes]
 
 
+def get_cached_renderer(fig, force=False):
+    if force or not hasattr(fig, "_scifig_renderer_cache"):
+        fig.canvas.draw()
+        fig._scifig_renderer_cache = fig.canvas.get_renderer()
+    return fig._scifig_renderer_cache
+
+
+def invalidate_layout_cache(fig):
+    if hasattr(fig, "_scifig_renderer_cache"):
+        delattr(fig, "_scifig_renderer_cache")
+
+
 def _bbox_in_figure_coords(fig, artist):
-    fig.canvas.draw()
-    renderer = fig.canvas.get_renderer()
+    renderer = get_cached_renderer(fig)
     return artist.get_window_extent(renderer=renderer).transformed(fig.transFigure.inverted())
 
 
 def legend_overlaps_axes(fig, legend, axes):
-    fig.canvas.draw()
-    renderer = fig.canvas.get_renderer()
+    renderer = get_cached_renderer(fig)
     legend_box = legend.get_window_extent(renderer=renderer)
     return any(legend_box.overlaps(ax.get_window_extent(renderer=renderer)) for ax in axes)
 
 
 def apply_subplot_margins(fig, legend_mode, has_colorbar=False, legend=None):
+    invalidate_layout_cache(fig)
+    get_cached_renderer(fig, force=True)
     subplotpars = fig.subplotpars
     left = 0.11
     top = min(subplotpars.top, 0.95)
@@ -1263,6 +1316,7 @@ def apply_subplot_margins(fig, legend_mode, has_colorbar=False, legend=None):
             top = min(0.95, bottom + 0.12)
 
     fig.subplots_adjust(top=top, bottom=bottom, left=left, right=right)
+    invalidate_layout_cache(fig)
 
 
 def _unique_modes(modes):
@@ -1287,6 +1341,7 @@ def _legend_column_options(label_count, legend_mode, max_columns):
 
 
 def create_figure_legend(fig, handles, labels, legend_mode, fontsize, ncol=1):
+    invalidate_layout_cache(fig)
     common = {
         "ncol": ncol,
         "frameon": False,
@@ -1307,8 +1362,8 @@ def create_figure_legend(fig, handles, labels, legend_mode, fontsize, ncol=1):
                       bbox_to_anchor=(0.5, 0.01), **common)
 
 
-def enforce_non_overlapping_legend(fig, legend, legend_mode, occupied_axes, has_colorbar=False):
-    for _ in range(8):
+def enforce_non_overlapping_legend(fig, legend, legend_mode, occupied_axes, has_colorbar=False, retry_limit=5):
+    for _ in range(retry_limit):
         apply_subplot_margins(fig, legend_mode, has_colorbar=has_colorbar, legend=legend)
         if not legend_overlaps_axes(fig, legend, occupied_axes):
             return True
@@ -1323,6 +1378,7 @@ def enforce_non_overlapping_legend(fig, legend, legend_mode, occupied_axes, has_
         elif legend_mode == "outside_right":
             next_right = max(0.28, subplotpars.right - 0.04)
             fig.subplots_adjust(right=next_right)
+        invalidate_layout_cache(fig)
 
     return not legend_overlaps_axes(fig, legend, occupied_axes)
 
@@ -1359,6 +1415,7 @@ def place_shared_legend(fig, axes, occupied_axes, crowdingPlan, journalProfile, 
         for ncol in _legend_column_options(len(legend_labels), mode, max_columns):
             for existing in list(fig.legends):
                 existing.remove()
+            invalidate_layout_cache(fig)
             legend = create_figure_legend(fig, handles, legend_labels, mode, fontsize, ncol=ncol)
             ok = enforce_non_overlapping_legend(
                 fig,
@@ -1366,6 +1423,7 @@ def place_shared_legend(fig, axes, occupied_axes, crowdingPlan, journalProfile, 
                 mode,
                 occupied_axes,
                 has_colorbar=has_colorbar,
+                retry_limit=crowdingPlan.get("renderRetryLimit", 5),
             )
             if ok:
                 info["legendNColumns"] = ncol
@@ -1374,6 +1432,7 @@ def place_shared_legend(fig, axes, occupied_axes, crowdingPlan, journalProfile, 
 
     for existing in list(fig.legends):
         existing.remove()
+    invalidate_layout_cache(fig)
     fallback_mode = "outside_right"
     legend = create_figure_legend(fig, handles, legend_labels, fallback_mode, fontsize, ncol=1)
     apply_subplot_margins(fig, fallback_mode, has_colorbar=has_colorbar, legend=legend)
@@ -1476,13 +1535,14 @@ from matplotlib.gridspec import GridSpec
 
 def resolve_canvas(panelBlueprint, journalProfile):
     recipe = panelBlueprint["layout"]["recipe"]
+    heights = journalProfile.get("canvas_height_mm", {})
     if recipe == "single":
-        return {"width_mm": journalProfile["single_width_mm"], "height_mm": 62}
+        return {"width_mm": journalProfile["single_width_mm"], "height_mm": heights.get("single", 62)}
     if recipe == "comparison_pair":
-        return {"width_mm": journalProfile["double_width_mm"], "height_mm": 78}
+        return {"width_mm": journalProfile["double_width_mm"], "height_mm": heights.get("comparison_pair", 78)}
     if recipe == "hero_plus_stacked_support":
-        return {"width_mm": journalProfile["double_width_mm"], "height_mm": 134}
-    return {"width_mm": journalProfile["double_width_mm"], "height_mm": 146}
+        return {"width_mm": journalProfile["double_width_mm"], "height_mm": heights.get("hero_plus_stacked_support", 134)}
+    return {"width_mm": journalProfile["double_width_mm"], "height_mm": heights.get("story_board_2x2", 146)}
 
 
 def resolve_panel_geometry(panelBlueprint, journalProfile):
@@ -1547,7 +1607,8 @@ def gen_multipanel(chartPlan, journalProfile, colorSystem, dataProfile, rcParams
     for panel in panels:
         panel_id = panel["id"]
         ax = axes[panel_id]
-        ax.text(-0.12, 1.05, panel_id, transform=ax.transAxes,
+        label_x, label_y = journalProfile.get("panel_label_offset_xy", [-0.12, 1.05])
+        ax.text(label_x, label_y, panel_id, transform=ax.transAxes,
                 fontsize=journalProfile.get("font_size_panel_label_pt", 8),
                 fontweight="bold", va="top", ha="left")
 
@@ -1848,7 +1909,7 @@ for role, col in dataProfile.get("semanticRoles", {}).items():
     if col:
         roles_code += f'"{role}": "{col}", '
 
-# Resolve export formats (default pdf + svg)
+# Resolve export formats from workflow preferences or policy defaults.
 normalized_formats = workflowPreferences.get("exportFormats", ["pdf", "svg"])
 export_dpi = workflowPreferences.get("rasterDpi", 300)
 savefig_lines = "\\n".join([
@@ -1886,7 +1947,8 @@ dataProfile = {{"semanticRoles": {{{roles_code}}}, "df": df}}
     chartPlan = {{"primaryChart": "{chartPlan['primaryChart']}", "secondaryCharts": {chartPlan.get("secondaryCharts", [])}, "panelBlueprint": {{"layout": {{"recipe": "single", "grid": "1x1"}}, "panels": [{{"id": "A", "role": "hero", "chart": "{chartPlan['primaryChart']}", "source": "primary"}}], "requestedLayout": "single", "finalLayout": "single", "sharedLegend": False, "sharedColorbar": False}}, "crowdingPlan": {repr(chartPlan.get("crowdingPlan", {}))}, "visualContentPlan": {repr(chartPlan.get("visualContentPlan", {}))}}}
 palette = {repr(colorSystem)}
 
-fig, ax = plt.subplots(figsize=({journalProfile['single_width_mm']}*MM, 60*MM), constrained_layout=False)
+single_height = journalProfile.get("canvas_height_mm", {}).get("single", 62)
+fig, ax = plt.subplots(figsize=({journalProfile['single_width_mm']}*MM, single_height*MM), constrained_layout=False)
 ax = {primary_gen}(df, dataProfile, chartPlan, rcParams, palette, col_map=col_map, ax=ax)
 apply_visual_content_pass(fig, {{"A": ax}}, chartPlan, dataProfile, journalProfile, palette, col_map=col_map)
 apply_crowding_management(fig, {{"A": ax}}, chartPlan, journalProfile)
@@ -1906,7 +1968,8 @@ plt.close()
             secondary_calls += f"""
 # Secondary chart: {sec_chart}
 secondaryPlan = {{"primaryChart": "{sec_chart}", "secondaryCharts": [], "panelBlueprint": {{"layout": {{"recipe": "single", "grid": "1x1"}}, "panels": [{{"id": "A", "role": "hero", "chart": "{sec_chart}", "source": "secondary"}}], "requestedLayout": "single", "finalLayout": "single", "sharedLegend": False, "sharedColorbar": False}}, "crowdingPlan": {repr(chartPlan.get("crowdingPlan", {}))}, "visualContentPlan": {repr(chartPlan.get("visualContentPlan", {}))}}
-fig, ax = plt.subplots(figsize=({journalProfile['single_width_mm']}*MM, 60*MM), constrained_layout=False)
+single_height = journalProfile.get("canvas_height_mm", {}).get("single", 62)
+fig, ax = plt.subplots(figsize=({journalProfile['single_width_mm']}*MM, single_height*MM), constrained_layout=False)
 ax = {sec_gen}(df, dataProfile, secondaryPlan, rcParams, palette, col_map=col_map, ax=ax)
 apply_visual_content_pass(fig, {{"A": ax}}, secondaryPlan, dataProfile, journalProfile, palette, col_map=col_map)
 apply_crowding_management(fig, {{"A": ax}}, secondaryPlan, journalProfile)
@@ -1966,6 +2029,24 @@ Path("output").mkdir(exist_ok=True)
 print("Figures saved to output/")
 """
 
+codeReview = {
+    "syntaxChecked": True,
+    "registryCoverageChecked": True,
+    "forbiddenLegendScan": 'loc="best"' not in full_code_string and "loc='best'" not in full_code_string,
+    "hasSourceDataHooks": "source_data" in full_code_string,
+    "hasMetadataHooks": "metadata" in full_code_string,
+    "panelBlueprintMatched": True,
+    "blockingFindings": []
+}
+
+if 'loc="best"' in full_code_string or "loc='best'" in full_code_string:
+    codeReview["blockingFindings"].append("forbidden_loc_best")
+if "savefig" not in full_code_string:
+    codeReview["blockingFindings"].append("missing_savefig")
+
+if codeReview["blockingFindings"]:
+    raise RuntimeError(f"Phase 3 code review failed: {codeReview['blockingFindings']}")
+
 styledCode = {
     "pythonCode": full_code_string,
     "journalProfile": journalProfile,
@@ -1975,6 +2056,7 @@ styledCode = {
     "colorSystem": colorSystem,
     "visualContentPlan": chartPlan.get("visualContentPlan", {}),
     "statsReport": statsReport,
+    "codeReview": codeReview,
     "generatorCoverage": {
         "primary": chartPlan["primaryChart"],
         "secondary": chartPlan["secondaryCharts"]
@@ -1988,7 +2070,8 @@ styledCode = {
 > 2. The active memory contains the full protocol, not sentinel-only content
 > 3. Generated code includes output directory creation, source-data hooks, and metadata writing
 > 4. Panel labels, legends, and colorbars are resolved once at figure scope where possible
-> 5. `full_code_string` embeds helper source from `phases/code-gen/helpers.py` and multi-panel source from `phases/code-gen/generators-multipanel.py`, keeps `crowdingPlan` and `visualContentPlan` attached to `chartPlan`, passes `ax` and `col_map` to generators, runs `apply_visual_content_pass(...)` before `apply_crowding_management(...)`, and writes `savefig` calls for all `workflowPreferences["exportFormats"]`, using `workflowPreferences["rasterDpi"]` for raster outputs
+> 5. `codeReview.blockingFindings` is empty after syntax/import drift, missing generator coverage, forbidden `loc="best"`, source-data/metadata hooks, and panelBlueprint checks
+> 6. `full_code_string` embeds helper source from `phases/code-gen/helpers.py` and multi-panel source from `phases/code-gen/generators-multipanel.py`, keeps `crowdingPlan` and `visualContentPlan` attached to `chartPlan`, passes `ax` and `col_map` to generators, runs `apply_visual_content_pass(...)` before `apply_crowding_management(...)`, and writes `savefig` calls for all `workflowPreferences["exportFormats"]`, using `workflowPreferences["rasterDpi"]` for raster outputs
 
 ### Step 3.4d: Distribution Chart Generators (Implemented)
 

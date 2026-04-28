@@ -116,10 +116,53 @@ Stable palette presets for publication-grade scientific figures.
 ]
 ```
 
+## Editorial Impact Presets
+
+These palettes are still restrained and colorblind-aware, but provide stronger figure-level hierarchy than the muted defaults.
+
+### `editorial_science_8`
+
+```python
+[
+    "#0B1F3A",  # near-navy anchor
+    "#E64B35",  # high-signal coral
+    "#00A087",  # teal
+    "#3C5488",  # steel blue
+    "#F39B2F",  # amber accent
+    "#7E6148",  # muted brown
+    "#8491B4",  # lavender gray
+    "#4DBBD5"   # cyan support
+]
+```
+
+### `cell_high_contrast_6`
+
+```python
+[
+    "#1B1B1B",
+    "#D73027",
+    "#4575B4",
+    "#1A9850",
+    "#FDAE61",
+    "#7570B3"
+]
+```
+
+### `single_cell_12`
+
+```python
+[
+    "#1F77B4", "#FF7F0E", "#2CA02C", "#D62728",
+    "#9467BD", "#8C564B", "#E377C2", "#7F7F7F",
+    "#BCBD22", "#17BECF", "#4C78A8", "#F58518"
+]
+```
+
 ## Semantic Mapping Defaults
 
 - `control` -> `#1F4E79`
 - `treatment` -> `#C8553D`
+- `treated`, `drug`, `stimulated`, `case` -> treatment color unless a domain playbook overrides it
 - `rescue` -> `#4C956C`
 - `vehicle` -> `#6C757D`
 - `low risk` -> lighter sequential tone
@@ -134,3 +177,6 @@ Stable palette presets for publication-grade scientific figures.
 3. Never encode the same category with different colors across hero and support panels.
 4. Test every palette in grayscale; if adjacent groups collapse, increase luminance separation.
 5. Reserve very bright accent colors for one or two key highlights only.
+6. Sort categories deterministically before assigning fallback colors.
+7. If categories exceed the palette length, keep color stable and add marker shape, line style, or facet grouping instead of cycling indistinguishable colors.
+8. For visual-impact mode, use one dark anchor, one warm highlight, and one cool support family; do not turn every group into a highlight.

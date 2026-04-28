@@ -39,9 +39,17 @@ NATURE_PROFILE = {
     "grid": False,
     "panel_gap_rel": 0.22,
     "panel_label_offset_xy": [-0.12, 1.05],
+    "canvas_height_mm": {
+        "single": 62,
+        "comparison_pair": 78,
+        "hero_plus_stacked_support": 134,
+        "story_board_2x2": 146
+    },
     "colorbar_shrink": 0.6,
     "shared_legend_position": "upper center",
-    "shared_legend_ncol": "auto"
+    "shared_legend_ncol": "auto",
+    "legend_retry_limit": 5,
+    "visual_impact_default": "editorial_science"
 }
 ```
 
@@ -58,7 +66,8 @@ CELL_PROFILE = {
     "legend_frame": False,
     "grid": False,
     "panel_gap_rel": 0.28,
-    "narrative_bias": "hero_plus_support"
+    "narrative_bias": "hero_plus_support",
+    "visual_impact_default": "editorial_science_high"
 }
 ```
 
@@ -75,9 +84,16 @@ SCIENCE_PROFILE = {
     "legend_frame": False,
     "grid": False,
     "panel_gap_rel": 0.18,
-    "narrative_bias": "compact_pair"
+    "narrative_bias": "compact_pair",
+    "visual_impact_default": "compact_editorial"
 }
 ```
+
+## Shared Policy Notes
+
+- Canvas heights, panel-label offsets, legend retry limits, and visual-impact defaults are policy tokens. Do not repeat new values inline in phase code.
+- If a journal-specific override changes legend position, canvas height, or typography, update Phase 3 and `specs/workflow-policies.md` in the same change.
+- Rendered QA overrides journal preference: a beautiful profile is invalid if legends, colorbars, panel labels, or metric boxes overlap plotted data.
 
 ## Lancet-like Tokens
 

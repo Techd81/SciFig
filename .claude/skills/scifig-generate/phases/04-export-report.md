@@ -9,6 +9,7 @@ Execute the generated code, export figure assets, generate source-data friendly 
 - Export source-data friendly tables for quantitative panels
 - Generate statistical and methods-ready reporting
 - Package metadata, panel manifest, and reproducibility requirements
+- Run rendered visual QA before declaring the output submission-ready
 
 ## Execution
 
@@ -92,7 +93,61 @@ required_support_files = [
 ]
 ```
 
-### Step 4.4: Generate `requirements.txt`
+### Step 4.4: Rendered Visual QA Gate
+
+After execution and required-output checks, inspect the rendered artifacts before writing the final bundle. Prefer a read-only `rendered-qa` Agent for complex multi-panel outputs; otherwise run the same checks directly.
+
+```python
+render_qa = {
+    "legendOutsidePlotArea": chartPlan.get("crowdingPlan", {}).get("legendOutsidePlotArea", True),
+    "axisLegendRemovedCount": chartPlan.get("crowdingPlan", {}).get("axisLegendRemovedCount", 0),
+    "legendModeUsed": chartPlan.get("crowdingPlan", {}).get("legendModeUsed", "none"),
+    "sharedColorbarApplied": chartPlan.get("crowdingPlan", {}).get("sharedColorbarApplied", False),
+    "visualEnhancementCount": len(chartPlan.get("visualContentPlan", {}).get("appliedEnhancements", [])),
+    "paletteContrastCheck": chartPlan.get("palettePlan", {}).get("contrastAuditRequired", True),
+    "editableTextCheck": "required_for_svg_pdf",
+    "overlapFailures": [],
+    "blankOrTinyOutputs": [],
+    "statProvenanceWarnings": [],
+    "hardFail": False
+}
+
+for item in expected:
+    artifact = Path(item["path"])
+    if not artifact.exists() or artifact.stat().st_size < 1024:
+        render_qa["blankOrTinyOutputs"].append(str(artifact))
+
+if not render_qa["legendOutsidePlotArea"]:
+    render_qa["overlapFailures"].append("legend_overlaps_plot_area")
+
+if chartPlan.get("visualContentPlan", {}).get("statProvenanceRequired", True):
+    for enhancement in chartPlan.get("visualContentPlan", {}).get("appliedEnhancements", []):
+        if any(token in enhancement for token in ("pvalue", "effect", "auc", "slope")):
+            if enhancement not in chartPlan.get("visualContentPlan", {}).get("statProvenance", []):
+                render_qa["statProvenanceWarnings"].append(enhancement)
+
+render_qa["hardFail"] = bool(
+    render_qa["blankOrTinyOutputs"] or
+    render_qa["overlapFailures"] or
+    render_qa["statProvenanceWarnings"]
+)
+
+if render_qa["hardFail"]:
+    raise RuntimeError(
+        "Rendered QA failed. Return to Phase 3 for layout/style/code fixes, "
+        "or Phase 2 if the figure plan is overpacked."
+    )
+```
+
+Hard failures:
+
+- legend, colorbar, metric boxes, panel labels, or direct labels overlap plotted data
+- output artifact is missing, blank, or implausibly small
+- requested vector text is not editable in SVG/PDF
+- `legendOutsidePlotArea` is false
+- inline statistical callouts have no provenance in `statPlan`, input columns, or `visualContentPlan.statProvenance`
+
+### Step 4.5: Generate `requirements.txt`
 
 ```python
 def gen_requirements(chartPlan):
@@ -121,7 +176,7 @@ def gen_requirements(chartPlan):
     return "\n".join(sorted(set(requirements)))
 ```
 
-### Step 4.5: Build Metadata And Panel Manifest
+### Step 4.6: Build Metadata And Panel Manifest
 
 ```python
 import hashlib
@@ -148,6 +203,13 @@ metadata = {
     "finalLayout": chartPlan["panelBlueprint"].get("finalLayout", chartPlan["panelBlueprint"]["layout"]["recipe"]),
     "simplificationsApplied": chartPlan.get("crowdingPlan", {}).get("simplificationsApplied", []),
     "droppedDirectLabelCount": chartPlan.get("crowdingPlan", {}).get("droppedDirectLabelCount", 0),
+    "legendModeUsed": chartPlan.get("crowdingPlan", {}).get("legendModeUsed", "none"),
+    "axisLegendRemovedCount": chartPlan.get("crowdingPlan", {}).get("axisLegendRemovedCount", 0),
+    "legendOutsidePlotArea": chartPlan.get("crowdingPlan", {}).get("legendOutsidePlotArea", True),
+    "sharedColorbarApplied": chartPlan.get("crowdingPlan", {}).get("sharedColorbarApplied", False),
+    "visualContentPlan": chartPlan.get("visualContentPlan", {}),
+    "delegationReports": chartPlan.get("delegationReports", {}),
+    "renderQa": render_qa,
     "seed": styledCode["seed"],
     "scifigVersion": "0.2.0"
 }
@@ -160,11 +222,14 @@ panel_manifest = {
     "sharedLegend": chartPlan["panelBlueprint"]["sharedLegend"],
     "sharedColorbar": chartPlan["panelBlueprint"]["sharedColorbar"],
     "palettePlan": chartPlan["palettePlan"],
-    "crowdingPlan": chartPlan.get("crowdingPlan", {})
+    "crowdingPlan": chartPlan.get("crowdingPlan", {}),
+    "visualContentPlan": chartPlan.get("visualContentPlan", {}),
+    "delegationReports": chartPlan.get("delegationReports", {}),
+    "renderQa": render_qa
 }
 ```
 
-### Step 4.6: Export Source Data Tables
+### Step 4.7: Export Source Data Tables
 
 For every quantitative panel, write a tidy CSV to `output/source_data/`.
 
@@ -189,7 +254,7 @@ def export_source_data(chartPlan, dataProfile):
     return source_files
 ```
 
-### Step 4.7: Write Statistical Report
+### Step 4.8: Write Statistical Report
 
 Build the report content from the template:
 
@@ -225,7 +290,7 @@ stats_report_content = f"""# Statistical Report
 """
 ```
 
-### Step 4.8: Package `outputBundle`
+### Step 4.9: Package `outputBundle`
 
 ```python
 sourceDataFiles = export_source_data(chartPlan, dataProfile)
@@ -242,7 +307,8 @@ outputBundle = {
     "sourceData": sourceDataFiles,
     "panelManifest": "output/reports/panel_manifest.json",
     "requirements": "output/requirements.txt",
-    "metadata": "output/reports/metadata.json"
+    "metadata": "output/reports/metadata.json",
+    "renderQa": "output/reports/render_qa.json"
 }
 ```
 
@@ -252,15 +318,17 @@ Write files:
 Path("output/reports/stats_report.md").write_text(stats_report_content, encoding="utf-8")
 Path("output/reports/panel_manifest.json").write_text(json.dumps(panel_manifest, indent=2), encoding="utf-8")
 Path("output/reports/metadata.json").write_text(json.dumps(metadata, indent=2), encoding="utf-8")
+Path("output/reports/render_qa.json").write_text(json.dumps(render_qa, indent=2), encoding="utf-8")
 Path("output/requirements.txt").write_text(gen_requirements(chartPlan), encoding="utf-8")
 ```
 
-### Step 4.9: Iteration Rules
+### Step 4.10: Iteration Rules
 
 If the user requests changes:
 
 - chart family or domain framing -> return to Phase 2
 - style, palette, typography, layout, shared legends -> return to Phase 3
+- rendered QA failure -> return to Phase 3 unless the plan is overpacked, then return to Phase 2
 - export format or report packaging -> stay in Phase 4
 - data interpretation or pairing assumptions -> return to Phase 1 or Phase 2 depending on whether schema meaning changed
 

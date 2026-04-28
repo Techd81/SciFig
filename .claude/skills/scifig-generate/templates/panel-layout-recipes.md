@@ -68,6 +68,31 @@ Reusable layout blueprints for multi-panel scientific figures.
 - Legend: treat as a figure-level layout element, never as a panel annotation. If panels share group, color, marker, or line semantics, keep one shared legend outside every plotting area. Prefer bottom-center, then top-center, then outside-right.
 - Legend collision policy: never use `loc="best"` or any in-axes legend for publication output. If space is tight, adjust legend columns, shorten labels, reduce handle/text spacing, increase figure margins, or reflow panels before allowing the legend to overlap curves, bars, points, error bars, confidence intervals, grids, or heatmap cells.
 
+## Layout Scoring
+
+Before code generation, score candidate layouts:
+
+```python
+layout_score = (
+    panel_count * 2 +
+    legend_burden * 3 +
+    long_label_burden * 2 +
+    colorbar_burden * 2 +
+    aspect_ratio_mismatch * 2 -
+    story_fit * 4
+)
+```
+
+Choose the lowest score that still tells the scientific story. Dropping a weak support panel is preferred over shrinking four panels into unreadable output. Cell-like figures should bias toward `hero_plus_stacked_support` when one panel carries the main claim.
+
+## Visual Impact Recipes
+
+- **Hero contrast**: make panel A visually dominant through canvas share, not oversized title text.
+- **Evidence ladder**: pair each eye-catching highlight with a support panel or source-data table.
+- **Inset discipline**: use insets for distributions, residuals, or local detail only when they are data-derived and remain outside the main data marks.
+- **Metric boxes**: place compact summaries outside axes; Phase 4 must fail if they overlap the plotted region.
+- **Semantic restraint**: reserve high-saturation accents for the key condition, event, or feature; keep context marks muted.
+
 ## Shared Legend Pattern
 
 ```python

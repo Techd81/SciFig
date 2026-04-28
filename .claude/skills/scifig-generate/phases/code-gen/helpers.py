@@ -6,6 +6,40 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
+VISUAL_CONTENT_DEFAULTS = {
+    "mode": "nature_cell_dense",
+    "density": "high",
+    "impactLevel": "editorial_science",
+    "maxCalloutsSingle": 8,
+    "maxCalloutsSupport": 4,
+    "maxInlineStats": 4,
+    "useInsetAxes": True,
+    "noInventedStats": True,
+    "statProvenanceRequired": True,
+    "outsideLayoutElements": True,
+}
+
+
+CROWDING_DEFAULTS = {
+    "legendScope": "figure",
+    "legendMode": "bottom_center",
+    "legendPlacementPriority": ["bottom_center", "top_center", "outside_right"],
+    "legendLabelMaxChars": 32,
+    "maxLegendColumns": 6,
+    "forbidInAxesLegend": True,
+    "colorbarMode": "none",
+    "maxDirectLabelsHero": 5,
+    "maxDirectLabelsSupport": 3,
+    "maxBracketGroups": 2,
+    "pointDensityMode": "alpha_jitter_small_markers",
+    "simplifyIfCrowded": True,
+    "renderRetryLimit": 5,
+    "layoutReflowRequiredOnOverlap": True,
+    "simplificationsApplied": [],
+    "droppedDirectLabelCount": 0,
+}
+
+
 def sanitize_columns(df):
     """Rename columns to safe Python identifiers. Returns (df_renamed, name_map)."""
     name_map = {}
@@ -159,15 +193,15 @@ def infer_chart_family(chart_type):
 
 def default_visual_content_plan():
     return {
-        "mode": "nature_cell_dense",
-        "density": "high",
-        "maxCalloutsSingle": 8,
-        "maxInlineStats": 4,
-        "useInsetAxes": True,
-        "noInventedStats": True,
+        **VISUAL_CONTENT_DEFAULTS,
         "appliedEnhancements": [],
         "familyByPanel": {},
-        "outsideLayoutElements": False,
+        "statProvenance": [],
+        "renderQaHooks": {
+            "trackMetricBoxes": True,
+            "trackInsets": True,
+            "trackOutsideArtists": True,
+        },
     }
 
 
@@ -182,6 +216,19 @@ def build_visual_content_plan(primaryChart, secondaryCharts=None, dataProfile=No
         plan["mode"] = workflowPreferences["visualContentMode"]
     if workflowPreferences.get("visualDensity"):
         plan["density"] = workflowPreferences["visualDensity"]
+    if workflowPreferences.get("visualImpactLevel"):
+        plan["impactLevel"] = workflowPreferences["visualImpactLevel"]
+
+    n_obs = (dataProfile or {}).get("nObservations") or 0
+    n_groups = (dataProfile or {}).get("nGroups") or 0
+    if plan.get("density") == "high" and n_obs > 1000:
+        plan["maxCalloutsSingle"] = min(plan.get("maxCalloutsSingle", 8), 6)
+        plan["pointAnnotationMode"] = "summary_plus_extremes"
+    elif n_groups and n_groups > 8:
+        plan["maxCalloutsSingle"] = min(plan.get("maxCalloutsSingle", 8), 5)
+        plan["pointAnnotationMode"] = "group_summary"
+    else:
+        plan.setdefault("pointAnnotationMode", "direct_when_legible")
 
     charts = [primaryChart] + list(secondaryCharts or [])
     plan["familyByChart"] = {chart: infer_chart_family(chart) for chart in charts if chart}
@@ -590,22 +637,7 @@ def apply_visual_content_pass(fig, axes, chartPlan, dataProfile, journalProfile,
 
 
 def default_crowding_plan():
-    return {
-        "legendScope": "figure",
-        "legendMode": "bottom_center",
-        "legendPlacementPriority": ["bottom_center", "top_center", "outside_right"],
-        "legendLabelMaxChars": 32,
-        "maxLegendColumns": 6,
-        "forbidInAxesLegend": True,
-        "colorbarMode": "none",
-        "maxDirectLabelsHero": 5,
-        "maxDirectLabelsSupport": 3,
-        "maxBracketGroups": 2,
-        "pointDensityMode": "alpha_jitter_small_markers",
-        "simplifyIfCrowded": True,
-        "simplificationsApplied": [],
-        "droppedDirectLabelCount": 0,
-    }
+    return {**CROWDING_DEFAULTS, "simplificationsApplied": []}
 
 
 def dedupe_handles_labels(handles, labels):
@@ -705,20 +737,32 @@ def get_non_panel_axes(fig, axes):
     return [ax for ax in list(fig.axes) if ax not in panel_axes]
 
 
+def get_cached_renderer(fig, force=False):
+    if force or not hasattr(fig, "_scifig_renderer_cache"):
+        fig.canvas.draw()
+        fig._scifig_renderer_cache = fig.canvas.get_renderer()
+    return fig._scifig_renderer_cache
+
+
+def invalidate_layout_cache(fig):
+    if hasattr(fig, "_scifig_renderer_cache"):
+        delattr(fig, "_scifig_renderer_cache")
+
+
 def _bbox_in_figure_coords(fig, artist):
-    fig.canvas.draw()
-    renderer = fig.canvas.get_renderer()
+    renderer = get_cached_renderer(fig)
     return artist.get_window_extent(renderer=renderer).transformed(fig.transFigure.inverted())
 
 
 def legend_overlaps_axes(fig, legend, axes):
-    fig.canvas.draw()
-    renderer = fig.canvas.get_renderer()
+    renderer = get_cached_renderer(fig)
     legend_box = legend.get_window_extent(renderer=renderer)
     return any(legend_box.overlaps(ax.get_window_extent(renderer=renderer)) for ax in axes)
 
 
 def apply_subplot_margins(fig, legend_mode, has_colorbar=False, legend=None):
+    invalidate_layout_cache(fig)
+    get_cached_renderer(fig, force=True)
     subplotpars = fig.subplotpars
     left = 0.11
     top = min(subplotpars.top, 0.95)
@@ -746,6 +790,7 @@ def apply_subplot_margins(fig, legend_mode, has_colorbar=False, legend=None):
             top = min(0.95, bottom + 0.12)
 
     fig.subplots_adjust(top=top, bottom=bottom, left=left, right=right)
+    invalidate_layout_cache(fig)
 
 
 def _unique_modes(modes):
@@ -770,6 +815,7 @@ def _legend_column_options(label_count, legend_mode, max_columns):
 
 
 def create_figure_legend(fig, handles, labels, legend_mode, fontsize, ncol=1):
+    invalidate_layout_cache(fig)
     common = {
         "ncol": ncol,
         "frameon": False,
@@ -790,8 +836,8 @@ def create_figure_legend(fig, handles, labels, legend_mode, fontsize, ncol=1):
                       bbox_to_anchor=(0.5, 0.01), **common)
 
 
-def enforce_non_overlapping_legend(fig, legend, legend_mode, occupied_axes, has_colorbar=False):
-    for _ in range(8):
+def enforce_non_overlapping_legend(fig, legend, legend_mode, occupied_axes, has_colorbar=False, retry_limit=5):
+    for _ in range(retry_limit):
         apply_subplot_margins(fig, legend_mode, has_colorbar=has_colorbar, legend=legend)
         if not legend_overlaps_axes(fig, legend, occupied_axes):
             return True
@@ -806,6 +852,7 @@ def enforce_non_overlapping_legend(fig, legend, legend_mode, occupied_axes, has_
         elif legend_mode == "outside_right":
             next_right = max(0.28, subplotpars.right - 0.04)
             fig.subplots_adjust(right=next_right)
+        invalidate_layout_cache(fig)
 
     return not legend_overlaps_axes(fig, legend, occupied_axes)
 
@@ -842,6 +889,7 @@ def place_shared_legend(fig, axes, occupied_axes, crowdingPlan, journalProfile, 
         for ncol in _legend_column_options(len(legend_labels), mode, max_columns):
             for existing in list(fig.legends):
                 existing.remove()
+            invalidate_layout_cache(fig)
             legend = create_figure_legend(fig, handles, legend_labels, mode, fontsize, ncol=ncol)
             ok = enforce_non_overlapping_legend(
                 fig,
@@ -849,6 +897,7 @@ def place_shared_legend(fig, axes, occupied_axes, crowdingPlan, journalProfile, 
                 mode,
                 occupied_axes,
                 has_colorbar=has_colorbar,
+                retry_limit=crowdingPlan.get("renderRetryLimit", 5),
             )
             if ok:
                 info["legendNColumns"] = ncol
@@ -857,6 +906,7 @@ def place_shared_legend(fig, axes, occupied_axes, crowdingPlan, journalProfile, 
 
     for existing in list(fig.legends):
         existing.remove()
+    invalidate_layout_cache(fig)
     fallback_mode = "outside_right"
     legend = create_figure_legend(fig, handles, legend_labels, fallback_mode, fontsize, ncol=1)
     apply_subplot_margins(fig, fallback_mode, has_colorbar=has_colorbar, legend=legend)
