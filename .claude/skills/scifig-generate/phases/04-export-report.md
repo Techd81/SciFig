@@ -109,7 +109,8 @@ render_qa = {
     "overlapFailures": [],
     "blankOrTinyOutputs": [],
     "statProvenanceWarnings": [],
-    "hardFail": False
+    "hardFail": False,
+    "impactScore": None,
 }
 
 for item in expected:
@@ -136,6 +137,23 @@ if render_qa["hardFail"]:
     raise RuntimeError(
         "Rendered QA failed. Return to Phase 3 for layout/style/code fixes, "
         "or Phase 2 if the figure plan is overpacked."
+    )
+```
+
+#### Step 4.4b: Visual Impact Scoring
+
+After `render_qa` passes its hard-fail checks, evaluate visual impact using a `visual-impact-scorer` Agent. The agent scores contrast depth, visual hierarchy, focal-point clarity, and information-density vs readability balance on a 0-100 scale.
+
+```python
+# After render_qa passes (no hardFail)
+# Delegate to visual-impact-scorer agent
+# Agent returns: { impactScore: 0-100, dimensions: { contrast, hierarchy, focalClarity, infoDensityVsReadability } }
+
+render_qa["impactScore"] = impact_result.get("impactScore", 50)
+if render_qa["impactScore"] < 20:
+    raise RuntimeError(
+        f"Visual impact score {render_qa['impactScore']}/100 is critically low. "
+        "Review contrast, hierarchy, focal clarity, and information density."
     )
 ```
 

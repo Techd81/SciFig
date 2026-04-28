@@ -2,7 +2,7 @@
 
 Expanded chart taxonomy for `scifig-generate`. Use this as the lookup table during Phase 2.
 
-**Status**: ✅ = implemented (115); every registered chart has a dedicated `gen_` implementation.
+**Status**: ✅ = implemented (116); every registered chart has a dedicated `gen_` implementation.
 
 ## Core Quantitative Charts
 
@@ -194,6 +194,10 @@ Expanded chart taxonomy for `scifig-generate`. Use this as the lookup table duri
 | `grouped_bar` | ✅ | grouped categories | Grouped bar |
 | `heatmap_symmetric` | ✅ | symmetric matrix | Symmetric heatmap |
 | `violin_grouped` | ✅ | multiple groups | Grouped violin |
+| `spatial_feature` | ✅ | spatial coordinates + feature value | Spatial expression map |
+| `composition_dotplot` | ✅ | compositional data by group | Composition dot summary |
+| `bubble_matrix` | ✅ | matrix with size encoding | Bubble matrix |
+| `alluvial` | ✅ | flow between categories | Alluvial/Sankey diagram |
 
 ## Selection Heuristics
 

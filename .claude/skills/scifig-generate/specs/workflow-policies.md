@@ -50,6 +50,9 @@ CROWDING_POLICY = {
     "max_bracket_groups": 2,
     "render_retry_limit": 5,
     "layout_reflow_required_on_overlap": True,
+    "legend_external_hard_limit": True,
+    "legend_reflow_strategy": ["margin_adjust", "height_increase", "entry_reduction"],
+    "legend_max_height_multiplier": 1.3,
 }
 
 LAYOUT_SCORE_WEIGHTS = {
@@ -89,8 +92,12 @@ Use `Agent` only after the data-status, file-path, and mode gates are complete. 
 | `chart-stats-planner` | Multi-panel, custom domain, high-stakes statistics, or requested inferential claims | `chartPlan.delegationReports.stats` | unregistered chart, unsupported statistical assumption, missing replicate/cohort meaning |
 | `panel-layout-auditor` | More than two panels, shared legend/colorbar, long labels, many groups | `chartPlan.delegationReports.layout` | overpacked layout, missing legend/colorbar plan, invalid axis linking |
 | `palette-journal-auditor` | Domain palette, many categories, grayscale-safe request, journal submission | `chartPlan.delegationReports.palette` | category collisions, poor grayscale contrast, semantic map drift |
+| `scientific-color-harmony` | After build_palette_plan in Phase 2 | `chartPlan.delegationReports.color_harmony` | advisory only — perceptual harmony, color-wheel relationships, domain aesthetics |
+| `layout-aesthetics` | After build_panel_blueprint in Phase 2 | `chartPlan.delegationReports.aesthetics` | advisory only — whitespace balance, visual weight distribution, panel proportions |
+| `content-richness` | After build_visual_content_plan in Phase 2 | `chartPlan.delegationReports.content_richness` | advisory only — annotation density, label informativeness, marker diversity |
 | `code-reviewer` | Before Phase 3 completion | `styledCode.codeReview` | syntax/import failures, generator drift, forbidden `loc="best"`, missing metadata/source hooks |
 | `rendered-qa` | After script execution and before final outputBundle | `outputBundle.renderQa` | blank/tiny output, overlap, in-axes legend, missing format, non-editable SVG/PDF text |
+| `visual-impact-scorer` | After rendered-qa, before outputBundle packaging | `outputBundle.renderQa.impactScore` | impactScore < 40 → warning, impactScore < 20 → hardFail |
 
 Blocking findings route back to the owning phase rather than being buried in the final report.
 
@@ -107,5 +114,6 @@ Phase 4 must produce `render_qa.json` with:
 - `paletteContrastCheck`
 - `visualEnhancementCount`
 - `statProvenanceWarnings`
+- `impactScore` (0-100 from visual-impact-scorer agent)
 
-Any hard failure returns to Phase 3 for styling/layout/code or Phase 2 for an overpacked plan.
+Any hard failure returns to Phase 3 for styling/layout/code or Phase 2 for an overpacked plan. `impactScore < 20` is a hard fail; `impactScore < 40` is a warning.

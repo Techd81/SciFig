@@ -19,6 +19,8 @@ Read the input file, determine the structural pattern, extract semantic roles, i
 import pandas as pd
 from pathlib import Path
 
+LARGE_ROW_THRESHOLD = 100_000
+
 file_path = "{{FILE_PATH}}"
 if not file_path:
     raise ValueError("Missing FILE_PATH. Ask the user where the data file lives before Phase 1.")
@@ -30,10 +32,52 @@ if not path.exists() or not path.is_file():
 ext = path.suffix.lower()
 
 if ext in (".csv", ".txt", ".tsv"):
+    # Encoding detection: try utf-8 first, fall back to latin-1, then chardet
+    _encoding = "utf-8"
+    try:
+        with open(path, encoding="utf-8") as f:
+            f.read(8192)
+    except UnicodeDecodeError:
+        try:
+            with open(path, encoding="latin-1") as f:
+                f.read(8192)
+            _encoding = "latin-1"
+        except UnicodeDecodeError:
+            try:
+                import chardet
+                with open(path, "rb") as f:
+                    _detected = chardet.detect(f.read(100000))
+                _encoding = _detected.get("encoding", "latin-1") or "latin-1"
+            except ImportError:
+                _encoding = "latin-1"
+
+    # Delimiter auto-detection for .csv/.txt
     sep = "\t" if ext == ".tsv" else ","
-    df = pd.read_csv(path, sep=sep)
+    if ext in (".csv", ".txt"):
+        with open(path, encoding=_encoding, errors="replace") as f:
+            _first_lines = [f.readline() for _ in range(5)]
+        _tab_counts = [line.count("\t") for line in _first_lines]
+        _comma_counts = [line.count(",") for line in _first_lines]
+        if all(t > c for t, c in zip(_tab_counts, _comma_counts)) and max(_tab_counts) > 0:
+            sep = "\t"
+
+    # Probe row count for large-file handling
+    _probe = pd.read_csv(path, sep=sep, nrows=10, encoding=_encoding, on_bad_lines="warn")
+    _total_rows = sum(1 for _ in open(path, encoding="utf-8", errors="replace")) - 1
+    if _total_rows > LARGE_ROW_THRESHOLD:
+        # Chunked read: sample for structure detection, keep full for downstream
+        _chunk_size = min(50_000, _total_rows // 5)
+        df_full = pd.read_csv(path, sep=sep, encoding=_encoding, on_bad_lines="warn")
+        df = df_full.head(LARGE_ROW_THRESHOLD)  # working sample for Phase 1
+        _is_chunked = True
+    else:
+        df = pd.read_csv(path, sep=sep, encoding=_encoding, on_bad_lines="warn")
+        df_full = df
+        _is_chunked = False
 elif ext in (".xlsx", ".xls"):
     df = pd.read_excel(path)
+    df_full = df
+    _is_chunked = False
 else:
     raise ValueError(f"Unsupported file type: {ext}")
 
@@ -43,6 +87,12 @@ if df.empty:
 column_names = df.columns.tolist()
 lower_cols = [c.lower() for c in column_names]
 ```
+
+When `_is_chunked` is `True`:
+- Use `df` (head sample) for structure detection, semantic role mapping, domain inference, and risk assessment.
+- Store `df_full` reference in `dataProfile["fullDfPath"]` so downstream phases can load the complete dataset when needed.
+- Add `dataProfile["isChunked"] = True` and `dataProfile["totalRows"] = _total_rows` so Phase 2+ can decide whether to subsample for plotting.
+- Warn in `dataProfile["warnings"]`: `CHUNKED_READ: structure detection used {_total_rows} rows, analysis limited to first {len(df)} rows`.
 
 ### Step 1.2: Detect Structure And Special Patterns
 
@@ -435,6 +485,9 @@ dataProfile = {
         "blocking": False
     },
     "filePath": file_path,
+    "isChunked": _is_chunked if "_is_chunked" in dir() else False,
+    "totalRows": _total_rows if "_total_rows" in dir() else len(df),
+    "fullDfPath": file_path if "_is_chunked" in dir() and _is_chunked else None,
     "df": df
 }
 ```

@@ -128,6 +128,91 @@ cbar.set_label("Value", fontsize=5)
 - C = `enrichment_dotplot`
 - D = `pca` or `umap`
 
+## Recipe 6: Triple Horizontal
+
+**When to use**
+- Three wide-aspect panels side-by-side (e.g. time-course, dose-response, multi-condition)
+
+**Layout**
+- `1 x 3`
+- A = primary, B = secondary, C = validation
+
+**Typical pairings**
+- `line+ci` + `bar_grouped` + `scatter`
+- `dose_response` + `dose_response` + `dose_response`
+
+## Recipe 7: Triple Vertical
+
+**When to use**
+- Three tall/narrow panels stacked vertically (e.g. multi-gene expression, multi-cohort)
+
+**Layout**
+- `3 x 1`
+- A = primary, B = secondary, C = validation
+
+**Typical pairings**
+- `violin+strip` + `violin+strip` + `violin+strip`
+- `box_grouped` + `box_grouped` + `box_grouped`
+
+## Recipe 8: Stacked Pair
+
+**When to use**
+- Two vertically-stacked panels (e.g. before/after, upstream/downstream)
+
+**Layout**
+- `2 x 1`
+- A = primary, B = comparison
+
+**Typical pairings**
+- `scatter` + `residual`
+- `km` + `risk_table`
+
+## Recipe 9: 2x3 Discovery Board
+
+**When to use**
+- Six conditions, time-points, or genes in a compact grid
+
+**Layout**
+- `2 x 3`
+- A-F mapped left-to-right, top-to-bottom
+
+**Typical pairings**
+- Six `violin+strip` panels
+- Six `heatmap_pure` panels
+
+## Recipe 10: 3x3 Large Board
+
+**When to use**
+- Nine conditions, multi-gene, or multi-omics summary
+
+**Layout**
+- `3 x 3`
+- A-I mapped left-to-right, top-to-bottom
+
+## Recipe 11: Hero + Triple Support
+
+**When to use**
+- One dominant panel with three narrow supporting panels
+
+**Layout**
+- `3 x 2` — A spans all 3 rows on the left; B, C, D stacked on the right
+
+**Typical pairings**
+- `manhattan` + `qq` + `forest` + `enrichment_dotplot`
+- `volcano` + `heatmap_pure` + `violin+strip` + `pca`
+
+## Recipe 12: Asymmetric L
+
+**When to use**
+- One wide top panel with two narrow bottom panels
+
+**Layout**
+- `2 x 2` — A spans both columns in row 0; B and C in row 1
+
+**Typical pairings**
+- `line+ci` + `bar_grouped` + `scatter`
+- `km` + `forest` + `roc`
+
 ## Composition Rules
 
 1. Share legends whenever the same categorical mapping appears in multiple panels, and keep them outside the data region.

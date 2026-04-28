@@ -35,6 +35,9 @@ CROWDING_DEFAULTS = {
     "simplifyIfCrowded": True,
     "renderRetryLimit": 5,
     "layoutReflowRequiredOnOverlap": True,
+    "legendExternalHardLimit": True,
+    "legendReflowStrategy": ["margin_adjust", "height_increase", "entry_reduction"],
+    "legendMaxHeightMultiplier": 1.3,
     "simplificationsApplied": [],
     "droppedDirectLabelCount": 0,
 }
@@ -760,6 +763,45 @@ def legend_overlaps_axes(fig, legend, axes):
     return any(legend_box.overlaps(ax.get_window_extent(renderer=renderer)) for ax in axes)
 
 
+def elements_overlap_axes(fig, axes):
+    renderer = get_cached_renderer(fig)
+    axes_boxes = {pid: ax.get_window_extent(renderer=renderer) for pid, ax in axes.items()}
+    issues = []
+    for ax_pid, ax in axes.items():
+        for child in ax.get_children():
+            gid = getattr(child, "get_gid", lambda: None)()
+            if gid in ("scifig_metric_box", "scifig_inset"):
+                try:
+                    child_box = child.get_window_extent(renderer=renderer)
+                    for other_pid, other_box in axes_boxes.items():
+                        if other_pid != ax_pid and child_box.overlaps(other_box):
+                            issues.append({"element": gid, "host_panel": ax_pid, "conflict_panel": other_pid})
+                except Exception:
+                    pass
+    return issues
+
+
+def _reflow_legend_with_height_increase(fig, handles, labels, legend_labels, occupied_axes,
+                                        crowdingPlan, journalProfile, fontsize):
+    max_mult = crowdingPlan.get("legendMaxHeightMultiplier", 1.3)
+    base_height = fig.get_figheight()
+    for mult in [1.1, 1.2, 1.3]:
+        if mult > max_mult:
+            break
+        fig.set_figheight(base_height * mult)
+        invalidate_layout_cache(fig)
+        get_cached_renderer(fig, force=True)
+        for mode in ["outside_right", "bottom_center", "top_center"]:
+            for existing in list(fig.legends):
+                existing.remove()
+            legend = create_figure_legend(fig, handles, legend_labels, mode, fontsize, ncol=1)
+            ok = enforce_non_overlapping_legend(fig, legend, mode, occupied_axes, retry_limit=3)
+            if ok:
+                return legend, mode
+    fig.set_figheight(base_height)
+    return None, None
+
+
 def apply_subplot_margins(fig, legend_mode, has_colorbar=False, legend=None):
     invalidate_layout_cache(fig)
     get_cached_renderer(fig, force=True)
@@ -788,6 +830,17 @@ def apply_subplot_margins(fig, legend_mode, has_colorbar=False, legend=None):
             bottom = max(0.12, top - 0.12)
         else:
             top = min(0.95, bottom + 0.12)
+
+    if legend is not None:
+        renderer = get_cached_renderer(fig)
+        legend_box = legend.get_window_extent(renderer=renderer).transformed(fig.transFigure.inverted())
+        if legend_mode == "outside_right" and legend_box.x1 > 0.99:
+            needed_right = max(0.20, legend_box.x0 - 0.02)
+            right = min(right, needed_right)
+        elif legend_mode == "bottom_center":
+            bottom = max(bottom, min(0.74, legend_box.y1 + 0.035))
+        elif legend_mode == "top_center":
+            top = min(top, max(0.26, legend_box.y0 - 0.035))
 
     fig.subplots_adjust(top=top, bottom=bottom, left=left, right=right)
     invalidate_layout_cache(fig)
@@ -854,6 +907,11 @@ def enforce_non_overlapping_legend(fig, legend, legend_mode, occupied_axes, has_
             fig.subplots_adjust(right=next_right)
         invalidate_layout_cache(fig)
 
+    if not legend_overlaps_axes(fig, legend, occupied_axes):
+        return True
+
+    invalidate_layout_cache(fig)
+    apply_subplot_margins(fig, legend_mode, has_colorbar=has_colorbar, legend=legend)
     return not legend_overlaps_axes(fig, legend, occupied_axes)
 
 
@@ -910,8 +968,14 @@ def place_shared_legend(fig, axes, occupied_axes, crowdingPlan, journalProfile, 
     fallback_mode = "outside_right"
     legend = create_figure_legend(fig, handles, legend_labels, fallback_mode, fontsize, ncol=1)
     apply_subplot_margins(fig, fallback_mode, has_colorbar=has_colorbar, legend=legend)
+    if legend_overlaps_axes(fig, legend, occupied_axes):
+        legend.remove()
+        invalidate_layout_cache(fig)
+        info["legendOutsidePlotArea"] = False
+        info["layoutReflowNeeded"] = True
+        return None, fallback_mode, info
     info["legendNColumns"] = 1
-    info["legendOutsidePlotArea"] = not legend_overlaps_axes(fig, legend, occupied_axes)
+    info["legendOutsidePlotArea"] = True
     return legend, fallback_mode, info
 
 
@@ -962,9 +1026,38 @@ def apply_crowding_management(fig, axes, chartPlan, journalProfile):
             labels=labels,
         )
 
+    if legend_info.get("layoutReflowNeeded") and crowdingPlan.get("legendExternalHardLimit", True):
+        fontsize = journalProfile.get("font_size_small_pt", 5)
+        max_label_chars = crowdingPlan.get("legendLabelMaxChars", 32)
+        legend_labels, _ = shorten_legend_labels(labels, max_label_chars)
+        reflow_legend, reflow_mode = _reflow_legend_with_height_increase(
+            fig, handles, labels, legend_labels, occupied_axes, crowdingPlan, journalProfile, fontsize)
+        if reflow_legend is not None:
+            legend = reflow_legend
+            legend_mode_used = reflow_mode
+            legend_info["legendOutsidePlotArea"] = True
+            legend_info["layoutReflowNeeded"] = False
+            legend_info["heightIncreased"] = True
+        else:
+            legend_info["legendOutsidePlotArea"] = False
+
     apply_subplot_margins(fig, legend_mode_used, has_colorbar=shared_colorbar_applied, legend=legend)
     if chartPlan.get("visualContentPlan", {}).get("outsideLayoutElements"):
         fig.subplots_adjust(right=min(fig.subplotpars.right, 0.78))
+
+    get_cached_renderer(fig, force=True)
+    overlap_issues = elements_overlap_axes(fig, axes)
+    if overlap_issues:
+        for issue in overlap_issues:
+            for child in list(axes[issue["host_panel"]].get_children()):
+                gid = getattr(child, "get_gid", lambda: None)()
+                if gid == issue["element"]:
+                    current_x = getattr(child, '_x', None) or 1.015
+                    if hasattr(child, 'set_position'):
+                        child.set_position((current_x + 0.05, getattr(child, '_y', 1.0)))
+                    elif hasattr(child, 'set_x'):
+                        child.set_x(current_x + 0.05)
+        invalidate_layout_cache(fig)
 
     crowdingPlan["droppedDirectLabelCount"] = dropped_direct_labels
     crowdingPlan["legendScope"] = "figure"
@@ -983,6 +1076,8 @@ def apply_crowding_management(fig, axes, chartPlan, journalProfile):
     if dropped_direct_labels:
         simplifications.append(f"direct_labels_trimmed:{dropped_direct_labels}")
     crowdingPlan["simplificationsApplied"] = list(dict.fromkeys(simplifications))
+    if overlap_issues:
+        crowdingPlan["overlapIssues"] = overlap_issues
     chartPlan["crowdingPlan"] = crowdingPlan
 
     return {
@@ -993,5 +1088,7 @@ def apply_crowding_management(fig, axes, chartPlan, journalProfile):
         "axisLegendRemovedCount": removed_axis_legends,
         "legendOutsidePlotArea": legend_info.get("legendOutsidePlotArea", True),
         "legendLabelsShortened": legend_info.get("legendLabelsShortened", False),
+        "layoutReflowApplied": legend_info.get("layoutReflowNeeded", False) is False and legend_info.get("heightIncreased", False),
+        "overlapIssues": overlap_issues,
     }
 ```

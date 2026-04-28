@@ -298,38 +298,46 @@ def build_panel_blueprint(primaryChart, secondaryCharts, dataProfile, workflowPr
     )
     requested_story = story
 
-    if story == "story_board_2x2" and len(support_pool) < 3:
-        story = "hero_plus_stacked_support" if len(support_pool) >= 2 else "comparison_pair" if len(support_pool) >= 1 else "single"
-    elif story == "hero_plus_stacked_support" and len(support_pool) < 2:
-        story = "comparison_pair" if len(support_pool) >= 1 else "single"
-    elif story == "comparison_pair" and len(support_pool) < 1:
-        story = "single"
+    PANEL_IDS = list("ABCDEFGHI")
+    story_panel_map = {
+        "single": 1,
+        "comparison_pair": 2,
+        "hero_plus_stacked_support": 3,
+        "story_board_2x2": 4,
+        "triple_horizontal": 3,
+        "triple_vertical": 3,
+        "stacked_pair": 2,
+        "hero_plus_triple_support": 4,
+        "asymmetric_L": 3,
+        "board_2x3": 6,
+        "board_3x3": 9,
+    }
 
-    if story == "single":
-        panels = [{"id": "A", "role": "hero", "chart": primaryChart, "source": "primary"}]
-        layout = {"recipe": "single", "grid": "1x1"}
-    elif story == "hero_plus_stacked_support":
-        panels = [
-            {"id": "A", "role": "hero", "chart": primaryChart, "source": "primary"},
-            {"id": "B", "role": "support", "chart": support_pool[0], "source": "secondary"},
-            {"id": "C", "role": "validation", "chart": support_pool[1], "source": "secondary"}
-        ]
-        layout = {"recipe": "hero_plus_stacked_support", "grid": "2x2-hero-span"}
-    elif story == "story_board_2x2":
-        charts = [primaryChart] + support_pool[:3]
-        panels = [
-            {"id": "A", "role": "hero", "chart": charts[0], "source": "primary"},
-            {"id": "B", "role": "support", "chart": charts[1], "source": "secondary"},
-            {"id": "C", "role": "validation", "chart": charts[2], "source": "secondary"},
-            {"id": "D", "role": "context", "chart": charts[3], "source": "candidate"}
-        ]
-        layout = {"recipe": "story_board_2x2", "grid": "2x2"}
-    else:
-        panels = [
-            {"id": "A", "role": "hero", "chart": primaryChart, "source": "primary"},
-            {"id": "B", "role": "support", "chart": support_pool[0], "source": "secondary"}
-        ]
-        layout = {"recipe": "comparison_pair", "grid": "1x2"}
+    needed = story_panel_map.get(story, 2)
+    available = 1 + len(support_pool)
+
+    if needed > available:
+        for fallback in ["story_board_2x2", "hero_plus_stacked_support", "comparison_pair", "single"]:
+            if story_panel_map.get(fallback, 99) <= available:
+                story = fallback
+                needed = story_panel_map[story]
+                break
+
+    charts = [primaryChart] + support_pool[:needed - 1]
+    roles = ["hero"] + ["support"] * (needed - 2) + (["context"] if needed > 2 else [])
+    if len(roles) < needed:
+        roles = ["hero"] + ["support"] * (needed - 1)
+
+    panels = []
+    for i in range(min(needed, len(charts))):
+        panels.append({
+            "id": PANEL_IDS[i],
+            "role": roles[i] if i < len(roles) else "support",
+            "chart": charts[i],
+            "source": "primary" if i == 0 else "secondary",
+        })
+
+    layout = {"recipe": story, "grid": f"{story_panel_map.get(story, 2)}"}
 
     continuous_scale_charts = {
         "heatmap_cluster", "heatmap_pure", "heatmap_annotated", "heatmap_triangular",
@@ -410,7 +418,14 @@ def build_crowding_plan(primaryChart, secondaryCharts, dataProfile, workflowPref
         "story_board_2x2": ["hero_plus_stacked_support", "comparison_pair", "single"],
         "hero_plus_stacked_support": ["comparison_pair", "single"],
         "comparison_pair": ["single"],
-        "single": []
+        "single": [],
+        "triple_horizontal": ["comparison_pair", "single"],
+        "triple_vertical": ["stacked_pair", "single"],
+        "stacked_pair": ["single"],
+        "board_2x3": ["story_board_2x2", "hero_plus_stacked_support", "comparison_pair", "single"],
+        "board_3x3": ["board_2x3", "story_board_2x2", "hero_plus_stacked_support", "comparison_pair", "single"],
+        "hero_plus_triple_support": ["hero_plus_stacked_support", "comparison_pair", "single"],
+        "asymmetric_L": ["triple_horizontal", "comparison_pair", "single"],
     }.get(final_layout, ["comparison_pair", "single"])
 
     simplifications = []
@@ -641,6 +656,48 @@ Before locking `chartPlan`, optionally use read-only agents when the plan is com
 - `chart-stats-planner`: validate chart/stat fit, replicate meaning, and no invented inferential claims.
 - `panel-layout-auditor`: validate support-panel dedupe, layout score, legend burden, axis linking, and reflow fallbacks.
 - `palette-journal-auditor`: validate semantic color mapping, grayscale contrast, journal profile fit, and overflow marker/linestyle fallback.
+
+Additionally, these advisory agents run after their respective plan steps:
+
+- `scientific-color-harmony`: after `palettePlan` is built, evaluates perceptual harmony, color-wheel relationships, and domain aesthetics. Writes to `chartPlan.delegationReports.color_harmony`.
+- `layout-aesthetics`: after `panelBlueprint` is built, evaluates whitespace balance, visual weight distribution, panel proportions, and grid harmony. Writes to `chartPlan.delegationReports.aesthetics`.
+- `content-richness`: after `visualContentPlan` is built, evaluates annotation density, label informativeness, marker diversity, and directional elements. Writes to `chartPlan.delegationReports.content_richness`.
+
+These three advisory agents are non-blocking — findings are logged but do not block Phase 3 entry.
+
+Advisory agent dispatch protocol:
+
+```python
+# After palettePlan is built
+color_harmony = Agent(
+    subagent_type="general-purpose",
+    prompt=f"Evaluate the perceptual harmony of this palette plan for a {domain} domain figure. "
+           f"Palette: {palettePlan}. Journal profile: {journalProfile}. "
+           f"Assess: color-wheel relationships, perceptual uniformity, domain aesthetic fit. "
+           f"Return JSON: {{\"harmony_score\": 0-100, \"findings\": [...], \"suggestions\": [...]}}"
+)
+chartPlan["delegationReports"]["color_harmony"] = color_harmony
+
+# After panelBlueprint is built
+aesthetics = Agent(
+    subagent_type="general-purpose",
+    prompt=f"Evaluate the layout aesthetics of this {len(panels)}-panel {recipe} figure. "
+           f"Panel blueprint: {panelBlueprint}. Journal profile: {journalProfile}. "
+           f"Assess: whitespace balance, visual weight distribution, panel proportions, grid harmony. "
+           f"Return JSON: {{\"aesthetics_score\": 0-100, \"findings\": [...], \"suggestions\": [...]}}"
+)
+chartPlan["delegationReports"]["aesthetics"] = aesthetics
+
+# After visualContentPlan is built
+richness = Agent(
+    subagent_type="general-purpose",
+    prompt=f"Evaluate the content richness of this figure's visual content plan. "
+           f"Plan: {visualContentPlan}. Chart types: {[p['chart'] for p in panels]}. "
+           f"Assess: annotation density, label informativeness, marker diversity, directional elements. "
+           f"Return JSON: {{\"richness_score\": 0-100, \"findings\": [...], \"suggestions\": [...]}}"
+)
+chartPlan["delegationReports"]["content_richness"] = richness
+```
 
 Any blocking finding must be resolved in Phase 2 before Phase 3 starts.
 
