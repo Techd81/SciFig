@@ -264,20 +264,31 @@ def add_group_dividers(ax: Axes,
                         group_labels: Sequence[str] | None = None,
                         group_centers: Sequence[float] | None = None,
                         color: str = "gray", lw: float = 1.5,
-                        alpha: float = 0.6, label_y_frac: float = 1.02,
+                        alpha: float = 0.6,
+                        label_position: str = "above",
+                        label_y_frac: float | None = None,
                         label_color: str = "#444",
                         label_fontsize: int = 11) -> None:
-    """Draw dashed vertical group dividers and optional group labels above (idiom I3)."""
+    """Draw dashed vertical group dividers and optional group labels (idiom I3).
+
+    label_position: 'above' (default, outside chart at y=1.02 axes coords) |
+                    'inside_top' (at y=0.96 axes coords, safer with figure title) |
+                    'inside_bottom' (at y=0.04 axes coords).
+    label_y_frac:  override fraction (axes coords) explicitly. Wins over label_position.
+    """
     for x_split in split_indices:
         ax.axvline(x_split, color=color, linestyle="--",
                    linewidth=lw, alpha=alpha, zorder=1)
-    if group_labels and group_centers:
-        ymax = ax.get_ylim()[1]
-        y_label = ymax * label_y_frac
-        for cx, name in zip(group_centers, group_labels):
-            ax.text(cx, y_label, name, ha="center", va="bottom",
-                    fontsize=label_fontsize, fontweight="bold",
-                    color=label_color)
+    if not (group_labels and group_centers):
+        return
+    pos_map = {"above": 1.02, "inside_top": 0.96, "inside_bottom": 0.04}
+    yfrac = label_y_frac if label_y_frac is not None else pos_map.get(label_position, 0.96)
+    va = "bottom" if yfrac >= 1.0 else "top"
+    for cx, name in zip(group_centers, group_labels):
+        ax.text(cx, yfrac, name,
+                ha="center", va=va,
+                fontsize=label_fontsize, fontweight="bold",
+                color=label_color, transform=ax.get_xaxis_transform())
 
 
 def add_panel_label(ax: Axes, label: str, *,
@@ -595,8 +606,11 @@ def select_narrative_arc(dataProfile: dict, chartPlan: dict | None = None) -> st
 
 
 _ARC_REQUIRED_MOTIFS = {
-    # 'hero' is single-panel headline — corpus convention drops panel labels for hero
-    "hero":                  ["polygon_polar_grid", "colored_marker_edge"],
+    # 'hero' is single-panel headline. Sub-types differentiate polar vs cartesian.
+    "hero":                  ["colored_marker_edge"],                  # universal hero requirement
+    "hero.polar":            ["polygon_polar_grid", "colored_marker_edge"],
+    "hero.cartesian":        ["colored_marker_edge"],
+    "hero.dual_axis":        ["twin_axes_color_spines", "colored_marker_edge"],
     "single_focus":          ["alpha_layered_scatter"],
     "multipanel_grid":       ["panel_label", "colored_marker_edge", "dotted_zero_axhline"],
     "global_local":          ["shared_feature_ordering", "colored_marker_edge", "dotted_zero_axhline"],
@@ -615,10 +629,19 @@ def arc_required_motifs(arc: str, *, chart_family: str | None = None) -> list[st
     """Return mandatory motif keys for the chosen narrative arc.
 
     For arcs with sub-types, pass `chart_family` to disambiguate:
+      - hero + 'radar' / 'mirror_radial' → polar sub-type
+      - hero + 'dual_axis'                → dual_axis sub-type
+      - hero + 'scatter_regression' / 'forest' / 'box' / 'violin' → cartesian sub-type
       - train_test_diagnostic + 'scatter_regression' → scatter sub-type
       - train_test_diagnostic + 'time_series_pi'      → time-series sub-type
     Default (no chart_family): return the arc's universal motifs.
     """
+    if arc == "hero" and chart_family:
+        if chart_family in {"radar", "mirror_radial", "polar"}:
+            return list(_ARC_REQUIRED_MOTIFS["hero.polar"])
+        if chart_family in {"dual_axis"}:
+            return list(_ARC_REQUIRED_MOTIFS["hero.dual_axis"])
+        return list(_ARC_REQUIRED_MOTIFS["hero.cartesian"])
     if arc == "train_test_diagnostic" and chart_family:
         if chart_family in {"scatter_regression", "predicted_actual"}:
             return list(_ARC_REQUIRED_MOTIFS["train_test_diagnostic.scatter"])
