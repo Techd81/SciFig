@@ -141,6 +141,48 @@ def resolve_journal_profile(workflowPreferences):
         "story_bias": "clinical_validation"
     }
 
+    field_top_journal = {
+        **science,
+        "name": workflowPreferences.get("journalStyleLabel", "field_top_journal"),
+        "base_profile": "science",
+        "single_width_mm": 89,
+        "double_width_mm": 183,
+        "font_size_body_pt": 6,
+        "font_size_panel_label_pt": 8,
+        "axis_linewidth_pt": 0.55,
+        "tick_width_pt": 0.5,
+        "panel_gap_rel": 0.18,
+        "story_bias": "field_specific_top_journal",
+        "domain_journal_label": workflowPreferences.get("journalStyleLabel"),
+    }
+
+    field_methods = {
+        **nature,
+        "name": workflowPreferences.get("journalStyleLabel", "field_methods"),
+        "base_profile": "nature",
+        "panel_gap_rel": 0.22,
+        "story_bias": "methods_benchmark_validation",
+        "domain_journal_label": workflowPreferences.get("journalStyleLabel"),
+    }
+
+    field_dense = {
+        **cell,
+        "name": workflowPreferences.get("journalStyleLabel", "field_dense"),
+        "base_profile": "cell",
+        "panel_gap_rel": 0.26,
+        "story_bias": "dense_mechanism_performance",
+        "domain_journal_label": workflowPreferences.get("journalStyleLabel"),
+    }
+
+    field_compact = {
+        **science,
+        "name": workflowPreferences.get("journalStyleLabel", "field_compact"),
+        "base_profile": "science",
+        "panel_gap_rel": 0.16,
+        "story_bias": "compact_technical_comparison",
+        "domain_journal_label": workflowPreferences.get("journalStyleLabel"),
+    }
+
     if style == "cell":
         return cell
     if style == "science":
@@ -151,6 +193,14 @@ def resolve_journal_profile(workflowPreferences):
         return nejm
     if style == "jama":
         return jama
+    if style == "field_methods":
+        return field_methods
+    if style == "field_dense":
+        return field_dense
+    if style == "field_compact":
+        return field_compact
+    if style == "field_top_journal":
+        return field_top_journal
     return nature
 ```
 
@@ -445,10 +495,11 @@ Each generator should:
 - Return its axis object when used inside multi-panel composition
 - Apply `apply_chart_polish(ax, chart_type)` after drawing data
 - Leave Nature/Cell dense overlays to `apply_visual_content_pass(...)` so all implemented charts share the same information-density contract
+- Do not rely on bare lines/points alone: `apply_visual_content_pass(...)` must add data-derived in-plot explanatory labels plus metric boxes, inset summaries, endpoint/peak labels, threshold labels, or effect/range summaries according to `visualContentPlan`
 
 ### Post-plot polish function (call after every chart generator)
 
-Generator functions draw the base chart and apply minimal polish only. The generated script then runs `apply_visual_content_pass(...)` before crowding management so content density is controlled centrally instead of being reimplemented chart-by-chart.
+Generator functions draw the base chart and apply minimal polish only. The generated script then runs `apply_visual_content_pass(...)` before crowding management so content density is controlled centrally instead of being reimplemented chart-by-chart. The helper source in `phases/code-gen/helpers.py` is the execution source of truth for in-plot explanatory labels, enhancement counts, and residual axis-legend checks.
 
 ```python
 def apply_chart_polish(ax, chart_type):
@@ -1624,7 +1675,7 @@ Composition rules:
 - Hero panel may span rows or columns.
 - Panels sharing the same group, color, marker, or line semantics should reuse one figure-level legend outside the plotting areas.
 - Heatmaps and spatial score panels should reuse one shared colorbar when the same signal is encoded.
-- Do not use `loc="best"` or in-axes legends for publication output; remove panel legends and rebuild a shared `fig.legend`.
+- Do not use `loc="best"` or keep in-axes legends for publication output; generator-level legends are temporary handle sources only, then `apply_crowding_management(...)` must remove them, rebuild a shared `fig.legend`, and leave `axisLegendRemainingCount == 0`.
 - When panels collide, adjust legend columns, shorten labels, reduce spacing, increase margins, or reflow panels before allowing any legend to overlap plotted data or grid regions.
 - Keep panel labels at the same anchor, font, and offset.
 - Respect `axisLinkGroups` only when scales are semantically identical.
@@ -2078,6 +2129,8 @@ codeReview = {
     "syntaxChecked": True,
     "registryCoverageChecked": True,
     "forbiddenLegendScan": 'loc="best"' not in full_code_string and "loc='best'" not in full_code_string,
+    "axisLegendGatePresent": "axisLegendRemainingCount" in full_code_string,
+    "visualDensityGatePresent": "minTotalEnhancements" in full_code_string and "inPlotExplanatoryLabelCount" in full_code_string,
     "hasSourceDataHooks": "source_data" in full_code_string,
     "hasMetadataHooks": "metadata" in full_code_string,
     "panelBlueprintMatched": True,
@@ -2086,6 +2139,10 @@ codeReview = {
 
 if 'loc="best"' in full_code_string or "loc='best'" in full_code_string:
     codeReview["blockingFindings"].append("forbidden_loc_best")
+if "axisLegendRemainingCount" not in full_code_string:
+    codeReview["blockingFindings"].append("missing_axis_legend_remaining_gate")
+if "inPlotExplanatoryLabelCount" not in full_code_string or "minTotalEnhancements" not in full_code_string:
+    codeReview["blockingFindings"].append("missing_visual_density_gate")
 if "savefig" not in full_code_string:
     codeReview["blockingFindings"].append("missing_savefig")
 

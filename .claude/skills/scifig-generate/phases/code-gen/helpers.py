@@ -13,6 +13,11 @@ VISUAL_CONTENT_DEFAULTS = {
     "maxCalloutsSingle": 8,
     "maxCalloutsSupport": 4,
     "maxInlineStats": 4,
+    "minEnhancementsPerPanel": 2,
+    "minTotalEnhancements": 4,
+    "requireInPlotExplanatoryLabels": True,
+    "minInPlotLabelsPerFigure": 1,
+    "semanticCalloutMode": "data_derived",
     "useInsetAxes": True,
     "noInventedStats": True,
     "statProvenanceRequired": True,
@@ -36,6 +41,7 @@ CROWDING_DEFAULTS = {
     "renderRetryLimit": 5,
     "layoutReflowRequiredOnOverlap": True,
     "legendExternalHardLimit": True,
+    "axisLegendHardFail": True,
     "legendReflowStrategy": ["margin_adjust", "height_increase", "entry_reduction"],
     "legendMaxHeightMultiplier": 1.3,
     "simplificationsApplied": [],
@@ -200,10 +206,14 @@ def default_visual_content_plan():
         "appliedEnhancements": [],
         "familyByPanel": {},
         "statProvenance": [],
+        "metricBoxCount": 0,
+        "insetCount": 0,
+        "inPlotExplanatoryLabelCount": 0,
         "renderQaHooks": {
             "trackMetricBoxes": True,
             "trackInsets": True,
             "trackOutsideArtists": True,
+            "trackInPlotLabels": True,
         },
     }
 
@@ -235,8 +245,21 @@ def build_visual_content_plan(primaryChart, secondaryCharts=None, dataProfile=No
 
     charts = [primaryChart] + list(secondaryCharts or [])
     plan["familyByChart"] = {chart: infer_chart_family(chart) for chart in charts if chart}
+    panel_count = max(1, len(charts))
+    plan["minTotalEnhancements"] = max(
+        plan.get("minTotalEnhancements", 4),
+        panel_count * plan.get("minEnhancementsPerPanel", 2),
+    )
+    if plan.get("requireInPlotExplanatoryLabels", True):
+        plan["minInPlotLabelsPerFigure"] = max(
+            plan.get("minInPlotLabelsPerFigure", 1),
+            min(panel_count, plan.get("maxCalloutsSingle", 8)),
+        )
     plan.setdefault("appliedEnhancements", [])
     plan.setdefault("familyByPanel", {})
+    plan.setdefault("metricBoxCount", 0)
+    plan.setdefault("insetCount", 0)
+    plan.setdefault("inPlotExplanatoryLabelCount", 0)
     return plan
 
 
@@ -287,6 +310,88 @@ def _record_visual(plan, panel_id, family, enhancement):
     plan["familyByPanel"][panel_id] = family
 
 
+def _visual_count(plan, key):
+    plan[key] = int(plan.get(key, 0)) + 1
+
+
+def _add_inplot_label(ax, text, visualPlan, xy=None, loc="upper_left", color="#222222"):
+    clean = str(text).strip()
+    if not clean:
+        return None
+    anchors = {
+        "upper_left": (0.04, 0.94, "left", "top"),
+        "upper_right": (0.96, 0.94, "right", "top"),
+        "lower_left": (0.04, 0.08, "left", "bottom"),
+        "lower_right": (0.96, 0.08, "right", "bottom"),
+        "center_right": (0.96, 0.52, "right", "center"),
+    }
+    if xy is None:
+        x, y, ha, va = anchors.get(loc, anchors["upper_left"])
+        artist = ax.text(
+            x, y, clean,
+            transform=ax.transAxes,
+            ha=ha,
+            va=va,
+            fontsize=4.8,
+            color=color,
+            bbox={
+                "boxstyle": "round,pad=0.2",
+                "facecolor": "white",
+                "edgecolor": "#D0D0D0",
+                "linewidth": 0.3,
+                "alpha": 0.82,
+            },
+            zorder=9,
+        )
+    else:
+        artist = ax.annotate(
+            clean,
+            xy=xy,
+            xytext=(5, 5),
+            textcoords="offset points",
+            fontsize=4.8,
+            color=color,
+            bbox={
+                "boxstyle": "round,pad=0.18",
+                "facecolor": "white",
+                "edgecolor": "#D0D0D0",
+                "linewidth": 0.3,
+                "alpha": 0.84,
+            },
+            arrowprops={"arrowstyle": "-", "lw": 0.28, "color": "#555555"},
+            zorder=9,
+        )
+    artist.set_gid("scifig_inplot_label")
+    _visual_count(visualPlan, "inPlotExplanatoryLabelCount")
+    return artist
+
+
+def _has_inplot_label(ax):
+    for text in ax.texts:
+        gid = getattr(text, "get_gid", lambda: None)()
+        if gid == "scifig_inplot_label":
+            return True
+    return False
+
+
+def _ensure_panel_explanatory_label(ax, visualPlan, family):
+    if not visualPlan.get("requireInPlotExplanatoryLabels", True) or _has_inplot_label(ax):
+        return None
+    labels = {
+        "distribution": "median and spread encoded",
+        "scatter_embedding": "trend context",
+        "matrix_heatmap": "value pattern",
+        "time_series": "trajectory summary",
+        "clinical_diagnostic": "diagnostic summary",
+        "genomics_enrichment": "threshold context",
+        "engineering_spectra": "performance window",
+        "composition_flow": "composition summary",
+        "psych_ecology": "response pattern",
+        "generic": "data-derived summary",
+    }
+    return _add_inplot_label(ax, labels.get(family, "data-derived summary"), visualPlan, loc="lower_left")
+
+
 def _add_metric_box(ax, lines, visualPlan):
     clean = [str(line) for line in lines if line is not None and str(line).strip()]
     if not clean:
@@ -309,6 +414,7 @@ def _add_metric_box(ax, lines, visualPlan):
         },
     )
     artist.set_gid("scifig_metric_box")
+    _visual_count(visualPlan, "metricBoxCount")
     visualPlan["outsideLayoutElements"] = True
     return artist
 
@@ -331,6 +437,7 @@ def _add_summary_inset(ax, values, visualPlan, color="#4C78A8"):
         spine.set_edgecolor("#777777")
     inset.set_title("dist.", fontsize=4, pad=1)
     inset.set_gid("scifig_inset")
+    _visual_count(visualPlan, "insetCount")
     visualPlan["outsideLayoutElements"] = True
     return inset
 
@@ -357,6 +464,7 @@ def _enhance_distribution(ax, dataProfile, visualPlan, palette, col_map):
     if group_col and df is not None and group_col in df:
         groups = list(df[group_col].dropna().unique())
     if groups:
+        group_summaries = []
         for i, group in enumerate(groups[:8]):
             subset = _numeric_values(df[df[group_col] == group], value_col)
             if len(subset) == 0:
@@ -364,11 +472,24 @@ def _enhance_distribution(ax, dataProfile, visualPlan, palette, col_map):
             median = float(np.nanmedian(subset))
             q1, q3 = np.nanpercentile(subset, [25, 75])
             mean = float(np.nanmean(subset))
+            group_summaries.append((i, str(group), median, mean, len(subset)))
             ax.vlines(i, q1, q3, color="black", lw=1.0, zorder=7)
             ax.scatter([i], [mean], marker="D", s=18, facecolor="white",
                        edgecolor="black", linewidth=0.45, zorder=8)
             ax.text(i, -0.12, f"n={len(subset)}", transform=ax.get_xaxis_transform(),
                     ha="center", va="top", fontsize=5, clip_on=False, color="#333333")
+        if group_summaries:
+            best = max(group_summaries, key=lambda item: item[2])
+            baseline = group_summaries[0]
+            delta = best[2] - baseline[2]
+            _add_inplot_label(
+                ax,
+                f"best: {best[1][:14]}\nmedian {best[2]:.3g}\ndelta={delta:+.2g}",
+                visualPlan,
+                xy=(best[0], best[2]),
+                color="#111111",
+            )
+            enhancements.append("best_group_callout")
         if len(groups) == 2:
             a = _numeric_values(df[df[group_col] == groups[0]], value_col)
             b = _numeric_values(df[df[group_col] == groups[1]], value_col)
@@ -382,6 +503,7 @@ def _enhance_distribution(ax, dataProfile, visualPlan, palette, col_map):
             _add_metric_box(ax, [f"groups={len(groups)}", f"n={len(values)}", f"median={np.nanmedian(values):.3g}"], visualPlan)
     else:
         ax.axvline(np.nanmedian(values), color="black", lw=0.7, ls="--")
+        _add_inplot_label(ax, f"median={np.nanmedian(values):.3g}", visualPlan, loc="upper_left")
         _add_metric_box(ax, [f"n={len(values)}", f"median={np.nanmedian(values):.3g}", f"IQR={np.nanpercentile(values, 75) - np.nanpercentile(values, 25):.3g}"], visualPlan)
     _add_summary_inset(ax, values, visualPlan, color=palette.get("categorical", ["#4C78A8"])[0])
     return enhancements
@@ -406,8 +528,10 @@ def _enhance_scatter(ax, dataProfile, visualPlan, palette, col_map):
         ax.plot(xs, slope * xs + intercept, color="black", lw=0.75,
                 alpha=0.65, label="_nolegend_", zorder=5)
         r = np.corrcoef(x, y)[0, 1]
+        direction = "positive" if slope >= 0 else "negative"
+        _add_inplot_label(ax, f"{direction} trend\nr={r:.2f}", visualPlan, loc="upper_left")
         _add_metric_box(ax, [f"n={len(x)}", f"r={r:.2f}", f"slope={slope:.2g}"], visualPlan)
-        enhancements.append("trend_summary")
+        enhancements.extend(["trend_summary", "inplot_trend_label"])
     label_col = _role(dataProfile, "feature_id", "label", "gene")
     if label_col and df is not None and label_col in df and len(y) > 0:
         budget = min(visualPlan.get("maxCalloutsSingle", 8), 5, len(y))
@@ -460,6 +584,13 @@ def _enhance_time_series(ax, dataProfile, visualPlan, palette, col_map):
                    edgecolor=line.get_color(), linewidth=0.6, zorder=7)
         enhancements.append("endpoint_and_peak_labels")
     if ax.lines:
+        main_line = ax.lines[0]
+        x0 = np.asarray(main_line.get_xdata(), dtype=float)
+        y0 = np.asarray(main_line.get_ydata(), dtype=float)
+        if len(x0) >= 2 and len(y0) >= 2:
+            change = y0[-1] - y0[0]
+            _add_inplot_label(ax, f"endpoint delta={change:+.2g}", visualPlan, loc="upper_right")
+            enhancements.append("endpoint_delta_label")
         _add_metric_box(ax, [f"series={len(ax.lines)}", "endpoints labeled"], visualPlan)
     return enhancements or ["time_context"]
 
@@ -500,8 +631,10 @@ def _enhance_clinical(ax, dataProfile, visualPlan, palette, col_map, chart_type)
             lines.append(f"n={len(df)}")
         except TypeError:
             pass
+    if lines:
+        _add_inplot_label(ax, "\n".join(lines[:2]), visualPlan, loc="upper_left")
     _add_metric_box(ax, lines or ["clinical summary"], visualPlan)
-    return ["clinical_metric_summary"]
+    return ["clinical_metric_summary", "inplot_clinical_label"]
 
 
 def _enhance_genomics(ax, dataProfile, visualPlan, palette, col_map, chart_type):
@@ -522,6 +655,7 @@ def _enhance_genomics(ax, dataProfile, visualPlan, palette, col_map, chart_type)
     ax.axvline(1, color="#888888", lw=0.5, ls="--")
     ax.axhline(1.3, color="#888888", lw=0.5, ls="--")
     hits = int(np.sum((np.abs(x) >= 1) & (y >= 1.3)))
+    _add_inplot_label(ax, f"hits={hits}\nthresholded", visualPlan, loc="upper_right")
     if label_col and df is not None and label_col in df:
         budget = min(visualPlan.get("maxCalloutsSingle", 8), 6, len(y))
         for idx in np.argsort(y)[-budget:]:
@@ -529,7 +663,7 @@ def _enhance_genomics(ax, dataProfile, visualPlan, palette, col_map, chart_type)
                         xytext=(3, 3), textcoords="offset points", fontsize=4.5,
                         arrowprops={"arrowstyle": "-", "lw": 0.25, "color": "#555555"})
     _add_metric_box(ax, [f"features={len(x)}", f"hits={hits}", "|log2FC|>=1", "FDR/p>=line"], visualPlan)
-    return ["threshold_lines", "top_feature_callouts", "hit_summary"]
+    return ["threshold_lines", "top_feature_callouts", "hit_summary", "inplot_hit_label"]
 
 
 def _enhance_engineering(ax, dataProfile, visualPlan, palette, col_map):
@@ -545,8 +679,9 @@ def _enhance_engineering(ax, dataProfile, visualPlan, palette, col_map):
         ax.annotate(f"peak {y[peak_idx]:.2g}", (x[peak_idx], y[peak_idx]),
                     xytext=(5, 5), textcoords="offset points", fontsize=4.8,
                     arrowprops={"arrowstyle": "-", "lw": 0.3, "color": "#555555"})
+        _add_inplot_label(ax, f"peak window\n{x[peak_idx]:.3g}, {y[peak_idx]:.3g}", visualPlan, loc="upper_left")
         _add_metric_box(ax, [f"n={len(y)}", f"peak={y[peak_idx]:.3g}", f"range={np.nanmin(y):.2g}..{np.nanmax(y):.2g}"], visualPlan)
-        return ["peak_annotation", "range_summary"]
+        return ["peak_annotation", "range_summary", "inplot_peak_label"]
     _add_metric_box(ax, ["engineering summary"], visualPlan)
     return ["engineering_context"]
 
@@ -562,8 +697,9 @@ def _enhance_composition(ax, dataProfile, visualPlan, palette, col_map):
         lines.extend([f"total={total:.3g}", f"items={len(values)}"])
     if group_col and df is not None and group_col in df:
         lines.append(f"categories={df[group_col].nunique()}")
+    _add_inplot_label(ax, "\n".join(lines[:2]) if lines else "composition", visualPlan, loc="upper_left")
     _add_metric_box(ax, lines or ["composition summary"], visualPlan)
-    return ["composition_summary"]
+    return ["composition_summary", "inplot_composition_label"]
 
 
 def _enhance_psych_ecology(ax, dataProfile, visualPlan, palette, col_map):
@@ -572,10 +708,12 @@ def _enhance_psych_ecology(ax, dataProfile, visualPlan, palette, col_map):
     value_col = _role(dataProfile, "value", "y")
     values = _numeric_values(df, value_col)
     if len(values):
+        _add_inplot_label(ax, f"mean={np.nanmean(values):.3g}\nmedian={np.nanmedian(values):.3g}", visualPlan, loc="upper_left")
         _add_metric_box(ax, [f"n={len(values)}", f"mean={np.nanmean(values):.3g}", f"median={np.nanmedian(values):.3g}"], visualPlan)
     else:
+        _add_inplot_label(ax, "rank/proportion view", visualPlan, loc="upper_left")
         _add_metric_box(ax, ["rank/proportion view"], visualPlan)
-    return ["reference_band", "descriptive_summary"]
+    return ["reference_band", "descriptive_summary", "inplot_response_label"]
 
 
 def _enhance_generic(ax, dataProfile, visualPlan, palette, col_map):
@@ -587,8 +725,9 @@ def _enhance_generic(ax, dataProfile, visualPlan, palette, col_map):
         except TypeError:
             n = None
     _maybe_reference_zero(ax)
+    _add_inplot_label(ax, f"n={n}" if n is not None else "descriptive view", visualPlan, loc="upper_left")
     _add_metric_box(ax, [f"n={n}" if n is not None else "descriptive view"], visualPlan)
-    return ["descriptive_context"]
+    return ["descriptive_context", "inplot_context_label"]
 
 
 def apply_visual_content_pass(fig, axes, chartPlan, dataProfile, journalProfile, palette, col_map=None):
@@ -596,6 +735,14 @@ def apply_visual_content_pass(fig, axes, chartPlan, dataProfile, journalProfile,
     visualPlan = _ensure_visual_content_plan(chartPlan, dataProfile=dataProfile)
     if visualPlan.get("mode") in ("off", "none"):
         return {"appliedEnhancementCount": 0, "families": {}}
+
+    actual_panel_count = max(1, len(axes))
+    visualPlan["minTotalEnhancements"] = actual_panel_count * visualPlan.get("minEnhancementsPerPanel", 2)
+    if visualPlan.get("requireInPlotExplanatoryLabels", True):
+        visualPlan["minInPlotLabelsPerFigure"] = max(
+            1,
+            min(actual_panel_count, visualPlan.get("maxCalloutsSingle", 8)),
+        )
 
     panel_lookup = {
         panel.get("id"): panel.get("chart")
@@ -628,12 +775,20 @@ def apply_visual_content_pass(fig, axes, chartPlan, dataProfile, journalProfile,
         else:
             enhancements = _enhance_generic(ax, dataProfile, visualPlan, palette, col_map)
 
+        fallback_label = _ensure_panel_explanatory_label(ax, visualPlan, family)
+        if fallback_label is not None:
+            enhancements.append("fallback_inplot_explanatory_label")
         for enhancement in enhancements:
             _record_visual(visualPlan, panel_id, family, enhancement)
 
     chartPlan["visualContentPlan"] = visualPlan
     return {
         "appliedEnhancementCount": len(visualPlan.get("appliedEnhancements", [])),
+        "inPlotExplanatoryLabelCount": visualPlan.get("inPlotExplanatoryLabelCount", 0),
+        "metricBoxCount": visualPlan.get("metricBoxCount", 0),
+        "insetCount": visualPlan.get("insetCount", 0),
+        "minTotalEnhancements": visualPlan.get("minTotalEnhancements", 0),
+        "minInPlotLabelsPerFigure": visualPlan.get("minInPlotLabelsPerFigure", 0),
         "families": families,
         "outsideLayoutElements": visualPlan.get("outsideLayoutElements", False),
     }
@@ -685,6 +840,10 @@ def remove_axis_legends(axes):
     return removed
 
 
+def count_axis_legends(axes):
+    return sum(1 for ax in axes.values() if ax.get_legend() is not None)
+
+
 def shorten_legend_labels(labels, max_chars=32):
     shortened = False
     output = []
@@ -701,11 +860,18 @@ def shorten_legend_labels(labels, max_chars=32):
 def trim_excess_text_annotations(ax, max_keep):
     if max_keep is None:
         return 0
-    texts = list(ax.texts)
-    if len(texts) <= max_keep:
+    protected_gids = {"scifig_metric_box", "scifig_inplot_label"}
+    trim_candidates = []
+    for text in list(ax.texts):
+        gid = getattr(text, "get_gid", lambda: None)()
+        raw = str(text.get_text())
+        if gid in protected_gids or raw.startswith("n="):
+            continue
+        trim_candidates.append(text)
+    if len(trim_candidates) <= max_keep:
         return 0
     removed = 0
-    for text in texts[max_keep:]:
+    for text in trim_candidates[max_keep:]:
         text.remove()
         removed += 1
     return removed
@@ -993,6 +1159,7 @@ def apply_crowding_management(fig, axes, chartPlan, journalProfile):
 
     handles, labels = collect_legend_entries(axes)
     removed_axis_legends = remove_axis_legends(axes)
+    remaining_axis_legends = count_axis_legends(axes)
     legend = None
     legend_mode_used = "none"
     legend_info = {
@@ -1045,6 +1212,9 @@ def apply_crowding_management(fig, axes, chartPlan, journalProfile):
     if chartPlan.get("visualContentPlan", {}).get("outsideLayoutElements"):
         fig.subplots_adjust(right=min(fig.subplotpars.right, 0.78))
 
+    if remaining_axis_legends:
+        removed_axis_legends += remove_axis_legends(axes)
+    remaining_axis_legends = count_axis_legends(axes)
     get_cached_renderer(fig, force=True)
     overlap_issues = elements_overlap_axes(fig, axes)
     if overlap_issues:
@@ -1063,6 +1233,7 @@ def apply_crowding_management(fig, axes, chartPlan, journalProfile):
     crowdingPlan["legendScope"] = "figure"
     crowdingPlan["legendModeUsed"] = legend_mode_used
     crowdingPlan["axisLegendRemovedCount"] = removed_axis_legends
+    crowdingPlan["axisLegendRemainingCount"] = remaining_axis_legends
     crowdingPlan["legendNColumns"] = legend_info.get("legendNColumns", 0)
     crowdingPlan["legendLabelsShortened"] = legend_info.get("legendLabelsShortened", False)
     crowdingPlan["legendOutsidePlotArea"] = legend_info.get("legendOutsidePlotArea", True)
@@ -1071,6 +1242,8 @@ def apply_crowding_management(fig, axes, chartPlan, journalProfile):
         simplifications.append("figure_level_shared_legend")
     if removed_axis_legends:
         simplifications.append(f"axis_legends_removed:{removed_axis_legends}")
+    if remaining_axis_legends:
+        simplifications.append(f"axis_legends_remaining:{remaining_axis_legends}")
     if legend_info.get("legendLabelsShortened", False):
         simplifications.append("legend_labels_shortened")
     if dropped_direct_labels:
@@ -1086,6 +1259,7 @@ def apply_crowding_management(fig, axes, chartPlan, journalProfile):
         "sharedColorbarApplied": shared_colorbar_applied,
         "hasFigureLegend": legend is not None,
         "axisLegendRemovedCount": removed_axis_legends,
+        "axisLegendRemainingCount": remaining_axis_legends,
         "legendOutsidePlotArea": legend_info.get("legendOutsidePlotArea", True),
         "legendLabelsShortened": legend_info.get("legendLabelsShortened", False),
         "layoutReflowApplied": legend_info.get("layoutReflowNeeded", False) is False and legend_info.get("heightIncreased", False),

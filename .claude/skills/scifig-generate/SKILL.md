@@ -62,7 +62,7 @@ Collect workflow preferences before dispatching to phases, but treat data availa
 - Mode selection is a separate gate after the data-status decision, and after the file path only when a real file already exists. Never infer `auto` from any answer that is not an exact mode-card selection, and never fall through to auto defaults after an invalid answer.
 - If the user answers a card with a localization request such as `请用中文`, treat it as a language-switch request, re-issue the same card in Chinese, and do not consume it as a data or mode decision.
 - If the user does not have data yet, branch explicitly: either help define a schema/template first, or generate a synthetic dataset only if the user explicitly asks for simulated data. Custom domains entered through Other must be preserved and must not collapse back to biomedical defaults.
-- AskUserQuestion payloads must stay tool-compatible: every question needs `id`, `header`, `question`, and 2-3 options. Do not use `multiSelect`. Use 1-3 questions per card by default; the final visual preference card is the only permitted 4-question exception because journal style, color, resolution, and crowding must be answered together. The journal-style options in that card must be inferred from the selected or custom scientific domain before the card is shown.
+- AskUserQuestion payloads must stay tool-compatible: every question needs `id`, `header`, `question`, and 2-3 options. Do not use `multiSelect`. Use 1-3 questions per card by default; the final visual preference card is the only permitted 4-question exception because journal style, color, resolution, and crowding must be answered together. Before showing that card, perform a domain-journal synthesis step from the selected or custom scientific domain. The journal-style options must be field-leading journals, conferences, or venue families for that exact domain, not a fixed Nature/Science/Cell list.
 
 Preference collection helpers, bilingual card templates, answer maps, and resolution maps are defined in [specs/preference-collection.md](specs/preference-collection.md). Read that file before executing any AskUserQuestion card. The helpers use a single bilingual-lookup pattern instead of duplicated zh/en branches.
 
@@ -70,7 +70,7 @@ Key functions from that file used in the flow below:
 - `normalize_card_answer(raw_answer, mapping)` -- resolves card answers, detects language-switch requests
 - `is_concrete_data_file_path(path_candidate)` -- validates file suffix
 - `resolve_domain_answer(raw_answer, mapping)` -- maps domain card answers to family keys
-- `infer_journal_style_options(domain_family, custom_domain_text, language)` -- domain-aware journal options
+- `infer_journal_style_options(domain_family, custom_domain_text, language, context=None)` -- AI-generated journal options with domain-aware fallback
 - `infer_synthetic_bundle_options(domain_family, custom_domain_text, language)` -- domain-aware bundle options
 - `generate_options_with_ai(context, question_type, fallback_options)` -- AI option generation with fallback chain
 - `_call_option_generator(prompt, question_type, fallback_options)` -- coordinator-interceptable call with proper fallback
@@ -84,7 +84,7 @@ Execute the 6-card flow defined in [specs/preference-collection.md](specs/prefer
 3. **Mode card**: `normalize_card_answer(answer, MODE_MAP)` → `auto` / `interactive`
 4. **Synthetic-domain card** (only if synthetic): `resolve_domain_answer(answer, SYNTHETIC_DOMAIN_MAP)` → domain family + custom text
 5. **Synthetic-bundle card** (only if synthetic): `infer_synthetic_bundle_options()` + optional `generate_options_with_ai()`
-6. **Visual-preference card** (4 questions): use `_localize_options(template, lang)` for palette/resolution/crowding; use `infer_journal_style_options()` for journal
+6. **Visual-preference card** (4 questions): use `_localize_options(template, lang)` for palette/resolution/crowding; use `infer_journal_style_options(..., context={...})` for AI-generated field-top-journal options based on the selected domain. Pass only `{label, description}` to AskUserQuestion, but keep the full `journalOptions` list in state for `styleKey` resolution. Example: audio/signal/acoustics should produce options such as IEEE/ACM TASLP, JASA, IEEE TSP / Signal Processing, ICASSP, or Interspeech when appropriate, not generic Nature-like / Science-like / Cell-like options.
 
 After all cards, assemble `workflowPreferences` using the resolution maps (`JOURNAL_STYLE_RESOLVE`, `STORY_MODE_RESOLVE`, `MISSING_RESOLVE`, `COLOR_MODE_RESOLVE`, `DPI_RESOLVE`, `CROWDING_RESOLVE`, `EXPORT_FORMATS_RESOLVE`, `STATS_RIGOR_RESOLVE`, `PANEL_LAYOUT_RESOLVE`) as defined in § "Building `workflowPreferences`".
 
@@ -96,7 +96,7 @@ When `workflowPreferences["interactionMode"] == "auto"`:
 
 - Ask the data-status card first, then always ask the explicit mode card before any plotting or synthetic-data generation branch. Ask the data-path card only when the user already has a file.
 - If the user chooses synthetic data, ask the synthetic-domain card after mode selection, infer suitable journal-style and bundle options from that answer, then ask the synthetic-bundle card as a separate follow-up.
-- Ask journal style, color, raster DPI, and crowding together in the final visual preference card for every synthetic-data run. The journal-style options in that card must come from `infer_journal_style_options(...)`, so clinical domains see clinical journal families, omics/cell biology domains see Nature/Cell/Science-like families, and engineering/ecology/social-science domains see more compact cross-disciplinary options. For real-file auto mode, fill these with submission-safe defaults unless the user selected interactive mode.
+- Ask journal style, color, raster DPI, and crowding together in the final visual preference card for every synthetic-data run. The journal-style options in that card must come from `infer_journal_style_options(..., context={...})`, which first asks AI to reason from the selected domain, custom domain text, and available data/profile context, then falls back to domain-specific top-journal seeds only if AI generation is unavailable or invalid. Do not show the broad Nature/Science/Cell trio unless the selected field itself is broad high-impact biology or the user explicitly asks for cross-disciplinary top-journal styling. For real-file auto mode, fill these with submission-safe defaults unless the user selected interactive mode.
 - Use `crowdingPolicy=auto_simplify` and `overlapPriority=clarity_first`.
 - Continue directly into Phase 1 only after either a concrete user-confirmed file path exists or a user-approved synthetic-data plan exists, and only after the user explicitly selected free mode.
 - Let the data and detected domain cues drive the recommendation unless the user already supplied explicit `DOMAIN_OVERRIDE` or `MUST_HAVE` constraints.
@@ -184,12 +184,12 @@ Blocking agent findings must route back to the owning phase before advancing. Ne
 7. If legend space is tight, adjust columns, shorten labels, reduce spacing, increase margins, or reflow panels before allowing any legend to overlap curves, bars, points, error bars, confidence bands, grids, or heatmap cells.
 8. Use shared legends or shared colorbars when panels encode the same semantics.
 9. Multi-panel figures must have an explicit panel blueprint before code generation.
-10. For implemented single-panel charts, increase Nature/Cell-style information density through data-derived summaries, reference lines, callouts, insets, sample-size labels, and effect-size context before adding new chart types.
+10. For implemented single-panel charts, increase Nature/Cell-style information density through data-derived summaries, in-plot explanatory labels, reference lines, callouts, insets, sample-size labels, and effect-size context before adding new chart types.
 11. Do not invent statistics for visual impact. Every p-value, AUC, effect size, threshold count, or fitted parameter must come from the supplied data or a documented upstream result.
 12. Prefer vector export and generate source-data friendly artifacts for quantitative panels.
 13. If domain inference is weak, fall back to general biomedical rules instead of overfitting to a guessed specialty.
 14. If statistical assumptions are uncertain, downgrade to a conservative or descriptive choice and explain why.
-15. If rendered QA reports overlap, blank/tiny output, in-axes legends, non-editable vector text, or missing formats, return to Phase 3 or Phase 2 before declaring completion.
+15. If rendered QA reports overlap, blank/tiny output, any remaining in-axes legend, too few visual enhancements, missing in-plot explanatory labels, non-editable vector text, or missing formats, return to Phase 3 or Phase 2 before declaring completion.
 16. Use `specs/workflow-policies.md` for thresholds and budgets; do not add new magic numbers in phase logic without naming the policy.
 
 ## Input Processing
@@ -320,7 +320,7 @@ Collapse completed sub-tasks back to phase-level summaries before the next phase
 - Before Phase 3, ensure the panel blueprint and palette plan are explicit.
 - Before Phase 3, resolve blocking chart/stat/layout/palette agent findings.
 - Before Phase 4, ensure code generation includes source-data, render-QA, and metadata hooks.
-- Before completion, require `renderQa.hardFail == false` and `legendOutsidePlotArea == true`.
+- Before completion, require `renderQa.hardFail == false`, `legendOutsidePlotArea == true`, `axisLegendRemainingCount == 0`, and enough data-derived visual content to satisfy `visualContentPlan.minTotalEnhancements` and `visualContentPlan.minInPlotLabelsPerFigure`.
 
 ## Related Commands
 

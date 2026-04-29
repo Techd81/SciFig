@@ -27,6 +27,11 @@ VISUAL_IMPACT_POLICY = {
     "max_callouts_single": 8,
     "max_callouts_support": 4,
     "max_inline_stats": 4,
+    "min_enhancements_per_panel": 2,
+    "min_total_enhancements": 4,
+    "require_inplot_explanatory_labels": True,
+    "min_inplot_labels_per_figure": 1,
+    "semantic_callout_mode": "data_derived",
     "use_inset_axes": True,
     "require_stat_provenance": True,
     "no_invented_stats": True,
@@ -34,7 +39,7 @@ VISUAL_IMPACT_POLICY = {
 }
 ```
 
-Visual impact must stay data-derived. Permitted enhancements include sample-size labels, observed quantiles, reference lines, confidence bands from supplied or computed values, inset distributions, rank callouts, model diagnostics, and semantic highlights already justified by `dataProfile` or `statPlan`.
+Visual impact must stay data-derived. Permitted enhancements include sample-size labels, observed quantiles, reference lines, confidence bands from supplied or computed values, inset distributions, rank callouts, model diagnostics, and semantic highlights already justified by `dataProfile` or `statPlan`. Every rendered figure should contain in-plot explanatory labels such as best group, endpoint delta, trend direction, threshold hit count, peak window, or matrix/value summaries; outside metric boxes alone do not satisfy visual impact.
 
 ## Crowding And Layout Policy
 
@@ -51,6 +56,7 @@ CROWDING_POLICY = {
     "render_retry_limit": 5,
     "layout_reflow_required_on_overlap": True,
     "legend_external_hard_limit": True,
+    "axis_legend_hard_fail": True,
     "legend_reflow_strategy": ["margin_adjust", "height_increase", "entry_reduction"],
     "legend_max_height_multiplier": 1.3,
 }
@@ -107,13 +113,16 @@ Phase 4 must produce `render_qa.json` with:
 
 - `legendOutsidePlotArea`
 - `axisLegendRemovedCount`
+- `axisLegendRemainingCount`
 - `sharedColorbarApplied`
 - `overlapFailures`
+- `contentDensityFailures`
 - `blankOrTinyOutputs`
 - `editableTextCheck`
 - `paletteContrastCheck`
 - `visualEnhancementCount`
+- `inPlotExplanatoryLabelCount`
 - `statProvenanceWarnings`
 - `impactScore` (0-100 from visual-impact-scorer agent)
 
-Any hard failure returns to Phase 3 for styling/layout/code or Phase 2 for an overpacked plan. `impactScore < 20` is a hard fail; `impactScore < 40` is a warning.
+Any hard failure returns to Phase 3 for styling/layout/code or Phase 2 for an overpacked plan. `axisLegendRemainingCount > 0`, `legendOutsidePlotArea == false`, missing in-plot explanatory labels, or `visualEnhancementCount < visualContentPlan.minTotalEnhancements` are hard failures. `impactScore < 20` is a hard fail; `impactScore < 40` is a warning.

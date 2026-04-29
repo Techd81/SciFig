@@ -459,10 +459,13 @@ def build_crowding_plan(primaryChart, secondaryCharts, dataProfile, workflowPref
         "pointDensityMode": point_density_mode,
         "renderRetryLimit": 5,
         "layoutReflowRequiredOnOverlap": True,
+        "legendExternalHardLimit": True,
+        "axisLegendHardFail": True,
         "annotationMode": "compact" if policy == "auto_simplify" else "full",
         "simplifyIfCrowded": policy != "preserve_information",
         "simplificationsApplied": simplifications,
-        "droppedDirectLabelCount": 0
+        "droppedDirectLabelCount": 0,
+        "axisLegendRemainingCount": 0
     }
 ```
 
@@ -556,6 +559,11 @@ def build_visual_content_plan(primaryChart, secondaryCharts, dataProfile, workfl
         "maxCalloutsSingle": max_callouts,
         "maxCalloutsSupport": 4,
         "maxInlineStats": 4,
+        "minEnhancementsPerPanel": 2,
+        "minTotalEnhancements": max(4, len(charts) * 2),
+        "requireInPlotExplanatoryLabels": True,
+        "minInPlotLabelsPerFigure": min(max(1, len(charts)), max_callouts),
+        "semanticCalloutMode": "data_derived",
         "useInsetAxes": True,
         "noInventedStats": True,
         "statProvenanceRequired": True,
@@ -563,12 +571,17 @@ def build_visual_content_plan(primaryChart, secondaryCharts, dataProfile, workfl
         "familyByChart": {chart: infer_visual_chart_family(chart) for chart in charts if chart},
         "appliedEnhancements": [],
         "familyByPanel": {},
+        "metricBoxCount": 0,
+        "insetCount": 0,
+        "inPlotExplanatoryLabelCount": 0,
         "outsideLayoutElements": True,
         "statProvenance": [],
         "notes": [
             "do_not_add_new_chart_types",
             "statistics_must_be_data_derived",
-            "nature_cell_information_density"
+            "nature_cell_information_density",
+            "minimum_inplot_explanatory_labels_required",
+            "minimum_visual_enhancement_count_required"
         ]
     }
 ```

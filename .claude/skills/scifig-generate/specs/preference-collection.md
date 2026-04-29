@@ -55,46 +55,59 @@ def infer_domain_family_from_text(domain_family, custom_domain_text):
         return "agriculture_food_science"
     if any(k in text for k in ("psychology", "survey", "likert", "social", "education")):
         return "psychology_social_science"
+    if any(k in text for k in (
+        "audio", "acoustic", "sound", "speech", "signal", "wave", "spectrogram", "sonar", "ultrasound",
+        "音频", "声学", "声音", "语音", "信号", "波形", "声波", "频谱", "超声",
+    )):
+        return "signal_processing_acoustics"
     return "general_biomedical"
 ```
 
-## Domain-to-Journal-Style Mapping
+## AI Journal-Style Options with Fallback
 
-Each domain family maps to a ranked list of journal-style options. Language is handled by a single lookup; no duplicated branches.
+Journal-style options are AI-generated after the user selects a domain. The user-facing labels must be top journals, conferences, or venue families from that selected field, not the generic Nature/Science/Cell trio. The fallback map below is only a domain-specific seed list for runtimes where `_call_option_generator` is not intercepted; it must not replace the AI reasoning step.
 
 ```python
-_JOURNAL_STYLE_BY_DOMAIN = {
+_DOMAIN_TOP_JOURNAL_SEEDS = {
+    "signal_processing_acoustics": [
+        {"en": ("IEEE/ACM TASLP-style (Recommended)", "Audio, speech, and acoustic signal-processing figures with compact spectra, waveform, and model-comparison panels", "field_compact"),
+         "zh": ("IEEE/ACM TASLP 风格（推荐）", "适合音频、语音和声学信号处理；强调频谱、波形、模型对比和紧凑多 panel", "field_compact")},
+        {"en": ("JASA-style", "Acoustics-first presentation for wave, psychoacoustic, room/speech, and measurement-heavy studies", "field_methods"),
+         "zh": ("JASA 风格", "适合声学、波形、心理声学、房间/语音和测量型研究；强调方法与可解释标注", "field_methods")},
+        {"en": ("IEEE TSP / Signal Processing-style", "Signal-processing theory, filtering, time-frequency analysis, and algorithm-performance figures", "field_compact"),
+         "zh": ("IEEE TSP / Signal Processing 风格", "适合信号处理理论、滤波、时频分析和算法性能图；强调清晰坐标与算法比较", "field_compact")},
+    ],
     "clinical_diagnostics_survival": [
-        {"en": ("Lancet-like (Clinical recommended)", "Clinical evidence, cohort, survival, and translational medical figures"),
-         "zh": ("Lancet-like（临床推荐）", "适合临床证据、队列、生存和转化医学图表")},
-        {"en": ("NEJM-like", "High-impact clinical trial, outcome, and medical research figures"),
-         "zh": ("NEJM-like", "适合高影响临床试验、结局和医学研究")},
-        {"en": ("JAMA-like", "Diagnostic accuracy, validation studies, and precise labeling"),
-         "zh": ("JAMA-like", "适合诊断准确性、验证研究和清晰标签")},
+        {"en": ("Lancet-style (Clinical recommended)", "Clinical evidence, cohort, survival, and translational medical figures", "lancet"),
+         "zh": ("Lancet 风格（临床推荐）", "适合临床证据、队列、生存和转化医学图表", "lancet")},
+        {"en": ("NEJM-style", "High-impact clinical trial, outcome, and medical research figures", "nejm"),
+         "zh": ("NEJM 风格", "适合高影响临床试验、结局和医学研究", "nejm")},
+        {"en": ("JAMA-style", "Diagnostic accuracy, validation studies, and precise labeling", "jama"),
+         "zh": ("JAMA 风格", "适合诊断准确性、验证研究和清晰标签", "jama")},
     ],
     "genomics_transcriptomics": [
-        {"en": ("Nature-like (Recommended)", "Submission-safe multi-panel figures for omics, mechanism, and discovery work"),
-         "zh": ("Nature-like（推荐）", "适合组学、机制发现和投稿安全的多 panel 科研图")},
-        {"en": ("Cell-like", "Mechanism narrative, cell states, and story-first multi-panel figures"),
-         "zh": ("Cell-like", "适合机制叙事、细胞状态和故事驱动组图")},
-        {"en": ("Science-like", "Compact, low-ink, fast-scanning high-impact figures"),
-         "zh": ("Science-like", "适合紧凑、低墨量、快速阅读的高影响图表")},
+        {"en": ("Nature Genetics / Nature Methods-style (Recommended)", "Omics discovery, methods, clustering, enrichment, and validation-heavy multi-panel figures", "nature"),
+         "zh": ("Nature Genetics / Nature Methods 风格（推荐）", "适合组学发现、方法、聚类、富集和验证型多 panel 图", "nature")},
+        {"en": ("Genome Biology-style", "Genomics workflows, benchmarking, differential analysis, and data-resource figures", "field_methods"),
+         "zh": ("Genome Biology 风格", "适合组学流程、benchmark、差异分析和数据资源型图表", "field_methods")},
+        {"en": ("Cell Genomics-style", "Mechanistic omics and cell-state stories with denser multi-panel organization", "cell"),
+         "zh": ("Cell Genomics 风格", "适合机制组学和细胞状态叙事；强调较密集的多 panel 组织", "cell")},
     ],
     "materials_engineering": [
-        {"en": ("Science-like (Recommended)", "Compact cross-disciplinary figures for engineering, ecology, or social science"),
-         "zh": ("Science-like（推荐）", "适合跨学科、工程、生态或社会科学的紧凑表达")},
-        {"en": ("Nature-like", "Submission-safe spacing and restrained general scientific figure style"),
-         "zh": ("Nature-like", "适合投稿安全、克制留白和通用科研图")},
-        {"en": ("Cell-like", "Story-led multi-panel results when narrative structure matters"),
-         "zh": ("Cell-like", "适合需要更强故事线的多 panel 结果")},
+        {"en": ("Advanced Materials-style (Recommended)", "Materials mechanism, performance, microscopy/spectra, and application-oriented multi-panel figures", "field_dense"),
+         "zh": ("Advanced Materials 风格（推荐）", "适合材料机制、性能、显微/谱图和应用导向多 panel", "field_dense")},
+        {"en": ("ACS Nano / Nano Letters-style", "Nanomaterials, device metrics, compact spectra, and structure-performance figures", "field_compact"),
+         "zh": ("ACS Nano / Nano Letters 风格", "适合纳米材料、器件指标、紧凑谱图和结构-性能图", "field_compact")},
+        {"en": ("Materials Today-style", "Cross-disciplinary materials story with clear mechanism-to-performance flow", "science"),
+         "zh": ("Materials Today 风格", "适合跨学科材料叙事；强调机制到性能的清晰链路", "science")},
     ],
     "_default": [
-        {"en": ("Nature-like (Recommended)", "Submission-safe restrained defaults for most scientific figures"),
-         "zh": ("Nature-like（推荐）", "投稿安全、留白克制、适合多数科研图")},
-        {"en": ("Science-like", "Compact, low-ink, fast-scanning figures"),
-         "zh": ("Science-like", "紧凑、低墨量、便于快速阅读")},
-        {"en": ("Cell-like", "Story-first multi-panel organization"),
-         "zh": ("Cell-like", "强调叙事和多 panel 组织")},
+        {"en": ("Field-leading journal style (Recommended)", "Ask the AI runtime to name the top venue for the selected field and adapt figure density to that venue", "field_top_journal"),
+         "zh": ("本领域顶刊风格（推荐）", "由 AI 根据所选领域命名顶级期刊/会议，并按该领域图表习惯调整密度与标注", "field_top_journal")},
+        {"en": ("Methods-focused journal style", "For method, benchmark, pipeline, and validation-heavy studies in the selected field", "field_methods"),
+         "zh": ("方法型顶刊风格", "适合该领域的方法、benchmark、流程和验证型研究", "field_methods")},
+        {"en": ("Compact communication style", "For concise, fast-scanning figures when the selected field values compact technical communication", "field_compact"),
+         "zh": ("紧凑传播型风格", "适合该领域偏好快速阅读、低墨量和技术比较的图表", "field_compact")},
     ],
 }
 
@@ -104,21 +117,67 @@ _GENOMICS_LIKE_DOMAINS = {"genomics_transcriptomics", "single_cell_spatial", "pr
 _CROSS_DISCIPLINE_DOMAINS = {"materials_engineering", "ecology_environmental", "agriculture_food_science", "psychology_social_science", "neuroscience_behavior"}
 
 
-def infer_journal_style_options(domain_family, custom_domain_text, language):
-    """Return list of {label, description} dicts for the journal-style card."""
+def infer_journal_style_fallback_options(domain_family, custom_domain_text, language):
+    """Return domain-specific top-journal fallback options for the journal-style card."""
     effective_domain = infer_domain_family_from_text(domain_family, custom_domain_text)
     lang = language if language in ("zh", "en") else "en"
 
-    if effective_domain == "clinical_diagnostics_survival":
-        entries = _JOURNAL_STYLE_BY_DOMAIN["clinical_diagnostics_survival"]
+    if effective_domain == "signal_processing_acoustics":
+        entries = _DOMAIN_TOP_JOURNAL_SEEDS["signal_processing_acoustics"]
+    elif effective_domain == "clinical_diagnostics_survival":
+        entries = _DOMAIN_TOP_JOURNAL_SEEDS["clinical_diagnostics_survival"]
     elif effective_domain in _GENOMICS_LIKE_DOMAINS:
-        entries = _JOURNAL_STYLE_BY_DOMAIN["genomics_transcriptomics"]
+        entries = _DOMAIN_TOP_JOURNAL_SEEDS["genomics_transcriptomics"]
     elif effective_domain in _CROSS_DISCIPLINE_DOMAINS:
-        entries = _JOURNAL_STYLE_BY_DOMAIN["materials_engineering"]
+        entries = _DOMAIN_TOP_JOURNAL_SEEDS["materials_engineering"]
     else:
-        entries = _JOURNAL_STYLE_BY_DOMAIN["_default"]
+        entries = _DOMAIN_TOP_JOURNAL_SEEDS["_default"]
 
-    return [{"label": e[lang][0], "description": e[lang][1]} for e in entries]
+    return [{"label": e[lang][0], "description": e[lang][1], "styleKey": e[lang][2]} for e in entries]
+
+
+def _normalize_journal_options(options, fallback_options):
+    """Accept field-specific AI journal labels and attach a styleKey for rendering."""
+    valid = []
+    for option in options or []:
+        if not isinstance(option, dict):
+            continue
+        label = option.get("label")
+        description = option.get("description")
+        if label and description:
+            valid.append({
+                "label": label,
+                "description": description,
+                "styleKey": option.get("styleKey") or option.get("visualStyleKey") or "field_top_journal",
+                "journalName": option.get("journalName") or label,
+            })
+    return valid[:5] if len(valid) >= 2 else fallback_options
+
+
+def infer_journal_style_options(domain_family, custom_domain_text, language, context=None):
+    """Return AI-generated field-top-journal options with deterministic domain fallback."""
+    fallback_options = infer_journal_style_fallback_options(domain_family, custom_domain_text, language)
+    effective_domain = infer_domain_family_from_text(domain_family, custom_domain_text)
+    context = dict(context or {})
+    domain_hints = context.get("domainHints", {})
+    if not isinstance(domain_hints, dict):
+        domain_hints = {"selected": domain_hints}
+
+    journal_context = {
+        **context,
+        "language": language if language in ("zh", "en") else "en",
+        "selectedDomainFamily": domain_family,
+        "customDomainText": custom_domain_text,
+        "effectiveDomainFamily": effective_domain,
+        "fallbackJournalSeeds": fallback_options,
+        "domainHints": {
+            **domain_hints,
+            "selected": custom_domain_text or domain_family,
+            "primary": effective_domain,
+        },
+    }
+    ai_options = generate_options_with_ai(journal_context, "journal_style", fallback_options)
+    return _normalize_journal_options(ai_options, fallback_options)
 ```
 
 ## Synthetic Bundle Options
@@ -174,14 +233,14 @@ def generate_options_with_ai(context, question_type, fallback_options):
     """Generate AskUserQuestion options dynamically using AI.
 
     context: dict with dataProfile, domainHints, journalProfile, IMPLEMENTED_CHARTS registry
-    question_type: one of "domain", "chart_bundle", "layout", "palette", "synthetic_bundle"
+    question_type: one of "domain", "chart_bundle", "layout", "palette", "synthetic_bundle", "journal_style"
     fallback_options: hardcoded list to use if AI generation fails
 
     Returns: list of {label, description} dicts (2-5 items)
     """
     prompt = _build_option_prompt(context, question_type)
     try:
-        ai_result = _call_option_generator(prompt, question_type)
+        ai_result = _call_option_generator(prompt, question_type, fallback_options)
         if ai_result and len(ai_result) >= 2:
             return ai_result[:5]
     except Exception:
@@ -190,7 +249,10 @@ def generate_options_with_ai(context, question_type, fallback_options):
 
 
 def _build_option_prompt(context, question_type):
+    context = context or {}
     domain = context.get("domainHints", {})
+    if not isinstance(domain, dict):
+        domain = {"selected": domain}
     profile = context.get("dataProfile", {})
     charts = context.get("IMPLEMENTED_CHARTS", [])
     journal = context.get("journalProfile", {})
@@ -207,6 +269,33 @@ def _build_option_prompt(context, question_type):
         return f"For {n_categories} categories in {domain} domain, suggest 2-3 color palettes. Return JSON array of {{label, description}}."
     if question_type == "synthetic_bundle":
         return f"For {domain} domain, suggest 2-3 synthetic figure bundle types. Return JSON array of {{label, description}}."
+    if question_type == "journal_style":
+        selected_domain = (
+            context.get("customDomainText")
+            or context.get("selectedDomainFamily")
+            or domain.get("selected")
+            or domain.get("primary")
+            or domain
+        )
+        effective_domain = context.get("effectiveDomainFamily") or domain.get("primary") or selected_domain
+        fallback_seeds = context.get("fallbackJournalSeeds", [])
+        language = context.get("language", "en")
+        return (
+            f"The user selected scientific domain: {selected_domain}. "
+            f"Effective domain family: {effective_domain}. "
+            f"Data profile: columns={profile.get('columns', [])}, "
+            f"rows={profile.get('nObservations', 0)}, groups={profile.get('nGroups', 0)}. "
+            f"Think like a domain-aware publication advisor. Suggest 2-3 top journals, conferences, "
+            f"or venue families from this exact field for the final visual preference card. "
+            f"Do not show generic Nature-like, Science-like, or Cell-like options unless the selected field itself "
+            f"would reasonably target those broad journals. For audio/acoustic/signal domains, prefer venues such as "
+            f"IEEE/ACM TASLP, JASA, IEEE TSP, Signal Processing, ICASSP, or Interspeech when appropriate. "
+            f"Fallback seeds if the field is ambiguous: {fallback_seeds}. "
+            f"Each option must include label, description, journalName, and styleKey. "
+            f"styleKey must be one of field_top_journal, field_methods, field_compact, field_dense, nature, science, cell, lancet, nejm, jama. "
+            f"Descriptions must explain why the venue matches the selected field and expected figure story. "
+            f"Return JSON array of {{label, description, journalName, styleKey}} in {language}."
+        )
     return ""
 
 
@@ -234,6 +323,8 @@ All card option strings use a bilingual map so the same normalized answer works 
 4. Synthetic-domain card (only if synthetic chosen)
 5. Synthetic-bundle card (only if synthetic chosen)
 6. Visual-preference card (4 questions: journal, color, resolution, crowding)
+
+Before step 6, compute `journalOptions = infer_journal_style_options(resolvedDomainFamily, customDomainText, lang, context={...})` and pass `{label, description}` from those exact options into the journal-style question. Preserve the full `journalOptions` list in coordinator state so `styleKey` is available when building `workflowPreferences`. Do not replace them with a static Nature/Science/Cell list.
 
 ### Bilingual Answer Maps
 
@@ -346,7 +437,25 @@ JOURNAL_STYLE_RESOLVE = {
     "Science-like（推荐）": "science", "Science-like (Recommended)": "science", "Science-like": "science",
     "Lancet-like（临床推荐）": "lancet", "Lancet-like (Clinical recommended)": "lancet",
     "NEJM-like": "nejm", "JAMA-like": "jama",
+    "Lancet-style (Clinical recommended)": "lancet", "NEJM-style": "nejm", "JAMA-style": "jama",
+    "IEEE/ACM TASLP-style (Recommended)": "field_compact",
+    "JASA-style": "field_methods",
+    "IEEE TSP / Signal Processing-style": "field_compact",
+    "Advanced Materials-style (Recommended)": "field_dense",
+    "ACS Nano / Nano Letters-style": "field_compact",
+    "Materials Today-style": "science",
+    "Nature Genetics / Nature Methods-style (Recommended)": "nature",
+    "Genome Biology-style": "field_methods",
+    "Cell Genomics-style": "cell",
 }
+
+
+def resolve_journal_style_choice(selected_label, journal_options):
+    """Resolve dynamic field-journal labels to a rendering style key."""
+    for option in journal_options or []:
+        if option.get("label") == selected_label:
+            return option.get("styleKey", "field_top_journal")
+    return JOURNAL_STYLE_RESOLVE.get(selected_label, "field_top_journal")
 
 STORY_MODE_RESOLVE = {
     "单 panel": "single", "Single panel": "single",
@@ -409,7 +518,9 @@ workflowPreferences = {
     "syntheticDomainFamily": syntheticPreferences.get("synthetic_domain_family"),
     "syntheticDomainText": syntheticPreferences.get("synthetic_domain_text"),
     "syntheticFigureBundle": syntheticPreferences.get("synthetic_bundle"),
-    "journalStyle": JOURNAL_STYLE_RESOLVE.get(preferences.journal, "custom"),
+    "journalStyle": resolve_journal_style_choice(preferences.journal, journalOptions),
+    "journalStyleLabel": preferences.journal,
+    "journalStyleOptions": journalOptions,
     "domainFamily": resolvedDomainFamily,
     "customDomainText": customDomainText,
     "storyMode": STORY_MODE_RESOLVE.get(preferences.story, "hero_plus_stacked_support"),

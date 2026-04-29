@@ -101,12 +101,17 @@ After execution and required-output checks, inspect the rendered artifacts befor
 render_qa = {
     "legendOutsidePlotArea": chartPlan.get("crowdingPlan", {}).get("legendOutsidePlotArea", True),
     "axisLegendRemovedCount": chartPlan.get("crowdingPlan", {}).get("axisLegendRemovedCount", 0),
+    "axisLegendRemainingCount": chartPlan.get("crowdingPlan", {}).get("axisLegendRemainingCount", 0),
     "legendModeUsed": chartPlan.get("crowdingPlan", {}).get("legendModeUsed", "none"),
     "sharedColorbarApplied": chartPlan.get("crowdingPlan", {}).get("sharedColorbarApplied", False),
     "visualEnhancementCount": len(chartPlan.get("visualContentPlan", {}).get("appliedEnhancements", [])),
+    "minVisualEnhancementCount": chartPlan.get("visualContentPlan", {}).get("minTotalEnhancements", 0),
+    "inPlotExplanatoryLabelCount": chartPlan.get("visualContentPlan", {}).get("inPlotExplanatoryLabelCount", 0),
+    "minInPlotExplanatoryLabels": chartPlan.get("visualContentPlan", {}).get("minInPlotLabelsPerFigure", 0),
     "paletteContrastCheck": chartPlan.get("palettePlan", {}).get("contrastAuditRequired", True),
     "editableTextCheck": "required_for_svg_pdf",
     "overlapFailures": [],
+    "contentDensityFailures": [],
     "blankOrTinyOutputs": [],
     "statProvenanceWarnings": [],
     "hardFail": False,
@@ -121,6 +126,15 @@ for item in expected:
 if not render_qa["legendOutsidePlotArea"]:
     render_qa["overlapFailures"].append("legend_overlaps_plot_area")
 
+if render_qa["axisLegendRemainingCount"] > 0:
+    render_qa["overlapFailures"].append("axis_legend_remaining")
+
+if render_qa["visualEnhancementCount"] < render_qa["minVisualEnhancementCount"]:
+    render_qa["contentDensityFailures"].append("visual_enhancement_count_below_minimum")
+
+if render_qa["inPlotExplanatoryLabelCount"] < render_qa["minInPlotExplanatoryLabels"]:
+    render_qa["contentDensityFailures"].append("inplot_explanatory_labels_below_minimum")
+
 if chartPlan.get("visualContentPlan", {}).get("statProvenanceRequired", True):
     for enhancement in chartPlan.get("visualContentPlan", {}).get("appliedEnhancements", []):
         if any(token in enhancement for token in ("pvalue", "effect", "auc", "slope")):
@@ -130,6 +144,7 @@ if chartPlan.get("visualContentPlan", {}).get("statProvenanceRequired", True):
 render_qa["hardFail"] = bool(
     render_qa["blankOrTinyOutputs"] or
     render_qa["overlapFailures"] or
+    render_qa["contentDensityFailures"] or
     render_qa["statProvenanceWarnings"]
 )
 
@@ -160,6 +175,8 @@ if render_qa["impactScore"] < 20:
 Hard failures:
 
 - legend, colorbar, metric boxes, panel labels, or direct labels overlap plotted data
+- any axis-level legend remains after crowding management
+- visual content is under-dense: too few data-derived enhancements or no in-plot explanatory labels
 - output artifact is missing, blank, or implausibly small
 - requested vector text is not editable in SVG/PDF
 - `legendOutsidePlotArea` is false
