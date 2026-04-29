@@ -24,10 +24,14 @@ VISUAL_CONTENT_DEFAULTS = {
     "minReferenceMotifsPerFigure": 2,
     "useMetricTables": True,
     "useDensityHalos": True,
+    "useDensityColorEncoding": True,
+    "useMarginalAxes": False,
     "usePerfectFitReference": True,
     "useSampleShapeEncoding": True,
     "useSignificanceStarLayer": True,
     "useDualAxisErrorBars": True,
+    "templateMotifsRequired": False,
+    "minTemplateMotifsPerFigure": 0,
     "noInventedStats": True,
     "statProvenanceRequired": True,
     "outsideLayoutElements": True,
@@ -216,6 +220,8 @@ def default_visual_content_plan():
         "familyByPanel": {},
         "visualGrammarMotifs": [],
         "visualGrammarMotifsApplied": [],
+        "templateMotifs": [],
+        "templateMotifsApplied": [],
         "statProvenance": [],
         "metricBoxCount": 0,
         "metricTableCount": 0,
@@ -226,6 +232,12 @@ def default_visual_content_plan():
         "significanceStarLayerCount": 0,
         "dualAxisEncodingCount": 0,
         "referenceMotifCount": 0,
+        "templateMotifCount": 0,
+        "marginalAxesCount": 0,
+        "densityColorEncodingCount": 0,
+        "subAxesCount": 0,
+        "colorbarSlotCount": 0,
+        "multiAxisEncodingCount": 0,
         "inPlotExplanatoryLabelCount": 0,
         "renderQaHooks": {
             "trackMetricBoxes": True,
@@ -233,6 +245,8 @@ def default_visual_content_plan():
             "trackInsets": True,
             "trackReferenceLines": True,
             "trackDensityHalos": True,
+            "trackDensityColorEncoding": True,
+            "trackMarginalAxes": True,
             "trackSampleEncodings": True,
             "trackOutsideArtists": True,
             "trackInPlotLabels": True,
@@ -303,6 +317,46 @@ def infer_reference_motifs(charts, dataProfile=None):
     return motifs
 
 
+def infer_template_motifs(charts, dataProfile=None):
+    """Infer template-derived evidence motifs without adding unsupported chart keys."""
+    dataProfile = dataProfile or {}
+    roles = dataProfile.get("semanticRoles", {}) if isinstance(dataProfile, dict) else {}
+    cols = [str(c).lower() for c in dataProfile.get("columnNames", [])] if isinstance(dataProfile, dict) else []
+    patterns = set(dataProfile.get("specialPatterns", [])) if isinstance(dataProfile, dict) else set()
+    role_values = [str(v).lower() for v in roles.values()]
+    tokens = " ".join(cols + role_values)
+    chart_keys = {str(chart or "").replace("+", "_").lower() for chart in charts if chart}
+    motifs = []
+
+    def add(name):
+        if name not in motifs:
+            motifs.append(name)
+
+    if "prediction_diagnostic" in patterns or ("actual" in roles and "predicted" in roles):
+        add("prediction_diagnostic_matrix")
+        add("joint_marginal_grid")
+        add("density_encoded_scatter")
+        add("metric_table_in_panel")
+    if "model_error_diagnostic" in patterns or any(token in tokens for token in ("rmse", "mae", "percent_error", "percentage_error", "error_pct")):
+        add("dual_axis_error_sidecar")
+    if "ml_explainability" in patterns or "feature_importance" in patterns or "shap_value" in roles or "importance" in roles:
+        add("explainability_importance_stack")
+        add("signed_effect_axis")
+    if "prediction_interval" in patterns or ("pi_low" in roles and "pi_high" in roles):
+        add("interval_uncertainty_band")
+    if ("ci_low" in roles and "ci_high" in roles) or "effect_interval" in patterns:
+        add("forest_interval_board")
+    if any(token in tokens for token in ("pvalue", "p_value", "padj", "fdr", "qvalue")) and any(
+        chart in chart_keys for chart in ("heatmap_annotated", "heatmap_triangular", "heatmap_symmetric", "correlation", "bubble_matrix")
+    ):
+        add("correlation_evidence_matrix")
+    if "optimization_tradeoff" in patterns or "pareto_flag" in roles or "pareto_chart" in chart_keys:
+        add("pareto_tradeoff_board")
+    if "radar" in chart_keys or "biodiversity_radar" in chart_keys:
+        add("polar_comparison_signature")
+    return motifs
+
+
 def build_visual_content_plan(primaryChart, secondaryCharts=None, dataProfile=None,
                               workflowPreferences=None, existing=None):
     """Create the default Nature/Cell dense visual-content contract."""
@@ -331,11 +385,25 @@ def build_visual_content_plan(primaryChart, secondaryCharts=None, dataProfile=No
     charts = [primaryChart] + list(secondaryCharts or [])
     plan["familyByChart"] = {chart: infer_chart_family(chart) for chart in charts if chart}
     planned_motifs = infer_reference_motifs(charts, dataProfile=dataProfile)
+    template_motifs = infer_template_motifs(charts, dataProfile=dataProfile)
     existing_motifs = list(plan.get("visualGrammarMotifs", []))
     for motif in planned_motifs:
         if motif not in existing_motifs:
             existing_motifs.append(motif)
     plan["visualGrammarMotifs"] = existing_motifs
+    existing_template_motifs = list(plan.get("templateMotifs", []))
+    for motif in template_motifs:
+        if motif not in existing_template_motifs:
+            existing_template_motifs.append(motif)
+    plan["templateMotifs"] = existing_template_motifs
+    plan["templateMotifsRequired"] = bool(existing_template_motifs)
+    plan["minTemplateMotifsPerFigure"] = 1 if existing_template_motifs else 0
+    if "joint_marginal_grid" in existing_template_motifs:
+        plan["useMarginalAxes"] = True
+    if "density_encoded_scatter" in existing_template_motifs:
+        plan["useDensityColorEncoding"] = True
+    if "dual_axis_error_sidecar" in existing_template_motifs:
+        plan["requiresMultiAxisEncoding"] = True
     panel_count = max(1, len(charts))
     plan["minTotalEnhancements"] = max(
         plan.get("minTotalEnhancements", 4),
@@ -353,6 +421,7 @@ def build_visual_content_plan(primaryChart, secondaryCharts=None, dataProfile=No
     plan.setdefault("appliedEnhancements", [])
     plan.setdefault("familyByPanel", {})
     plan.setdefault("visualGrammarMotifsApplied", [])
+    plan.setdefault("templateMotifsApplied", [])
     plan.setdefault("metricBoxCount", 0)
     plan.setdefault("metricTableCount", 0)
     plan.setdefault("insetCount", 0)
@@ -362,6 +431,12 @@ def build_visual_content_plan(primaryChart, secondaryCharts=None, dataProfile=No
     plan.setdefault("significanceStarLayerCount", 0)
     plan.setdefault("dualAxisEncodingCount", 0)
     plan.setdefault("referenceMotifCount", 0)
+    plan.setdefault("templateMotifCount", 0)
+    plan.setdefault("marginalAxesCount", 0)
+    plan.setdefault("densityColorEncodingCount", 0)
+    plan.setdefault("subAxesCount", 0)
+    plan.setdefault("colorbarSlotCount", 0)
+    plan.setdefault("multiAxisEncodingCount", 0)
     plan.setdefault("inPlotExplanatoryLabelCount", 0)
     return plan
 
@@ -422,6 +497,122 @@ def _record_motif(plan, motif):
     if motif not in applied:
         applied.append(motif)
         _visual_count(plan, "referenceMotifCount")
+
+
+def _record_template_motif(plan, motif):
+    applied = plan.setdefault("templateMotifsApplied", [])
+    if motif not in applied:
+        applied.append(motif)
+        _visual_count(plan, "templateMotifCount")
+
+
+def _template_motif_planned(plan, motif):
+    return motif in plan.get("templateMotifs", [])
+
+
+def _add_interval_template_summary(ax, dataProfile, visualPlan):
+    df = _df_from_profile(dataProfile)
+    if df is None:
+        return None
+    interval_specs = [
+        ("ci_low", "ci_high", "forest_interval_board", "CI"),
+        ("pi_low", "pi_high", "interval_uncertainty_band", "PI"),
+    ]
+    for low_role, high_role, motif, label in interval_specs:
+        low_col = _role(dataProfile, low_role)
+        high_col = _role(dataProfile, high_role)
+        if low_col not in df or high_col not in df:
+            continue
+        low = _numeric_values(df, low_col)
+        high = _numeric_values(df, high_col)
+        if len(low) == 0 or len(high) == 0:
+            continue
+        count = min(len(low), len(high))
+        width = float(np.nanmedian(high[:count] - low[:count])) if count else np.nan
+        _add_inplot_label(ax, f"{label} intervals\nn={count}, width={width:.2g}", visualPlan, loc="lower_right")
+        _record_template_motif(visualPlan, motif)
+        return motif
+    return None
+
+
+def _density_color_values(x, y, bins=32):
+    x = np.asarray(x, dtype=float)
+    y = np.asarray(y, dtype=float)
+    mask = np.isfinite(x) & np.isfinite(y)
+    if mask.sum() < 6:
+        return np.array([])
+    x_valid = x[mask]
+    y_valid = y[mask]
+    hist, x_edges, y_edges = np.histogram2d(x_valid, y_valid, bins=bins)
+    x_idx = np.clip(np.searchsorted(x_edges, x_valid, side="right") - 1, 0, hist.shape[0] - 1)
+    y_idx = np.clip(np.searchsorted(y_edges, y_valid, side="right") - 1, 0, hist.shape[1] - 1)
+    density = hist[x_idx, y_idx].astype(float)
+    if density.size and np.nanmax(density) > np.nanmin(density):
+        density = (density - np.nanmin(density)) / (np.nanmax(density) - np.nanmin(density))
+    return density
+
+
+def _overlay_density_colored_points(ax, x, y, visualPlan):
+    if not visualPlan.get("useDensityColorEncoding", False):
+        return None
+    x = np.asarray(x, dtype=float)
+    y = np.asarray(y, dtype=float)
+    mask = np.isfinite(x) & np.isfinite(y)
+    if mask.sum() < 12:
+        return None
+    x_valid = x[mask]
+    y_valid = y[mask]
+    density = _density_color_values(x_valid, y_valid, bins=min(40, max(12, int(np.sqrt(mask.sum())))))
+    if density.size != len(x_valid):
+        return None
+    scatter = ax.scatter(
+        x_valid,
+        y_valid,
+        c=density,
+        cmap="viridis",
+        s=18,
+        edgecolors="white",
+        linewidths=0.18,
+        alpha=0.86,
+        label="_nolegend_",
+        zorder=6,
+    )
+    scatter.set_gid("scifig_density_color_points")
+    _visual_count(visualPlan, "densityColorEncodingCount")
+    _record_template_motif(visualPlan, "density_encoded_scatter")
+    return scatter
+
+
+def _add_marginal_distribution_axes(ax, x, y, visualPlan, color="#4C78A8"):
+    if not visualPlan.get("useMarginalAxes", False):
+        return None
+    x = np.asarray(x, dtype=float)
+    y = np.asarray(y, dtype=float)
+    mask = np.isfinite(x) & np.isfinite(y)
+    if mask.sum() < 12:
+        return None
+    x_valid = x[mask]
+    y_valid = y[mask]
+    bins = min(18, max(6, int(np.sqrt(mask.sum()))))
+    top = ax.inset_axes([0.0, 1.03, 1.0, 0.18], transform=ax.transAxes)
+    right = ax.inset_axes([1.03, 0.0, 0.18, 1.0], transform=ax.transAxes)
+    top.hist(x_valid, bins=bins, color=color, alpha=0.72, edgecolor="white", linewidth=0.25)
+    right.hist(y_valid, bins=bins, orientation="horizontal", color=color, alpha=0.72, edgecolor="white", linewidth=0.25)
+    for marginal in (top, right):
+        marginal.set_xticks([])
+        marginal.set_yticks([])
+        marginal.set_gid("scifig_marginal_axis")
+        marginal.patch.set_alpha(0.0)
+        for spine in marginal.spines.values():
+            spine.set_linewidth(0.35)
+            spine.set_edgecolor("#B0B0B0")
+    _visual_count(visualPlan, "marginalAxesCount")
+    _visual_count(visualPlan, "marginalAxesCount")
+    _visual_count(visualPlan, "subAxesCount")
+    _visual_count(visualPlan, "subAxesCount")
+    visualPlan["outsideLayoutElements"] = True
+    _record_template_motif(visualPlan, "joint_marginal_grid")
+    return top, right
 
 
 def _resolve_numeric_column(dataProfile, df, *names):
@@ -595,6 +786,7 @@ def _add_metric_table(ax, rows, visualPlan, loc="lower_right"):
             cell.get_text().set_fontweight("bold")
     _visual_count(visualPlan, "metricTableCount")
     _record_motif(visualPlan, "prediction_metric_table")
+    _record_template_motif(visualPlan, "metric_table_in_panel")
     return table
 
 
@@ -760,7 +952,9 @@ def _add_dual_axis_error_bars(ax, df, x_col, visualPlan):
     ax2.spines["right"].set_linewidth(0.5)
     ax2.set_gid("scifig_dual_axis_error")
     _visual_count(visualPlan, "dualAxisEncodingCount")
+    _visual_count(visualPlan, "multiAxisEncodingCount")
     _record_motif(visualPlan, "dual_axis_error_bars")
+    _record_template_motif(visualPlan, "dual_axis_error_sidecar")
     return True
 
 
@@ -887,7 +1081,10 @@ def _enhance_scatter(ax, dataProfile, visualPlan, palette, col_map):
     if is_prediction:
         _add_perfect_fit_line(ax, x, y, visualPlan)
         _add_density_halos(ax, x, y, visualPlan, color=halo_color)
+        density_encoded = _overlay_density_colored_points(ax, x, y, visualPlan)
+        marginal_axes = _add_marginal_distribution_axes(ax, x, y, visualPlan, color=halo_color)
         sample_encoded = _add_sample_shape_encoding(ax, df, x_col, y_col, visualPlan, dataProfile=dataProfile)
+        error_sidecar = _add_dual_axis_error_bars(ax, df, x_col, visualPlan)
         rmse = float(np.sqrt(np.nanmean((y - x) ** 2)))
         mae = float(np.nanmean(np.abs(y - x)))
         r2 = _r2_from_actual_pred(x, y)
@@ -900,11 +1097,21 @@ def _enhance_scatter(ax, dataProfile, visualPlan, palette, col_map):
         _add_inplot_label(ax, f"perfect-fit diagnostic\nR2={r2_text}", visualPlan, loc="upper_left")
         _add_metric_box(ax, [f"n={len(x)}", f"RMSE={rmse:.3g}", f"MAE={mae:.3g}"], visualPlan)
         enhancements = ["perfect_fit_reference", "prediction_metric_table", "density_halo", "inplot_prediction_label"]
+        _record_template_motif(visualPlan, "prediction_diagnostic_matrix")
+        if density_encoded is not None:
+            enhancements.append("density_encoded_scatter")
+        if marginal_axes is not None:
+            enhancements.append("joint_marginal_grid")
+        if error_sidecar:
+            enhancements.append("dual_axis_error_sidecar")
         if sample_encoded:
             enhancements.append("sample_shape_encoding")
         return enhancements
 
     _add_density_halos(ax, x, y, visualPlan, color=halo_color)
+    density_encoded = _overlay_density_colored_points(ax, x, y, visualPlan)
+    if density_encoded is not None:
+        enhancements.append("density_encoded_scatter")
     if len(x) >= 3 and np.nanstd(x) > 0 and np.nanstd(y) > 0:
         slope, intercept = np.polyfit(x, y, 1)
         xs = np.linspace(np.nanmin(x), np.nanmax(x), 100)
@@ -954,6 +1161,7 @@ def _add_matrix_significance_stars(ax, numeric, dataProfile, visualPlan):
     if star_count:
         _visual_count(visualPlan, "significanceStarLayerCount")
         _record_motif(visualPlan, "significance_star_layer")
+        _record_template_motif(visualPlan, "correlation_evidence_matrix")
         return True
     return None
 
@@ -1060,7 +1268,11 @@ def _enhance_clinical(ax, dataProfile, visualPlan, palette, col_map, chart_type)
         _add_inplot_label(ax, "\n".join(lines[:2]), visualPlan, loc="upper_left")
     _add_metric_box(ax, lines or ["clinical summary"], visualPlan)
     _record_motif(visualPlan, "diagnostic_metric_box")
-    return ["clinical_metric_summary", "inplot_clinical_label"]
+    enhancements = ["clinical_metric_summary", "inplot_clinical_label"]
+    interval_motif = _add_interval_template_summary(ax, dataProfile, visualPlan)
+    if interval_motif:
+        enhancements.append(interval_motif)
+    return enhancements
 
 
 def _enhance_genomics(ax, dataProfile, visualPlan, palette, col_map, chart_type):
@@ -1123,15 +1335,48 @@ def _enhance_composition(ax, dataProfile, visualPlan, palette, col_map):
     value_col = _role(dataProfile, "value", "y")
     values = _numeric_values(df, value_col)
     lines = []
+    enhancements = ["composition_summary", "inplot_composition_label"]
     if len(values):
         total = float(np.nansum(values))
         lines.extend([f"total={total:.3g}", f"items={len(values)}"])
     if group_col and df is not None and group_col in df:
         lines.append(f"categories={df[group_col].nunique()}")
-    _add_inplot_label(ax, "\n".join(lines[:2]) if lines else "composition", visualPlan, loc="upper_left")
+    if _template_motif_planned(visualPlan, "explainability_importance_stack"):
+        feature_col = _role(dataProfile, "feature_id", "label", "feature")
+        importance_col = _role(dataProfile, "importance", "shap_value", "effect", "value")
+        feature_count = df[feature_col].nunique() if df is not None and feature_col in df else len(values)
+        _maybe_reference_zero(ax, visualPlan)
+        _add_inplot_label(ax, f"ranked feature evidence\nfeatures={feature_count}", visualPlan, loc="upper_left")
+        _record_template_motif(visualPlan, "explainability_importance_stack")
+        if importance_col:
+            _record_template_motif(visualPlan, "signed_effect_axis")
+        enhancements.append("explainability_importance_stack")
+    if _template_motif_planned(visualPlan, "pareto_tradeoff_board"):
+        pareto_col = _role(dataProfile, "pareto_flag", "optimal_flag")
+        objective_cols = [
+            col for col in getattr(df, "columns", [])
+            if any(token in str(col).lower() for token in ("objective", "loss", "cost", "utility", "score"))
+        ] if df is not None else []
+        pareto_count = None
+        if pareto_col and df is not None and pareto_col in df:
+            try:
+                pareto_count = int(np.asarray(df[pareto_col], dtype=float).sum())
+            except (TypeError, ValueError):
+                pareto_count = int(df[pareto_col].astype(bool).sum())
+        label = f"tradeoff board\nobjectives={len(objective_cols)}"
+        if pareto_count is not None:
+            label += f"\npareto={pareto_count}"
+        _add_inplot_label(ax, label, visualPlan, loc="upper_right")
+        _record_template_motif(visualPlan, "pareto_tradeoff_board")
+        enhancements.append("pareto_tradeoff_board")
+    if _template_motif_planned(visualPlan, "polar_comparison_signature"):
+        _record_template_motif(visualPlan, "polar_comparison_signature")
+        enhancements.append("polar_comparison_signature")
+    summary_loc = "lower_left" if len(enhancements) > 2 else "upper_left"
+    _add_inplot_label(ax, "\n".join(lines[:2]) if lines else "composition", visualPlan, loc=summary_loc)
     _add_metric_box(ax, lines or ["composition summary"], visualPlan)
     _record_motif(visualPlan, "composition_summary")
-    return ["composition_summary", "inplot_composition_label"]
+    return enhancements
 
 
 def _enhance_psych_ecology(ax, dataProfile, visualPlan, palette, col_map):
@@ -1161,6 +1406,9 @@ def _enhance_generic(ax, dataProfile, visualPlan, palette, col_map):
     _add_inplot_label(ax, f"n={n}" if n is not None else "descriptive view", visualPlan, loc="upper_left")
     _add_metric_box(ax, [f"n={n}" if n is not None else "descriptive view"], visualPlan)
     _record_motif(visualPlan, "descriptive_summary_box")
+    interval_motif = _add_interval_template_summary(ax, dataProfile, visualPlan)
+    if interval_motif:
+        return ["descriptive_context", interval_motif]
     return ["descriptive_context", "inplot_context_label"]
 
 
@@ -1228,6 +1476,15 @@ def apply_visual_content_pass(fig, axes, chartPlan, dataProfile, journalProfile,
         "significanceStarLayerCount": visualPlan.get("significanceStarLayerCount", 0),
         "dualAxisEncodingCount": visualPlan.get("dualAxisEncodingCount", 0),
         "referenceMotifCount": visualPlan.get("referenceMotifCount", 0),
+        "templateMotifCount": visualPlan.get("templateMotifCount", 0),
+        "minTemplateMotifsPerFigure": visualPlan.get("minTemplateMotifsPerFigure", 0),
+        "templateMotifs": visualPlan.get("templateMotifs", []),
+        "templateMotifsApplied": visualPlan.get("templateMotifsApplied", []),
+        "marginalAxesCount": visualPlan.get("marginalAxesCount", 0),
+        "densityColorEncodingCount": visualPlan.get("densityColorEncodingCount", 0),
+        "subAxesCount": visualPlan.get("subAxesCount", 0),
+        "colorbarSlotCount": visualPlan.get("colorbarSlotCount", 0),
+        "multiAxisEncodingCount": visualPlan.get("multiAxisEncodingCount", 0),
         "minReferenceMotifsPerFigure": visualPlan.get("minReferenceMotifsPerFigure", 0),
         "visualGrammarMotifs": visualPlan.get("visualGrammarMotifs", []),
         "visualGrammarMotifsApplied": visualPlan.get("visualGrammarMotifsApplied", []),
@@ -1623,6 +1880,10 @@ def apply_crowding_management(fig, axes, chartPlan, journalProfile):
         if mappable is not None:
             fig.colorbar(mappable, ax=list(axes.values()), shrink=0.6, pad=0.02)
             shared_colorbar_applied = True
+            visual_plan = chartPlan.setdefault("visualContentPlan", {})
+            _visual_count(visual_plan, "colorbarSlotCount")
+            if "correlation_evidence_matrix" in visual_plan.get("templateMotifs", []):
+                _record_template_motif(visual_plan, "correlation_evidence_matrix")
 
     occupied_axes = list(axes.values()) + get_non_panel_axes(fig, axes)
     if handles:

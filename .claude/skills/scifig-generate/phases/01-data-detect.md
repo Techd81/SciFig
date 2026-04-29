@@ -133,6 +133,22 @@ def detect_special_patterns(columns):
         patterns.add("dose_response")
     if any("ci_low" in c or "ci_lower" in c for c in cols) and any("ci_high" in c or "ci_upper" in c for c in cols):
         patterns.add("effect_interval")
+    if any(token in c for c in cols for token in ("actual", "observed", "measured", "experimental", "y_true")) and any(
+        token in c for c in cols for token in ("pred", "predict", "fitted", "estimated", "y_pred")
+    ):
+        patterns.add("prediction_diagnostic")
+    if any("residual" in c for c in cols) or any("rmse" in c or "mae" in c or "percent_error" in c or "error_pct" in c for c in cols):
+        patterns.add("model_error_diagnostic")
+    if any("shap" in c for c in cols) or any("ale" in c for c in cols) or any("pdp" in c for c in cols):
+        patterns.add("ml_explainability")
+    if any("importance" in c or "gain" in c or "permutation" in c for c in cols) and any("feature" in c for c in cols):
+        patterns.add("feature_importance")
+    if any("pareto" in c or "objective" in c or "optimal" in c for c in cols):
+        patterns.add("optimization_tradeoff")
+    if any("pi_low" in c or "pi_lower" in c or "prediction_interval_low" in c for c in cols) and any(
+        "pi_high" in c or "pi_upper" in c or "prediction_interval_high" in c for c in cols
+    ):
+        patterns.add("prediction_interval")
     # Materials / engineering
     if any("stress" in c or "sigma" in c for c in cols) and any("strain" in c or "epsilon" in c for c in cols):
         patterns.add("stress_strain")
@@ -194,13 +210,32 @@ ROLE_KEYWORDS = {
     "duration": ["duration", "survival_time", "follow_up", "os", "pfs"],
     "score": ["score", "probability", "risk", "prediction", "pred", "nes"],
     "label": ["label", "target", "truth", "outcome"],
+    "actual": ["actual", "observed", "measured", "experimental", "truth", "y_true"],
+    "predicted": ["predicted", "prediction", "pred", "fitted", "estimated", "estimate", "y_pred"],
+    "residual": ["residual", "error", "prediction_error"],
+    "sample": ["sample", "sample_id", "source", "reference", "ref"],
+    "model": ["model", "algorithm", "estimator", "method"],
     "effect": ["effect", "estimate", "beta", "hazard_ratio", "odds_ratio"],
     "se": ["se", "std_error", "stderr"],
     "ci_low": ["ci_low", "ci_lower", "lower", "lcl"],
     "ci_high": ["ci_high", "ci_upper", "upper", "ucl"],
+    "pi_low": ["pi_low", "pi_lower", "prediction_interval_low", "lower_pi"],
+    "pi_high": ["pi_high", "pi_upper", "prediction_interval_high", "upper_pi"],
+    "rmse": ["rmse", "root_mean_square_error"],
+    "mae": ["mae", "mean_absolute_error"],
+    "error_pct": ["percent_error", "percentage_error", "error_pct", "mape"],
     "fold_change": ["log2fc", "logfc", "fold_change"],
     "p_value": ["p", "pval", "p_value", "padj", "qvalue"],
     "feature_id": ["gene", "protein", "metabolite", "feature", "marker", "pathway"],
+    "importance": ["importance", "feature_importance", "gain", "permutation_importance"],
+    "shap_value": ["shap", "shap_value", "mean_shap"],
+    "feature_value": ["feature_value", "input_value", "covariate_value"],
+    "ale_effect": ["ale", "ale_effect", "accumulated_local_effect"],
+    "pdp_value": ["pdp", "partial_dependence", "pdp_value"],
+    "h_statistic": ["h_statistic", "interaction_strength", "interaction_score"],
+    "objective": ["objective", "loss", "cost", "utility", "score_objective"],
+    "pareto_flag": ["pareto", "non_dominated", "nondominated"],
+    "optimal_flag": ["optimal", "best", "selected"],
     "pathway": ["pathway", "term", "hallmark", "geneset"],
     "term": ["term", "pathway", "go_term", "kegg_term"],
     "size": ["size", "count", "set_size", "n_genes"],
@@ -359,6 +394,17 @@ def build_panel_candidates(df, roles, special_patterns, domain_hints):
     if "dose_response" in special_patterns:
         candidates.append({"role": "hero", "chart": "dose_response"})
         candidates.append({"role": "support", "chart": "waterfall"})
+    if "prediction_diagnostic" in special_patterns:
+        candidates.append({"role": "hero", "chart": "scatter_regression"})
+        candidates.append({"role": "validation", "chart": "residual_vs_fitted"})
+        candidates.append({"role": "support", "chart": "bland_altman"})
+    if "ml_explainability" in special_patterns or "feature_importance" in special_patterns:
+        candidates.append({"role": "hero", "chart": "lollipop_horizontal"})
+        candidates.append({"role": "support", "chart": "heatmap_annotated"})
+        candidates.append({"role": "context", "chart": "dotplot"})
+    if "optimization_tradeoff" in special_patterns:
+        candidates.append({"role": "hero", "chart": "pareto_chart"})
+        candidates.append({"role": "support", "chart": "scatter_regression"})
 
     if not candidates and "group" in roles and "value" in roles:
         candidates.append({"role": "hero", "chart": "raincloud"})

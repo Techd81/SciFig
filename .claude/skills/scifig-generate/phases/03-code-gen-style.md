@@ -11,6 +11,56 @@
 
 Generate complete Python code that applies journal style tokens, resolves a palette system, composes multi-panel figures, and writes reproducibility-friendly outputs.
 
+## Template-Mining Bootstrap (REQUIRED before any chart code)
+
+Phase 3 must consult `template-mining/` (the 7-module knowledge base built from 77 顶刊复刻案例) before emitting chart code. Operational helpers live in `phases/code-gen/template_mining_helpers.py`.
+
+**Bootstrap sequence at the top of every generator:**
+
+```python
+from template_mining_helpers import (
+    apply_journal_kernel, resolve_palette, role_color,
+    add_metric_box, add_perfect_fit_diagonal, add_zero_reference,
+    add_group_dividers, add_panel_label,
+    density_sort, density_color_scatter,
+    add_polygon_polar_grid, draw_gradient_box,
+    build_grid, select_narrative_arc, arc_required_motifs,
+    arc_default_grid, apply_zorder_recipe, bootstrap_chart,
+)
+
+# 1. Resolve narrative arc + grid recipe (06 + 04)
+arc    = select_narrative_arc(dataProfile, chartPlan)             # one of 10
+recipe = arc_default_grid(arc, panel_count=len(chartPlan["panels"]))
+
+# 2. Apply kernel (01) — choose variant based on arc
+variant = "hero" if arc in ("hero",) else "compact" if arc in ("multipanel_grid", "n×n_pairwise") else "default"
+apply_journal_kernel(variant=variant, journalProfile=journalProfile)
+
+# 3. Build figure + axes (04)
+fig, axes = build_grid(recipe, figsize=chartPlan.get("figsize"))
+
+# 4. Resolve palette (03) — palette key chosen in Phase 2
+palette = resolve_palette(chartPlan["palette_name"], journalProfile=journalProfile)
+
+# 5. Apply per-family zorder recipe (02) AFTER drawing primitives
+# 6. Apply required idioms (05) per arc
+required = arc_required_motifs(arc)
+```
+
+**Reference docs (read on demand, not eagerly):**
+
+| Decision | File |
+|---|---|
+| Kernel + variants | `template-mining/01-rcparams-kernel.md` |
+| Sandwich layering per family | `template-mining/02-zorder-recipes.md` |
+| Palette name → hex | `template-mining/03-palette-bank.md` |
+| Multi-panel grid recipe | `template-mining/04-grid-recipes.md` |
+| In-axes annotation idioms | `template-mining/05-annotation-idioms.md` |
+| Narrative arc selection | `template-mining/06-narrative-arcs.md` |
+| Family deep-dive (only if needed) | `template-mining/07-techniques/<family>.md` |
+
+**Anchor cases lookup**: query `template-mining/case-index.json` for ≥3 cases matching the chosen `chart_families` or `narrative_arc`. Use them as visual references when writing the generator code — copy their layer structure, palette anchors, and annotation idioms verbatim before tuning to the user's data.
+
 ## Objective
 
 - Resolve a concrete journal profile for Nature-like, Cell-like, or Science-like output
@@ -495,11 +545,11 @@ Each generator should:
 - Return its axis object when used inside multi-panel composition
 - Apply `apply_chart_polish(ax, chart_type)` after drawing data
 - Leave Nature/Cell dense overlays to `apply_visual_content_pass(...)` so all implemented charts share the same information-density contract
-- Do not rely on bare lines/points alone: `apply_visual_content_pass(...)` must add data-derived in-plot explanatory labels plus metric boxes/tables, inset summaries, endpoint/peak labels, threshold labels, perfect-fit/reference lines, density halos, sample-shape overlays, matrix labels, p-value star layers when p-values exist, dual-axis error bars when error columns exist, or effect/range summaries according to `visualContentPlan`
+- Do not rely on bare lines/points alone: `apply_visual_content_pass(...)` must add data-derived in-plot explanatory labels plus metric boxes/tables, inset or marginal summaries, endpoint/peak labels, threshold labels, perfect-fit/reference lines, density halos, density-colored points, sample-shape overlays, matrix labels, p-value star layers when p-values exist, dual-axis error bars when error columns exist, or effect/range summaries according to `visualContentPlan`
 
 ### Post-plot polish function (call after every chart generator)
 
-Generator functions draw the base chart and apply minimal polish only. The generated script then runs `apply_visual_content_pass(...)` before crowding management so content density is controlled centrally instead of being reimplemented chart-by-chart. The helper source in `phases/code-gen/helpers.py` is the execution source of truth for in-plot explanatory labels, reference visual grammar motifs, metric tables, density halos, enhancement counts, and residual axis-legend checks.
+Generator functions draw the base chart and apply minimal polish only. The generated script then runs `apply_visual_content_pass(...)` before crowding management so content density is controlled centrally instead of being reimplemented chart-by-chart. The helper source in `phases/code-gen/helpers.py` is the execution source of truth for in-plot explanatory labels, reference/template visual grammar motifs, metric tables, marginal axes, density-colored points, density halos, enhancement counts, and residual axis-legend checks.
 
 ```python
 def apply_chart_polish(ax, chart_type):
@@ -2200,7 +2250,7 @@ styledCode = {
 > 3. Generated code includes output directory creation, source-data hooks, and metadata writing
 > 4. Panel labels, legends, and colorbars are resolved once at figure scope where possible
 > 5. `codeReview.blockingFindings` is empty after syntax/import drift, missing generator coverage, forbidden `loc="best"`, source-data/metadata hooks, reference visual grammar gates, and panelBlueprint checks
-> 6. `full_code_string` embeds helper source from `phases/code-gen/helpers.py` and multi-panel source from `phases/code-gen/generators-multipanel.py`, keeps `crowdingPlan` and `visualContentPlan` attached to `chartPlan`, passes `ax` and `col_map` to generators, runs `apply_visual_content_pass(...)` before `apply_crowding_management(...)`, tracks `visualGrammarMotifsApplied`, `metricTableCount`, `referenceLineCount`, and `densityHaloCount`, and writes `savefig` calls for all `workflowPreferences["exportFormats"]`, using `workflowPreferences["rasterDpi"]` for raster outputs
+> 6. `full_code_string` embeds helper source from `phases/code-gen/helpers.py` and multi-panel source from `phases/code-gen/generators-multipanel.py`, keeps `crowdingPlan` and `visualContentPlan` attached to `chartPlan`, passes `ax` and `col_map` to generators, runs `apply_visual_content_pass(...)` before `apply_crowding_management(...)`, tracks `visualGrammarMotifsApplied`, `templateMotifsApplied`, `metricTableCount`, `referenceLineCount`, `densityHaloCount`, `marginalAxesCount`, and `densityColorEncodingCount`, and writes `savefig` calls for all `workflowPreferences["exportFormats"]`, using `workflowPreferences["rasterDpi"]` for raster outputs
 
 
 > **Generator code**: Read [code-gen/generators-distribution.md](code-gen/generators-distribution.md) for distribution chart generators (violin_paired, violin_split, dot_strip, histogram, density, ecdf, joyplot, ridge, and 40+ additional chart types across genomics, engineering, ecology, and more).

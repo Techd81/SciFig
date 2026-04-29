@@ -37,10 +37,14 @@ VISUAL_IMPACT_POLICY = {
     "use_inset_axes": True,
     "use_metric_tables": True,
     "use_density_halos": True,
+    "use_density_color_encoding": True,
+    "use_marginal_axes": True,
     "use_perfect_fit_reference": True,
     "use_sample_shape_encoding": True,
     "use_significance_star_layer": True,
     "use_dual_axis_error_bars": True,
+    "use_template_motifs": True,
+    "min_template_motifs_per_figure": 1,
     "require_stat_provenance": True,
     "no_invented_stats": True,
     "outside_layout_elements": True,
@@ -49,7 +53,9 @@ VISUAL_IMPACT_POLICY = {
 
 Visual impact must stay data-derived. Permitted enhancements include sample-size labels, observed quantiles, reference lines, confidence bands from supplied or computed values, inset distributions, rank callouts, model diagnostics, and semantic highlights already justified by `dataProfile` or `statPlan`. Every rendered figure should contain in-plot explanatory labels such as best group, endpoint delta, trend direction, threshold hit count, peak window, or matrix/value summaries; outside metric boxes alone do not satisfy visual impact.
 
-Reference visual grammar is mandatory when data support it. Use the reference motifs seen in high-density ML and experimental figures: correlation/value matrices with cell labels and significance stars only when p-values are supplied; prediction scatter panels with dashed perfect-fit lines, R2/RMSE/MAE metric tables, density halos, and optional sample-shape overlays; feature-importance or SHAP-like bars with clustering/cutoff sidecars when grouping or linkage data exist; validation/new-point panels with predicted/experimental markers plus dual-axis percent-error or RMSE bars when those columns exist. Do not invent p-values, SHAP values, clustering trees, or error columns for visual impact.
+Reference visual grammar is mandatory when data support it. Use the reference motifs seen in high-density ML and experimental figures: correlation/value matrices with cell labels and significance stars only when p-values are supplied; prediction scatter panels with dashed perfect-fit lines, R2/RMSE/MAE metric tables, density halos, density-colored points, marginal distributions, and optional sample-shape overlays; feature-importance or SHAP-like bars with clustering/cutoff sidecars when grouping or linkage data exist; validation/new-point panels with predicted/experimental markers plus dual-axis percent-error or RMSE bars when those columns exist. Do not invent p-values, SHAP values, clustering trees, or error columns for visual impact.
+
+Template-derived motifs are governed by `specs/template-visual-motifs.md`. Phase 2 must store them in `visualContentPlan.templateMotifs` with explicit provenance requirements, and Phase 4 must verify `templateMotifCount` when motifs were planned. Motifs are not chart registry entries; they are overlays or layout intents that enrich implemented charts.
 
 ## Crowding And Layout Policy
 
@@ -134,6 +140,15 @@ Phase 4 must produce `render_qa.json` with:
 - `inPlotExplanatoryLabelCount`
 - `referenceMotifCount`
 - `minReferenceMotifCount`
+- `templateMotifCount`
+- `minTemplateMotifCount`
+- `templateMotifs`
+- `templateMotifsApplied`
+- `marginalAxesCount`
+- `densityColorEncodingCount`
+- `subAxesCount`
+- `colorbarSlotCount`
+- `multiAxisEncodingCount`
 - `visualGrammarMotifs`
 - `visualGrammarMotifsApplied`
 - `metricTableCount`

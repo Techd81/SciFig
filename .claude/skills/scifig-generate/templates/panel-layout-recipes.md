@@ -213,6 +213,60 @@ cbar.set_label("Value", fontsize=5)
 - `line+ci` + `bar_grouped` + `scatter`
 - `km` + `forest` + `roc`
 
+## Recipe 13: Prediction Diagnostic Matrix
+
+**When to use**
+- Data contain observed/actual and predicted/fitted values, model split, sample/source, residual, or error columns.
+
+**Layout**
+- `2 x 2`
+- A = prediction scatter with perfect-fit line, density coloring, marginal distributions, and metric table
+- B = residual or error distribution
+- C = Bland-Altman or residual-vs-fitted support
+- D = new-point/error sidecar or sample/source summary
+
+**Required layout metadata**
+- `templateLayoutIntents` includes `prediction_diagnostic_matrix` and `joint_marginal_grid`
+- `subAxesRequired=true`
+- `axisLinkGroups` links panels that share actual/predicted scale
+- legends, metric tables, and marginal axes stay outside plotted data marks
+
+## Recipe 14: ML Explainability Board
+
+**When to use**
+- Data contain feature importance, SHAP-like values, ALE/PDP outputs, H-statistic, model, or feature-value columns.
+
+**Layout**
+- `2 x 2`
+- A = ranked importance lollipop/bar using signed zero reference when values can be negative
+- B = feature-value or dependence support heatmap/dotplot
+- C = model or cohort comparison
+- D = compact table/cutoff/cluster summary when supplied
+
+**Rules**
+- Do not invent SHAP, PDP, ALE, clustering, or cutoffs.
+- If only generic feature importance exists, use `lollipop_horizontal`, `dotplot`, or `heatmap_annotated`; do not request an unimplemented SHAP chart key.
+
+## Recipe 15: Evidence Strip With Marginal Support
+
+**When to use**
+- One hero panel needs small distribution, residual, or interval context without overfilling a board.
+
+**Layout**
+- A wide hero plus a narrow bottom or right strip
+- Support axes use small multiples, marginal histograms, or interval bands
+- Colorbars and legends reserve dedicated strip/slot space outside panel data
+
+## Recipe 16: Correlation Evidence Matrix
+
+**When to use**
+- Matrix, correlation, p-value, adjacency, co-occurrence, or bubble-matrix data.
+
+**Layout**
+- Main matrix axis with a reserved right colorbar slot
+- Optional upper/lower triangular mask, stars only from supplied p-values, small cell labels only for compact matrices
+- Any dendrogram or clustering sidecar must come from supplied linkage/order data
+
 ## Composition Rules
 
 1. Share legends whenever the same categorical mapping appears in multiple panels, and keep them outside the data region.
@@ -221,3 +275,5 @@ cbar.set_label("Value", fontsize=5)
 4. Prefer one hero panel over four equal-priority panels.
 5. Use panel labels at the same anchor point and size across the figure.
 6. Keep whitespace intentional; do not fill every slot if the story only needs three panels.
+7. Use `subAxesRequired`, `colorbarSlotRequired`, and `layoutIntents` when a template motif needs marginal axes, shared colorbars, or linked diagnostic axes.
+8. A template-derived motif is an overlay/layout intent, not a new generator key; keep chart keys limited to implemented registry entries.

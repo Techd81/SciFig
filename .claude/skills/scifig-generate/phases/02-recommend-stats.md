@@ -25,6 +25,7 @@ Use these files as on-demand references during decision making:
 - `specs/chart-catalog.md`
 - `specs/domain-playbooks.md`
 - `specs/workflow-policies.md`
+- `specs/template-visual-motifs.md`
 - `templates/panel-layout-recipes.md`
 - `templates/palette-presets.md`
 
@@ -133,6 +134,12 @@ def recommend_chart_bundle(dataProfile, workflowPreferences):
         return "km", ["forest", "roc", "calibration"]
     if "dose_response" in patterns:
         return "dose_response", ["waterfall", "paired_lines"]
+    if "prediction_diagnostic" in patterns or ("actual" in roles and "predicted" in roles):
+        return "scatter_regression", ["residual_vs_fitted", "bland_altman", "histogram"]
+    if "ml_explainability" in patterns or "feature_importance" in patterns or ("feature_id" in roles and ("importance" in roles or "shap_value" in roles)):
+        return "lollipop_horizontal", ["dotplot", "heatmap_annotated", "correlation"]
+    if "optimization_tradeoff" in patterns or "pareto_flag" in roles or "objective" in roles:
+        return "pareto_chart", ["scatter_regression", "parallel_coordinates"]
     if "embedding" in patterns:
         primary = "umap" if any(c.startswith("umap") for c in cols) else _safe("tsne")
         return primary, [_safe("composition_dotplot"), "violin+strip", "heatmap_pure"]
@@ -281,12 +288,44 @@ def _layout_legend_burden(n_groups, label_burden):
     return label_burden
 
 
+def infer_template_layout_intents(dataProfile, primaryChart, secondaryCharts):
+    roles = dataProfile.get("semanticRoles", {})
+    patterns = set(dataProfile.get("specialPatterns", []))
+    charts = [primaryChart] + list(secondaryCharts or [])
+    intents = []
+
+    def add(intent):
+        if intent not in intents:
+            intents.append(intent)
+
+    if "prediction_diagnostic" in patterns or ("actual" in roles and "predicted" in roles):
+        add("prediction_diagnostic_matrix")
+        add("joint_marginal_grid")
+    if "ml_explainability" in patterns or "feature_importance" in patterns or "shap_value" in roles:
+        add("ml_explainability_board")
+    if "optimization_tradeoff" in patterns or "pareto_chart" in charts or "pareto_flag" in roles:
+        add("pareto_tradeoff_board")
+    if "prediction_interval" in patterns or ("pi_low" in roles and "pi_high" in roles):
+        add("interval_uncertainty_band")
+    if any(chart in ("heatmap_annotated", "heatmap_triangular", "correlation", "bubble_matrix") for chart in charts):
+        add("correlation_evidence_matrix")
+    return intents
+
+
 def build_panel_blueprint(primaryChart, secondaryCharts, dataProfile, workflowPreferences):
     scale_policy = globals().get("DATA_SCALE_POLICY", {
         "legend_bottom_group_max": 8,
     })
+    story_was_default = "storyMode" not in workflowPreferences
     story = workflowPreferences.get("storyMode", "comparison_pair")
-    if workflowPreferences.get("journalStyle") == "cell" and story == "auto":
+    template_layout_intents = infer_template_layout_intents(dataProfile, primaryChart, secondaryCharts)
+    if (story == "auto" or story_was_default) and "prediction_diagnostic_matrix" in template_layout_intents:
+        story = "prediction_diagnostic_matrix"
+    elif (story == "auto" or story_was_default) and "ml_explainability_board" in template_layout_intents:
+        story = "ml_explainability_board"
+    elif (story == "auto" or story_was_default) and "pareto_tradeoff_board" in template_layout_intents:
+        story = "asymmetric_L"
+    elif workflowPreferences.get("journalStyle") == "cell" and story == "auto":
         story = "hero_plus_stacked_support"
     crowding_policy = workflowPreferences.get("crowdingPolicy", "auto_simplify")
     panel_candidates = dataProfile["panelCandidates"]
@@ -311,6 +350,8 @@ def build_panel_blueprint(primaryChart, secondaryCharts, dataProfile, workflowPr
         "asymmetric_L": 3,
         "board_2x3": 6,
         "board_3x3": 9,
+        "prediction_diagnostic_matrix": 4,
+        "ml_explainability_board": 4,
     }
 
     needed = story_panel_map.get(story, 2)
@@ -337,7 +378,15 @@ def build_panel_blueprint(primaryChart, secondaryCharts, dataProfile, workflowPr
             "source": "primary" if i == 0 else "secondary",
         })
 
-    layout = {"recipe": story, "grid": f"{story_panel_map.get(story, 2)}"}
+    layout_grid_map = {
+        "prediction_diagnostic_matrix": "2x2-diagnostic",
+        "ml_explainability_board": "2x2-explainability",
+    }
+    layout = {
+        "recipe": story,
+        "grid": layout_grid_map.get(story, f"{story_panel_map.get(story, 2)}"),
+        "templateLayoutIntents": template_layout_intents,
+    }
 
     continuous_scale_charts = {
         "heatmap_cluster", "heatmap_pure", "heatmap_annotated", "heatmap_triangular",
@@ -370,6 +419,9 @@ def build_panel_blueprint(primaryChart, secondaryCharts, dataProfile, workflowPr
         "sharedLegend": n_groups > 1,
         "sharedColorbar": any(panel["chart"] in continuous_scale_charts for panel in panels),
         "axisLinkGroups": [["A", "B"]] if len(panels) >= 2 else [],
+        "layoutIntents": template_layout_intents,
+        "subAxesRequired": "joint_marginal_grid" in template_layout_intents,
+        "colorbarSlotRequired": any(intent in template_layout_intents for intent in ("correlation_evidence_matrix", "ml_explainability_board")),
         "legendMode": "shared_auto",
         "colorbarMode": "shared_single" if any(panel["chart"] in continuous_scale_charts for panel in panels) else "none",
         "layoutScore": layout_score,
@@ -426,6 +478,8 @@ def build_crowding_plan(primaryChart, secondaryCharts, dataProfile, workflowPref
         "board_3x3": ["board_2x3", "story_board_2x2", "hero_plus_stacked_support", "comparison_pair", "single"],
         "hero_plus_triple_support": ["hero_plus_stacked_support", "comparison_pair", "single"],
         "asymmetric_L": ["triple_horizontal", "comparison_pair", "single"],
+        "prediction_diagnostic_matrix": ["story_board_2x2", "comparison_pair", "single"],
+        "ml_explainability_board": ["story_board_2x2", "hero_plus_stacked_support", "comparison_pair", "single"],
     }.get(final_layout, ["comparison_pair", "single"])
 
     simplifications = []
@@ -593,6 +647,54 @@ def infer_reference_visual_motifs(charts, dataProfile):
     return motifs
 
 
+def infer_template_visual_motifs(charts, dataProfile):
+    roles = dataProfile.get("semanticRoles", {})
+    columns = [str(c).lower() for c in dataProfile.get("columnNames", [])]
+    patterns = set(dataProfile.get("specialPatterns", []))
+    tokens = " ".join(columns + [str(v).lower() for v in roles.values()])
+    chart_keys = {str(chart or "").replace("+", "_").lower() for chart in charts if chart}
+    motifs = []
+    provenance = []
+
+    def add(name, requirement):
+        if name not in motifs:
+            motifs.append(name)
+        if requirement not in provenance:
+            provenance.append(requirement)
+
+    if "prediction_diagnostic" in patterns or ("actual" in roles and "predicted" in roles):
+        add("prediction_diagnostic_matrix", "actual_and_predicted_columns")
+        add("joint_marginal_grid", "numeric_actual_predicted_pair")
+        add("density_encoded_scatter", "numeric_xy_pair")
+        add("metric_table_in_panel", "metrics_computed_from_actual_predicted")
+    if "model_error_diagnostic" in patterns or any(token in tokens for token in ("rmse", "mae", "percent_error", "percentage_error", "error_pct")):
+        add("dual_axis_error_sidecar", "error_metric_column_or_computable_residuals")
+    if "ml_explainability" in patterns or "feature_importance" in patterns or "shap_value" in roles or "importance" in roles:
+        add("explainability_importance_stack", "feature_importance_or_shap_columns")
+        add("signed_effect_axis", "signed_importance_or_effect_values")
+    if "prediction_interval" in patterns or ("pi_low" in roles and "pi_high" in roles):
+        add("interval_uncertainty_band", "provided_interval_columns")
+    if ("ci_low" in roles and "ci_high" in roles) or "effect_interval" in patterns:
+        add("forest_interval_board", "provided_effect_interval_columns")
+    if any(token in tokens for token in ("pvalue", "p_value", "padj", "fdr", "qvalue")) and any(
+        chart in chart_keys for chart in ("heatmap_annotated", "heatmap_triangular", "heatmap_symmetric", "correlation", "bubble_matrix")
+    ):
+        add("correlation_evidence_matrix", "matrix_or_correlation_values_plus_pvalues")
+    if "optimization_tradeoff" in patterns or "pareto_flag" in roles or "pareto_chart" in chart_keys:
+        add("pareto_tradeoff_board", "objective_columns_or_pareto_flags")
+    if "radar" in chart_keys or "biodiversity_radar" in chart_keys:
+        add("polar_comparison_signature", "radar_or_cyclic_comparison_columns")
+
+    return {
+        "motifs": motifs,
+        "provenanceRequirements": provenance,
+        "requiresMarginalAxes": "joint_marginal_grid" in motifs,
+        "requiresDensityColor": "density_encoded_scatter" in motifs,
+        "requiresColorbarSlot": "correlation_evidence_matrix" in motifs,
+        "requiresMultiAxis": "dual_axis_error_sidecar" in motifs,
+    }
+
+
 def build_visual_content_plan(primaryChart, secondaryCharts, dataProfile, workflowPreferences):
     scale_policy = globals().get("DATA_SCALE_POLICY", {
         "point_density_alpha_max": 1000,
@@ -613,6 +715,8 @@ def build_visual_content_plan(primaryChart, secondaryCharts, dataProfile, workfl
     else:
         point_annotation_mode = "direct_when_legible"
     reference_motifs = infer_reference_visual_motifs(charts, dataProfile)
+    template_motif_plan = infer_template_visual_motifs(charts, dataProfile)
+    template_motifs = template_motif_plan["motifs"]
 
     return {
         "mode": mode,
@@ -627,16 +731,27 @@ def build_visual_content_plan(primaryChart, secondaryCharts, dataProfile, workfl
         "minReferenceMotifsPerFigure": min(max(1, len(reference_motifs)), max(2, min(3, len(charts) + 1))),
         "visualGrammarMotifs": reference_motifs,
         "visualGrammarMotifsApplied": [],
+        "templateMotifsRequired": bool(template_motifs),
+        "templateMotifs": template_motifs,
+        "templateMotifsApplied": [],
+        "templateMotifCount": 0,
+        "minTemplateMotifsPerFigure": 1 if template_motifs else 0,
+        "layoutIntents": template_motifs,
+        "provenanceRequirements": template_motif_plan["provenanceRequirements"],
         "requireInPlotExplanatoryLabels": True,
         "minInPlotLabelsPerFigure": min(max(1, len(charts)), max_callouts),
         "semanticCalloutMode": "data_derived",
         "useInsetAxes": True,
+        "useMarginalAxes": template_motif_plan["requiresMarginalAxes"],
         "useMetricTables": True,
         "useDensityHalos": True,
+        "useDensityColorEncoding": template_motif_plan["requiresDensityColor"],
         "usePerfectFitReference": True,
         "useSampleShapeEncoding": True,
         "useSignificanceStarLayer": True,
         "useDualAxisErrorBars": True,
+        "requiresColorbarSlot": template_motif_plan["requiresColorbarSlot"],
+        "requiresMultiAxisEncoding": template_motif_plan["requiresMultiAxis"],
         "noInventedStats": True,
         "statProvenanceRequired": True,
         "pointAnnotationMode": point_annotation_mode,
@@ -651,6 +766,11 @@ def build_visual_content_plan(primaryChart, secondaryCharts, dataProfile, workfl
         "sampleEncodingCount": 0,
         "significanceStarLayerCount": 0,
         "dualAxisEncodingCount": 0,
+        "marginalAxesCount": 0,
+        "densityColorEncodingCount": 0,
+        "subAxesCount": 0,
+        "colorbarSlotCount": 0,
+        "multiAxisEncodingCount": 0,
         "referenceMotifCount": 0,
         "inPlotExplanatoryLabelCount": 0,
         "outsideLayoutElements": True,
@@ -660,6 +780,7 @@ def build_visual_content_plan(primaryChart, secondaryCharts, dataProfile, workfl
             "statistics_must_be_data_derived",
             "nature_cell_information_density",
             "reference_visual_grammar_required",
+            "template_visual_motifs_required_when_data_supports_them",
             "minimum_inplot_explanatory_labels_required",
             "minimum_visual_enhancement_count_required"
         ]
@@ -683,7 +804,17 @@ def build_palette_plan(primaryChart, dataProfile, workflowPreferences):
             "treatment": "#C8553D",
             "treated": "#C8553D",
             "drug": "#C8553D",
-            "rescue": "#4C956C"
+            "rescue": "#4C956C",
+            "train": "#4C78A8",
+            "test": "#E45756",
+            "actual": "#1F4E79",
+            "observed": "#1F4E79",
+            "predicted": "#C8553D",
+            "feature_low": "#3B6FB6",
+            "feature_high": "#B5403A",
+            "positive_correlation": "#B5403A",
+            "negative_correlation": "#3B6FB6",
+            "optimal": "#00A087"
         },
         "grayscaleCheck": True,
         "sharedAcrossPanels": True,
@@ -737,6 +868,7 @@ chartPlan = {
     "panelBlueprint": panelBlueprint,
     "crowdingPlan": crowdingPlan,
     "visualContentPlan": visualContentPlan,
+    "templateMotifs": visualContentPlan.get("templateMotifs", []),
     "palettePlan": palettePlan,
     "delegationReports": delegationReports,
     "journalOverrides": {},

@@ -110,11 +110,20 @@ render_qa = {
     "minInPlotExplanatoryLabels": chartPlan.get("visualContentPlan", {}).get("minInPlotLabelsPerFigure", 0),
     "referenceMotifCount": chartPlan.get("visualContentPlan", {}).get("referenceMotifCount", 0),
     "minReferenceMotifCount": chartPlan.get("visualContentPlan", {}).get("minReferenceMotifsPerFigure", 0),
+    "templateMotifCount": chartPlan.get("visualContentPlan", {}).get("templateMotifCount", 0),
+    "minTemplateMotifCount": chartPlan.get("visualContentPlan", {}).get("minTemplateMotifsPerFigure", 0),
+    "templateMotifs": chartPlan.get("visualContentPlan", {}).get("templateMotifs", []),
+    "templateMotifsApplied": chartPlan.get("visualContentPlan", {}).get("templateMotifsApplied", []),
     "visualGrammarMotifs": chartPlan.get("visualContentPlan", {}).get("visualGrammarMotifs", []),
     "visualGrammarMotifsApplied": chartPlan.get("visualContentPlan", {}).get("visualGrammarMotifsApplied", []),
     "metricTableCount": chartPlan.get("visualContentPlan", {}).get("metricTableCount", 0),
     "referenceLineCount": chartPlan.get("visualContentPlan", {}).get("referenceLineCount", 0),
     "densityHaloCount": chartPlan.get("visualContentPlan", {}).get("densityHaloCount", 0),
+    "marginalAxesCount": chartPlan.get("visualContentPlan", {}).get("marginalAxesCount", 0),
+    "densityColorEncodingCount": chartPlan.get("visualContentPlan", {}).get("densityColorEncodingCount", 0),
+    "subAxesCount": chartPlan.get("visualContentPlan", {}).get("subAxesCount", 0),
+    "colorbarSlotCount": chartPlan.get("visualContentPlan", {}).get("colorbarSlotCount", 0),
+    "multiAxisEncodingCount": chartPlan.get("visualContentPlan", {}).get("multiAxisEncodingCount", 0),
     "sampleEncodingCount": chartPlan.get("visualContentPlan", {}).get("sampleEncodingCount", 0),
     "significanceStarLayerCount": chartPlan.get("visualContentPlan", {}).get("significanceStarLayerCount", 0),
     "dualAxisEncodingCount": chartPlan.get("visualContentPlan", {}).get("dualAxisEncodingCount", 0),
@@ -148,6 +157,10 @@ if render_qa["inPlotExplanatoryLabelCount"] < render_qa["minInPlotExplanatoryLab
 if chartPlan.get("visualContentPlan", {}).get("referenceMotifsRequired", True):
     if render_qa["referenceMotifCount"] < render_qa["minReferenceMotifCount"]:
         render_qa["contentDensityFailures"].append("reference_visual_motif_count_below_minimum")
+
+if chartPlan.get("visualContentPlan", {}).get("templateMotifsRequired", False):
+    if render_qa["templateMotifCount"] < render_qa["minTemplateMotifCount"]:
+        render_qa["contentDensityFailures"].append("template_visual_motif_count_below_minimum")
 
 if chartPlan.get("visualContentPlan", {}).get("statProvenanceRequired", True):
     for enhancement in chartPlan.get("visualContentPlan", {}).get("appliedEnhancements", []):
@@ -192,6 +205,7 @@ Hard failures:
 - any axis-level legend remains after crowding management
 - visual content is under-dense: too few data-derived enhancements or no in-plot explanatory labels
 - required reference visual grammar is missing: too few data-supported motif layers such as metric tables, perfect-fit/reference lines, density halos, matrix labels, p-value stars, sample-shape overlays, or dual-axis error bars
+- required template visual grammar is missing: planned motif layers such as joint marginal axes, density-colored scatter, prediction diagnostic matrix, correlation evidence matrix, interval band, or dual-axis error sidecar were not applied
 - output artifact is missing, blank, or implausibly small
 - requested vector text is not editable in SVG/PDF
 - `legendOutsidePlotArea` is false

@@ -1,0 +1,5120 @@
+[
+  {
+    "id": "Python 科研绘图：如何优雅地展示“模型精度+稳定性”？顶刊可视化复盘_1777452458",
+    "file": "Python 科研绘图：如何优雅地展示“模型精度+稳定性”？顶刊可视化复盘_1777452458.md",
+    "title": "Python 科研绘图：如何优雅地展示“模型精度+稳定性”？顶刊可视化复盘",
+    "journals": [],
+    "chart_families": [
+      "forest",
+      "scatter_regression",
+      "marginal_joint"
+    ],
+    "rc": {
+      "font.family": "['Times New Roman'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "16",
+      "axes.linewidth": "1.5",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": "600",
+      "savefig.bbox": "'tight'"
+    },
+    "palette_hex": [
+      "#EE6677",
+      "#4477AA"
+    ],
+    "cmaps": [
+      "coolwarm"
+    ],
+    "grid": {
+      "gridspec": [
+        2,
+        3
+      ],
+      "subplots": null,
+      "figsize": [
+        18.0,
+        12.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 7,
+      "zorder_max": 5,
+      "zorder_distinct_levels": 3,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 1,
+      "axhline": 1,
+      "transAxes": 1,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 3,
+      "bar": 0,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 2,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 1,
+      "legend_calls": 0,
+      "colorbar": 0
+    },
+    "code_lines": 56,
+    "narrative_arc": "single_focus",
+    "signature_tricks": [
+      "group_divider_axvline",
+      "alpha_layered_scatter"
+    ],
+    "preamble": "前言** 在机器学习辅助研究中，证明模型的“准”只是第一步，证明其“稳”（鲁棒性）才是打动审稿人的关键。本文复刻自 *Bioresource Technology*，展示如何在一张图内集成回归散点、边缘密度分布及蒙特卡洛稳定性分析，构建一套“工程化绘图”系统，全方位呈现模型的精度、泛化能力及预测分布特征。 **02 原图解析** - **骨架结构**： - **2x3 网格布局**：横向对比 Random Forest、LightGBM 与 GBDT。 - **嵌套子网格 (SubGridSpec)**：第一行子图并非简单的散点图，而是由主散点图与顶部/右侧边缘密度图构成的“无缝拼接”系统。 - **图层管理 (Z-order)**： - **参考线底层**：对角线置于 $z=2$。 - **散点中层**：Train/Test 散点置于 $z=3$。 - **标注顶层**：$R^2$ 与统计信息框置于 $z=5$，并添加半透明白底（bbox）以防遮挡数据。 - **科研逻辑**：第一行（a-c）展示单次预测的精度表现（边缘密度揭示数据偏态）；第二行（d-f）展示 100 次随机测试后的 R2-RMSE 稳定性分布，逻辑严密。 **论文原图** **03"
+  },
+  {
+    "id": "Python复现顶刊CEJ _ 拒绝手绘！如何用代码“量产”高颜值多面板吸附等温线图？_1777452771",
+    "file": "Python复现顶刊CEJ _ 拒绝手绘！如何用代码“量产”高颜值多面板吸附等温线图？_1777452771.md",
+    "title": "Python复现顶刊CEJ ",
+    "journals": [
+      "CEJ"
+    ],
+    "chart_families": [
+      "scatter_regression"
+    ],
+    "rc": {
+      "font.family": "['Times New Roman'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "16",
+      "axes.linewidth": "1.5",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": "600",
+      "savefig.bbox": "'tight'"
+    },
+    "palette_hex": [
+      "#00CED1",
+      "#FF0000",
+      "#1E90FF"
+    ],
+    "cmaps": [],
+    "grid": {
+      "gridspec": [
+        2,
+        3
+      ],
+      "subplots": null,
+      "figsize": [
+        15.0,
+        10.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 0,
+      "zorder_max": null,
+      "zorder_distinct_levels": 0,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 0,
+      "transAxes": 1,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 0,
+      "bar": 0,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 1,
+      "legend_calls": 1,
+      "colorbar": 0
+    },
+    "code_lines": 49,
+    "narrative_arc": "multipanel_grid",
+    "signature_tricks": [],
+    "preamble": "前言** 在化学工程与材料科学研究中，将实验值、模拟值与多种模型预测值在同一面板内展示，是论证模型优越性的核心手段。本教程复刻自顶刊《Chemical Engineering Journal》(CEJ, IF=13.3)，展示如何通过 Python 实现 6 面板布局、5 类数据源的像素级对齐，并利用“图层三明治”技法提升图表的逻辑深度与视觉高级感。 **02 原图解析** - **视觉解剖 (The Anatomy)**： - **GridSpec 网格布局**：采用 $2 \\times 3$ 整体布局，确保跨面板的字号统一与轴线对齐，避免后期物理拼接导致的排版失衡。 - **三明治图层法 (The Sandwich Trick)**： - **底层**：辅助网格。 - **中层**：各模型预测曲线（Solid Lines）。 - **顶层**：实验真值（Hollow Markers）。通过高 `zorder` 确保实验点悬浮于预测线之上，体现“实测为准”的学术诚实感。 - **科研逻辑**：展示增量学习模型（IL model）在不同温度/压力条件下对 $H_2$ 吸附量的预测效果。红色 IL 曲线在所有子图中均紧密贴合蓝色实验点，显著优于传统 TR 与 OR 模型。 **论文原图** **03"
+  },
+  {
+    "id": "Python科研绘图复现_绘制多面板分组森林图展示生存分析风险比(HR)_1777453520",
+    "file": "Python科研绘图复现_绘制多面板分组森林图展示生存分析风险比(HR)_1777453520.md",
+    "title": "Python科研绘图复现",
+    "journals": [
+      "Nature Comms",
+      "Nature"
+    ],
+    "chart_families": [
+      "forest",
+      "scatter_regression"
+    ],
+    "rc": {
+      "font.family": "['Times New Roman'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "16",
+      "axes.linewidth": "1.5",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": "600",
+      "savefig.bbox": "'tight'"
+    },
+    "palette_hex": [
+      "#8DA0CB",
+      "#FC8D62",
+      "#66C2A5"
+    ],
+    "cmaps": [],
+    "grid": {
+      "gridspec": null,
+      "subplots": [
+        1,
+        4
+      ],
+      "figsize": [
+        14.0,
+        4.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 2,
+      "zorder_max": 10,
+      "zorder_distinct_levels": 2,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 1,
+      "axhline": 0,
+      "transAxes": 0,
+      "despine_calls": 2,
+      "errorbar": 1,
+      "fill_between": 0,
+      "scatter": 0,
+      "bar": 0,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 0,
+      "legend_calls": 1,
+      "colorbar": 0
+    },
+    "code_lines": 61,
+    "narrative_arc": "multipanel_grid",
+    "signature_tricks": [
+      "group_divider_axvline",
+      "ridgeline_offset_kde",
+      "category_split_dashed"
+    ],
+    "preamble": "前言** 在临床与流行病学研究中，森林图（Forest Plot）是展示回归分析效应值（如 Hazard Ratio）的标配。当研究涉及多个结局指标及复杂的敏感性分析时，如何在单个面板内清晰对比多个模型（Model 1-3）且保持排版对齐是视觉设计的难点。本教程复刻自 *Nature Communications*，展示如何利用 Python 的 `errorbar` 结合分面布局，构建一套自动化绘图方案，直观呈现不同统计模型下的结论稳健性。 **02 原图解析** - **水平分面布局 (Faceted Structure)**： - 图表按结局指标（如 Lung Cancer, COPD）进行水平切分。X 轴代表 HR 值，Y 轴通过隐藏标签实现分类变量（不同 Model）的纵向排布。 - **视觉编码逻辑**： - **离散分类色**：采用冷暖对比色区分 Model 1（基础调整）至 Model 3（全调整）。 - **统计基准线**：HR=1.0 的垂直虚线作为风险判断的黄金准则。 - **科研逻辑**：通过对比不同模型的 HR 值与 95% 置信区间，证明即便在不同程度的混杂因素调整下，吸烟相关蛋白组学特征对疾病风险的预测依然稳健（区间不跨越 1.0）。 **论文原图** **03"
+  },
+  {
+    "id": "Python科研绘图：一行代码实现 R² + 95% 置信区间的高级散点图_1777452391",
+    "file": "Python科研绘图：一行代码实现 R² + 95% 置信区间的高级散点图_1777452391.md",
+    "title": "Python科研绘图：一行代码实现 R² + 95% 置信区间的高级散点图",
+    "journals": [],
+    "chart_families": [
+      "scatter_regression"
+    ],
+    "rc": {
+      "font.family": "'Times New Roman'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "14",
+      "axes.linewidth": "1.5",
+      "xtick.direction": null,
+      "ytick.direction": null,
+      "savefig.dpi": "600",
+      "savefig.bbox": "'tight'"
+    },
+    "palette_hex": [
+      "#313695",
+      "#A50026"
+    ],
+    "cmaps": [],
+    "grid": {
+      "gridspec": null,
+      "subplots": null,
+      "figsize": [
+        12.0,
+        10.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 4,
+      "zorder_max": 10,
+      "zorder_distinct_levels": 3,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 0,
+      "transAxes": 2,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 1,
+      "bar": 0,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 2,
+      "legend_calls": 0,
+      "colorbar": 0
+    },
+    "code_lines": 48,
+    "narrative_arc": "single_focus",
+    "signature_tricks": [
+      "metric_text_box",
+      "alpha_layered_scatter"
+    ],
+    "preamble": "前言** 在机器学习与回归分析中，Parity Plot（平价图/对角线图）是评估预测精度与泛化能力的“无美颜生活照”。单纯列出 $R^2$ 数字往往缺乏说服力，一份高质量的科研图表应当同时展示样本分布、回归拟合及统计置信区间。本教程复刻自 *Separation and Purification Technology*，带你用 Python 构建带“阴影带（Shadow Band）”的专业散点图矩阵。 **02 原图解析** - **视觉解剖 (The Anatomy)**： - **2x2 Panel 布局**：横跨多个预测任务。核心细节在于强制保持 X 轴与 Y 轴的 **Isometric（等距）** 比例，确保 45 度对角线（Bisect Line）不发生视觉畸变。 - **三明治图层法**：底层为 45° 虚线，中层为回归拟合带，顶层为空心散点。 - **科研逻辑**：以 MOF 材料吸附量预测为例。Panel (a) 中数据紧贴对角线，展示了极高的预测一致性；而 Panel (d) 则揭示了模型在高值区域的预测发散现象，这种对“不完美”的真实呈现，正是审稿人所看重的证据。 - **配色系统**：采用经典“红蓝 CP”——蓝色代表 Training，红色代表 Testing，色盲友好且对比强烈。 **论文原图** **03"
+  },
+  {
+    "id": "Python绘图实战：基于GridSpec构建多面板回归预测与边缘分布组合图_1777453032",
+    "file": "Python绘图实战：基于GridSpec构建多面板回归预测与边缘分布组合图_1777453032.md",
+    "title": "Python绘图实战：基于GridSpec构建多面板回归预测与边缘分布组合图",
+    "journals": [],
+    "chart_families": [
+      "scatter_regression",
+      "marginal_joint"
+    ],
+    "rc": {
+      "font.family": "['Times New Roman'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "16",
+      "axes.linewidth": "1.5",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": "600",
+      "savefig.bbox": "'tight'"
+    },
+    "palette_hex": [
+      "#D62728",
+      "#1F77B4"
+    ],
+    "cmaps": [],
+    "grid": {
+      "gridspec": null,
+      "subplots": null,
+      "figsize": null
+    },
+    "counts": {
+      "zorder_calls": 1,
+      "zorder_max": 0,
+      "zorder_distinct_levels": 1,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 0,
+      "transAxes": 1,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 2,
+      "bar": 0,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 2,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 1,
+      "legend_calls": 0,
+      "colorbar": 0
+    },
+    "code_lines": 54,
+    "narrative_arc": "marginal_joint",
+    "signature_tricks": [
+      "metric_text_box"
+    ],
+    "preamble": "前言** 在机器学习回归任务中，单纯的散点图（Parity Plot）难以揭示数据的样本偏态。通过在 X/Y 轴边缘嵌入密度分布曲线（KDE），研究者可以直观观察样本在低值或高值区域的集中程度。本教程展示如何利用 Matplotlib 的 `GridSpec` 实现“房中房”嵌套布局，在一个版面内整齐排布 6 个模型（XGBoost, RF, MLP 等）的对比矩阵，并集成 MAE、RMSE 等评估指标。 **02 原图解析** - **多级嵌套布局**： - **大布局**：2 行 x 3 列网格，对比 6 种机器学习算法。 - **微布局**：每个格点内部又划分为“三合一”系统——主散点图位于中心，顶部与右侧分别预留窄条空间绘制 KDE 曲线。这种非对称嵌套是实现顶刊级“复合图”的核心难点。 - **视觉编码**： - **红蓝分色**：红色（Train）与蓝色（Test）散点层叠。 - **指标铭牌**：右下角通过半透明文本框（bbox）展示评估指标，类似于仪表盘，信息层级分明。 - **科研逻辑**：通过边缘密度图验证模型在不同数据区间（如高浓度 vs 低浓度）的泛化稳定性，防止 $R^2$ 虚高掩盖局部拟合偏差。 **论文原图** **03"
+  },
+  {
+    "id": "基于PSO多目标优化与SHAP可解释分析的回归预测模型框架_1777461729",
+    "file": "基于PSO多目标优化与SHAP可解释分析的回归预测模型框架_1777461729.md",
+    "title": "基于PSO多目标优化与SHAP可解释分析的回归预测模型框架",
+    "journals": [],
+    "chart_families": [
+      "radar",
+      "shap_composite",
+      "heatmap_pairwise",
+      "scatter_regression",
+      "pareto"
+    ],
+    "rc": {
+      "font.family": null,
+      "mathtext.fontset": null,
+      "font.size": null,
+      "axes.linewidth": null,
+      "xtick.direction": null,
+      "ytick.direction": null,
+      "savefig.dpi": null,
+      "savefig.bbox": null
+    },
+    "palette_hex": [],
+    "cmaps": [],
+    "grid": {
+      "gridspec": null,
+      "subplots": null,
+      "figsize": null
+    },
+    "counts": {
+      "zorder_calls": 0,
+      "zorder_max": null,
+      "zorder_distinct_levels": 0,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 0,
+      "transAxes": 0,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 0,
+      "bar": 0,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 0,
+      "legend_calls": 0,
+      "colorbar": 0
+    },
+    "code_lines": 12,
+    "narrative_arc": "multipanel_grid",
+    "signature_tricks": [],
+    "preamble": "前言** 本文介绍一套集成化的机器学习工程化框架，涵盖了从数据预处理、多模型对比预测、多目标优化到模型可解释性分析的完整闭环。该框架采用模块化设计，具有极强的通用性，可广泛应用于各类高维非线性回归预测与工业工艺寻优任务。 **02 核心模块解析** - **多目标回归预测模块**：能够同时预测多个连续目标变量（如材料强度、韧性），集成多种先进回归算法，内置皮尔逊矩阵与评价指标雷达图。 - **PSO 多目标优化模块**：集成粒子群优化（PSO）算法，针对多个预测目标进行全局寻优，在相互制约的指标间寻找 Pareto 最优解（Pareto Front）。 - **SHAP 可解释性分析模块**：引入 SHAP 工具实现透明化分析。包含全局特征重要性、蜂巢图 (Beeswarm)、局部个体解释（Waterfall）及特征交互分析。 **框架全流程示意** **03 核心算法复刻** **"
+  },
+  {
+    "id": "复现 CEJ 顶刊神图 _ Python 绘制“密度散点+边缘直方图”多面板组合图_1777452838",
+    "file": "复现 CEJ 顶刊神图 _ Python 绘制“密度散点+边缘直方图”多面板组合图_1777452838.md",
+    "title": "复现 CEJ 顶刊神图 ",
+    "journals": [
+      "CEJ"
+    ],
+    "chart_families": [
+      "scatter_regression",
+      "marginal_joint",
+      "density_scatter",
+      "ale_pdp"
+    ],
+    "rc": {
+      "font.family": "['Times New Roman', 'Arial', 'SimHei']",
+      "mathtext.fontset": "'stix'",
+      "font.size": "16",
+      "axes.linewidth": "1.5",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": "600",
+      "savefig.bbox": "'tight'"
+    },
+    "palette_hex": [
+      "#69B3A2"
+    ],
+    "cmaps": [
+      "GnBu_r"
+    ],
+    "grid": {
+      "gridspec": null,
+      "subplots": null,
+      "figsize": null
+    },
+    "counts": {
+      "zorder_calls": 1,
+      "zorder_max": 10,
+      "zorder_distinct_levels": 1,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 0,
+      "transAxes": 1,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 1,
+      "bar": 0,
+      "boxplot": 0,
+      "hist": 2,
+      "heatmap": 0,
+      "kde": 1,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 1,
+      "legend_calls": 0,
+      "colorbar": 0
+    },
+    "code_lines": 60,
+    "narrative_arc": "marginal_joint",
+    "signature_tricks": [
+      "density_color_scatter",
+      "metric_text_box"
+    ],
+    "preamble": "前言** 科研绘图的痛点不在于“画不出来”，而在于“画不出那种感觉”。尤其是面对多维数据时，如何在信息密度与美观度之间取得平衡？ 今天我们要复刻的这张图，来自顶刊 **Chemical Engineering Journal (CEJ)**。它是一份教科书级的模型性能评估报告：Figure 7 不仅展示了预测值与真值的相关性，还通过边缘直方图（Marginal Histograms）揭示了数据分布，并结合下方柱状图拆解了不同温度条件下的细微差异。 **02 原图解析** - **🦴 骨架 (Structure)**：采用了嵌套布局。Panel (a) 和 (b) 的主图旁边嵌套了直方图。在 Matplotlib 中需要使用 `GridSpec` 将一个格子切分为 4x4 的子网格，并消除间隙，使直方图看起来像是从主轴上“长”出来的。 - **🍰 核心技巧 —— “三明治图层法”**：为避免散点图在数据量大时变成墨迹（Overplotting），使用了密度着色（Density Coloring）。通过高斯核密度估计（KDE）计算点的密集程度，让集中趋势一目了然。 - **🎨 配色 (Palette)**：抛弃默认色系，选用 Teal（青色）作为主色，搭配深蓝与红色。这种现代感十足的冷暖对比既专业又醒目。 **论文原图** **科学逻辑分析**：Panel (a) 展示整体数据库表现，Panel (b) 聚焦于 Top 10 拓扑结构材料（R² 提升至 0.91），Panel (c) & (d) 则从温度维度揭示性能衰减。这种“定性展示 + 定量拆解”构成了完整的叙事。 **03"
+  },
+  {
+    "id": "复现 Nature _ Python 绘制广义相加模型 (GAM) 拟合与残差诊断组合图_1777452515",
+    "file": "复现 Nature _ Python 绘制广义相加模型 (GAM) 拟合与残差诊断组合图_1777452515.md",
+    "title": "复现 Nature ",
+    "journals": [
+      "Nature"
+    ],
+    "chart_families": [
+      "shap_composite",
+      "scatter_regression",
+      "dual_axis",
+      "ale_pdp"
+    ],
+    "rc": {
+      "font.family": "['Times New Roman', 'Arial', 'SimHei']",
+      "mathtext.fontset": "'stix'",
+      "font.size": "16",
+      "axes.linewidth": "1.5",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": "600",
+      "savefig.bbox": "'tight'"
+    },
+    "palette_hex": [
+      "#B0B0B0",
+      "#5FA896",
+      "#FBC15E"
+    ],
+    "cmaps": [],
+    "grid": {
+      "gridspec": [
+        1,
+        2
+      ],
+      "subplots": null,
+      "figsize": [
+        12.0,
+        5.5
+      ]
+    },
+    "counts": {
+      "zorder_calls": 4,
+      "zorder_max": 4,
+      "zorder_distinct_levels": 4,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 0,
+      "transAxes": 1,
+      "despine_calls": 2,
+      "errorbar": 0,
+      "fill_between": 1,
+      "scatter": 2,
+      "bar": 0,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 1,
+      "legend_calls": 0,
+      "colorbar": 0
+    },
+    "code_lines": 66,
+    "narrative_arc": "train_test_diagnostic",
+    "signature_tricks": [
+      "error_band_fill_between",
+      "alpha_layered_scatter",
+      "regression_band_fillbtw"
+    ],
+    "preamble": "前言** 很多时候，我们输的不是数据，而是**“讲故事的皮囊”**。 今天我们要复刻的这张图，来自 *Nature* 一篇关于新冠病毒传播的硬核论文 *Fine-scale patterns of SARS-CoV-2 spread from identical pathogen sequences*。这张图构成了完美的**“科学叙事闭环”**：左图展示“人口流动如何解释病毒传播”（R²=0.61），右图通过残差分析揪出了隐藏的“隐形传播网”。我们将用 Python 深度复现其设计哲学。 **02 原图解析** - **骨架 (Structure)**：典型的 **1x2 双面板布局**。左图（Panel a）负责立论，展示主要趋势；右图（Panel b）负责诊断，展示异常离群值。 - **坐标系 (Coordinates)**：左图采用**双对数坐标系 (Log-Log Scale)**。由于流动性数据跨度极大（从几十到几万），取对数可以有效避免低数值点挤成一团。 - **🍰 核心技巧 —— “三明治图层法”**：通过严格控制图层层级（zorder），确保拟合线、误差带和成千上万个散点之间互不遮挡，重点突出。 - **科学解码**：图 a 证明手机数据能解释 60% 的病毒传播；图 b 的残差分析则“破案”了监狱转运导致的隐形传播——这些点虽然手机信号往来少，但病毒基因高度一致。 **论文原图** **03"
+  },
+  {
+    "id": "复现顶刊 _ Python绘制“主图+嵌入雨云图”组合，完美展示模型泛化能力_1777452243",
+    "file": "复现顶刊 _ Python绘制“主图+嵌入雨云图”组合，完美展示模型泛化能力_1777452243.md",
+    "title": "复现顶刊 ",
+    "journals": [],
+    "chart_families": [
+      "scatter_regression",
+      "raincloud",
+      "box",
+      "ale_pdp"
+    ],
+    "rc": {
+      "font.family": "['Times New Roman'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "14",
+      "axes.linewidth": "1.5",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": "600",
+      "savefig.bbox": "'tight'"
+    },
+    "palette_hex": [
+      "#FFA500",
+      "#008000"
+    ],
+    "cmaps": [],
+    "grid": {
+      "gridspec": null,
+      "subplots": null,
+      "figsize": [
+        11.0,
+        4.5
+      ]
+    },
+    "counts": {
+      "zorder_calls": 3,
+      "zorder_max": 10,
+      "zorder_distinct_levels": 3,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 1,
+      "axvline": 0,
+      "axhline": 0,
+      "transAxes": 1,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 1,
+      "bar": 0,
+      "boxplot": 1,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 1,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 1,
+      "legend_calls": 1,
+      "colorbar": 0
+    },
+    "code_lines": 67,
+    "narrative_arc": "inset_overlay",
+    "signature_tricks": [
+      "density_color_scatter",
+      "axes_inset_overlay",
+      "raincloud_combo"
+    ],
+    "preamble": "前言** 在展示机器学习模型预测效果时，仅提供 R² 数值往往过于单薄。如何直观展示模型在稀有样本上的趋势，同时体现预测误差的分布？ 最近在 **《Materials Genome Engineering Advances》** 2025 年的一篇论文中，一张关于氧化物玻璃介电常数预测的图吸引了我。它巧妙地在趋势图右下角嵌入了**“雨云图 (Raincloud Plot)”**。这种“趋势线 + 嵌入式误差分布”的组合方式，完美回答了“趋势对不对”和“误差稳不稳”两个核心问题。我们将使用 Matplotlib 进行像素级复刻。 **02 原图解析** - **🦴 骨架 (Structure)**：典型的 **1行2列** 布局，左右子图分别对应不同的掺杂体系。 - **🍰 核心技巧 —— Inset 嵌入雨云图**：在主图内部嵌套一个小画布，同时展示箱线图（Boxplot）、抖动散点（Jitter Strip）和密度曲线（Density Curve），全方位展示误差分布。 - **🎨 配色 (Palette)**：使用高对比度的橙绿配色（真值 vs 预测值），并采用带透明度的填充色增强视觉通透感。 **论文原图** **科学逻辑分析**：主图折线显示模型预测线（绿色）紧贴真值线（橙色），证明了模型在未见组分上的泛化能力。嵌入的误差图显示残差高度集中在 0 附近，且无离谱异常值，炫耀了模型的稳定性。 **03"
+  },
+  {
+    "id": "复现顶刊 _ 拒绝千篇一律的SHAP图，用Matplotlib手绘一张“蜂群+条形”组合图_1777452577",
+    "file": "复现顶刊 _ 拒绝千篇一律的SHAP图，用Matplotlib手绘一张“蜂群+条形”组合图_1777452577.md",
+    "title": "复现顶刊 ",
+    "journals": [
+      "Science"
+    ],
+    "chart_families": [
+      "shap_composite",
+      "dual_axis",
+      "treemap_pie",
+      "ale_pdp"
+    ],
+    "rc": {
+      "font.family": "['Times New Roman', 'Arial', 'SimHei']",
+      "mathtext.fontset": "'stix'",
+      "font.size": "16",
+      "axes.linewidth": "1.5",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": "600",
+      "savefig.bbox": "'tight'"
+    },
+    "palette_hex": [],
+    "cmaps": [
+      "RdBu_r"
+    ],
+    "grid": {
+      "gridspec": [
+        1,
+        4
+      ],
+      "subplots": null,
+      "figsize": [
+        15.0,
+        6.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 1,
+      "zorder_max": 3,
+      "zorder_distinct_levels": 1,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 2,
+      "axvline": 0,
+      "axhline": 0,
+      "transAxes": 1,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 1,
+      "bar": 0,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 1,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 0,
+      "legend_calls": 1,
+      "colorbar": 0
+    },
+    "code_lines": 62,
+    "narrative_arc": "composite_two_lane",
+    "signature_tricks": [
+      "density_color_scatter",
+      "axes_inset_overlay",
+      "pvalue_stars_overlay",
+      "raincloud_combo",
+      "alpha_layered_scatter"
+    ],
+    "preamble": "前言** 在 AI for Science 日益火爆的今天，**SHAP (Shapley Additive exPlanations)** 几乎成了模型可解释性的标配。但直接调用 `shap.summary_plot()` 画出来的图往往难以定制：颜色死板、字体受限、难以添加子图。 今天我们以发表在 **Bioresource Technology** (IF=9.7) 上的顶刊论文为例，带大家用 Matplotlib “徒手”复刻一张高信息密度的 **SHAP 组合分析图**。它不仅展示了特征排名，还通过蜂群图揭示了作用机理，并用嵌入饼图点缀了宏观分布。一张图，讲透三个维度的故事。 **02 原图解析** - **🦴 骨架 (Structure)**：这是一个**非对称的双面板布局**。左侧为条形图（展示特征排名），右侧为蜂群图（展示样本分布）。两图 Y 轴对齐，右图隐藏 Y 轴标签，使视线自然过渡。 - **🍰 核心技巧 —— “手动蜂群化”**：蜂群图本质上是带“密度抖动”的散点图。通过计算局部密度并增加随机 Y 轴偏移（Jitter），可以实现类似 `shap` 库的视觉效果，且具备极高的定制化程度。 - **🎨 配色 (Palette)**：采用现代扁平化审美，去除老旧的 3D 阴影，使用清晰的分类色块进行视觉引导。 **论文原图** **科学解码**：研究探讨生物质热解气化产率。左图显示 **O/C 比**是主宰（35.52%）；右图显示红点（高 O/C）集中在右侧，证明其正向促进产气，这为原料筛选提供了直观的机理支持。 **03"
+  },
+  {
+    "id": "如何用 Python 完美复刻一张“红蓝气泡”相关性分析图_1777451587",
+    "file": "如何用 Python 完美复刻一张“红蓝气泡”相关性分析图_1777451587.md",
+    "title": "如何用 Python 完美复刻一张“红蓝气泡”相关性分析图",
+    "journals": [
+      "Materials Today"
+    ],
+    "chart_families": [
+      "heatmap_pairwise",
+      "heatmap"
+    ],
+    "rc": {
+      "font.family": "['Arial'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "14",
+      "axes.linewidth": "1.2",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": "600",
+      "savefig.bbox": "'tight'"
+    },
+    "palette_hex": [
+      "#8ECFC9",
+      "#FFFFFF",
+      "#FA7F6F",
+      "#F0F0F0"
+    ],
+    "cmaps": [],
+    "grid": {
+      "gridspec": null,
+      "subplots": null,
+      "figsize": null
+    },
+    "counts": {
+      "zorder_calls": 4,
+      "zorder_max": 3,
+      "zorder_distinct_levels": 3,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 0,
+      "transAxes": 0,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 1,
+      "bar": 0,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 1,
+      "legend_calls": 0,
+      "colorbar": 0
+    },
+    "code_lines": 49,
+    "narrative_arc": "single_focus",
+    "signature_tricks": [],
+    "preamble": "前言** 在处理多变量相关性矩阵时，传统的热力图往往因信息通道单一（仅颜色）而导致视觉重心分散。高质量期刊（如 *Materials Today Communications*）常采用“双重编码（Double Encoding）”策略：通过颜色区分正负相关，通过面积表达相关性强弱。本教程展示如何利用 Python 的 `scatter` 函数伪装成热力图，实现“气泡相关性矩阵”，让强相关变量在版面中脱颖而出。 **02 原图解析** - **视觉解剖 (The Anatomy)**： - **骨架结构**：一个 $13 \\times 13$ 的对称坐标系。每个格点的中心即为数据坐标。 - **气泡黑魔法**：利用散点图的 `s` 参数映射相关系数绝对值 $|r|$，实现面积与强度的同步；利用颜色映射 $r$ 值，实现方向（红正、蓝负）的直观区分。 - **科研逻辑**：以混凝土（MMSC）力学性能分析为例。水泥（Cement）与强度（CS）呈现巨大的红色正相关球（$r=0.94$），而减水剂（PBS）与用水量（Water）则呈现巨大的蓝紫色负相关球（$r=-0.99$）。这种设计让读者一眼锁定关键驱动因子。 - **配色系统**：采用青色（Cyan, #8ECFC9）与珊瑚红（Salmon, #FA7F6F）的双色对撞，中间以白色过渡。 **论文原图** **03"
+  },
+  {
+    "id": "如何用Python绘制教科书级的双Y轴组合图_1777451702",
+    "file": "如何用Python绘制教科书级的双Y轴组合图_1777451702.md",
+    "title": "如何用Python绘制教科书级的双Y轴组合图",
+    "journals": [
+      "Materials Today"
+    ],
+    "chart_families": [
+      "dual_axis",
+      "ale_pdp"
+    ],
+    "rc": {
+      "font.family": "['Arial'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "14",
+      "axes.linewidth": "1.2",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": "600",
+      "savefig.bbox": "'tight'"
+    },
+    "palette_hex": [
+      "#CFE2F3",
+      "#9BC2E6",
+      "#F48E66"
+    ],
+    "cmaps": [],
+    "grid": {
+      "gridspec": null,
+      "subplots": null,
+      "figsize": [
+        12.0,
+        6.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 6,
+      "zorder_max": 4,
+      "zorder_distinct_levels": 4,
+      "twinx": 1,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 1,
+      "axhline": 0,
+      "transAxes": 0,
+      "despine_calls": 0,
+      "errorbar": 1,
+      "fill_between": 0,
+      "scatter": 0,
+      "bar": 1,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 0,
+      "legend_calls": 0,
+      "colorbar": 0
+    },
+    "code_lines": 56,
+    "narrative_arc": "multipanel_grid",
+    "signature_tricks": [
+      "twin_axes_color_spines",
+      "group_divider_axvline",
+      "bezier_smooth_line",
+      "dual_y_bar_line",
+      "category_split_dashed"
+    ],
+    "preamble": "前言** 在科研绘图中，常需在同一面板内展示物理意义迥异但高度相关的两组数据（如孔隙率与抗压强度）。简单的双轴图往往面临图层冲突、轴位混淆及视觉失衡。本教程复刻自 *Materials Today Communications*，展示如何遵循“图层三明治”法则，利用 Python 构建一套具备样条插值平滑、垂直分组切分及协同配色系统的专业双轴图。 **02 原图解析** - **图层三明治 (Layer Sandwich)**： - **底层（面包底）**：浅蓝色柱状图，代表孔隙率。其面积较大、颜色较淡，作为全局背景支撑。 - **中层（配菜）**：灰色垂直虚线，负责将 X 轴划分为不同的实验组（如 HKY, HSY 系列），建立视觉节奏。 - **顶层（肉饼）**：暖橙色折线图与误差棒，代表抗压强度。作为视觉重心，其颜色饱和度最高，完全覆盖于柱子之上。 - **科研逻辑**：通过锁定 `ylim` 范围（左轴 0-20%，右轴 44-60 MPa），刻意放大两者的“剪刀差”趋势，完美论证了“孔隙率越低，强度越高”的负相关机制。 - **样条插值 (Spline)**：折线采用了平滑处理，赋予了数据流动感与高级感，优于生硬的折线连接。 **论文原图** **03"
+  },
+  {
+    "id": "拒绝默认配色：Python 绘制多模型性能对比图的进阶实战_1777451272",
+    "file": "拒绝默认配色：Python 绘制多模型性能对比图的进阶实战_1777451272.md",
+    "title": "拒绝默认配色：Python 绘制多模型性能对比图的进阶实战",
+    "journals": [
+      "Nature Comms",
+      "Nature"
+    ],
+    "chart_families": [
+      "forest",
+      "shap_composite",
+      "scatter_regression"
+    ],
+    "rc": {
+      "font.family": "['Arial', 'Times New Roman', 'DejaVu Sans']",
+      "mathtext.fontset": "'stix'",
+      "font.size": "14",
+      "axes.linewidth": "1.2",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": "600",
+      "savefig.bbox": "'tight'"
+    },
+    "palette_hex": [
+      "#E64B35",
+      "#4DBBD5",
+      "#00A087",
+      "#3C5488",
+      "#F39B7F",
+      "#8491B4",
+      "#91D1C2",
+      "#DC0000",
+      "#7E6148",
+      "#333333"
+    ],
+    "cmaps": [],
+    "grid": {
+      "gridspec": null,
+      "subplots": null,
+      "figsize": [
+        8.0,
+        6.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 3,
+      "zorder_max": 3,
+      "zorder_distinct_levels": 3,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 1,
+      "axhline": 0,
+      "transAxes": 0,
+      "despine_calls": 2,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 0,
+      "bar": 0,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 1,
+      "legend_calls": 1,
+      "colorbar": 0
+    },
+    "code_lines": 67,
+    "narrative_arc": "multipanel_grid",
+    "signature_tricks": [
+      "group_divider_axvline",
+      "category_split_dashed"
+    ],
+    "preamble": "前言** 做机器学习（ML）相关课题时，常需要向审稿人证明特征选择的合理性：为什么要用这几十个特征？用更少的特征能否达到同样效果？ 今天我们要复刻的这张图，来自 *Nature Communications* 关于 PVRL 无创筛查的研究。作者为了证明“仅需 6 个血常规指标即可达到 0.85 AUC”，绘制了一张极其精美的**“增量特征选择性能曲线”**（Incremental Feature Selection Curve）。它在单一版面内展示了 9 种算法的轨迹，并清晰切出了“性价比拐点”。我们将使用 Matplotlib 进行像素级复现。 **02 原图解析** - **研究背景**：作者在 Discovery Cohort 中通过 5-fold 交叉验证，评估了从 Top 1 到 Top 30 特征组合的性能。 - **视觉逻辑**： - **横轴 (X)**：特征数量。 - **纵轴 (Y)**：AUC 值。 - **主结论 (RF 线)**：Random Forest（青色线）起步最快，在 n=6 时达到平台期。 - **拐点效应**：通过垂直虚线标出 `n=6`，有力证明了后续特征的冗余性。 - **真实性细节**：保留算法表现中的细微震荡（Zig-zag），比平滑曲线更具学术可信度。 **论文原图** **03"
+  },
+  {
+    "id": "期刊图表复现：偏最小二乘路径模型揭示变量间因果与总效应_1777455232",
+    "file": "期刊图表复现：偏最小二乘路径模型揭示变量间因果与总效应_1777455232.md",
+    "title": "期刊图表复现：偏最小二乘路径模型揭示变量间因果与总效应",
+    "journals": [],
+    "chart_families": [
+      "scatter_regression",
+      "nmds_pca",
+      "ale_pdp"
+    ],
+    "rc": {
+      "font.family": "['Times New Roman'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "16",
+      "axes.linewidth": "1.5",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": null,
+      "savefig.bbox": null
+    },
+    "palette_hex": [],
+    "cmaps": [],
+    "grid": {
+      "gridspec": null,
+      "subplots": null,
+      "figsize": null
+    },
+    "counts": {
+      "zorder_calls": 1,
+      "zorder_max": 1,
+      "zorder_distinct_levels": 1,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 2,
+      "axvline": 1,
+      "axhline": 0,
+      "transAxes": 0,
+      "despine_calls": 2,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 0,
+      "bar": 1,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 1,
+      "legend_calls": 0,
+      "colorbar": 0
+    },
+    "code_lines": 63,
+    "narrative_arc": "single_focus",
+    "signature_tricks": [
+      "axes_inset_overlay",
+      "metric_text_box",
+      "group_divider_axvline",
+      "category_split_dashed"
+    ],
+    "preamble": "前言** 在环境科学与多变量系统研究中，目标变量常受多种交织因素的共同影响。偏最小二乘路径模型（PLS-PM）或结构方程模型（SEM）通过构建有向拓扑网络，直观呈现了系统内部的直接效应、间接效应及多级级联关系。本教程展示如何利用 Python 绘制带弧度的精美路径图，并集成内嵌总效应柱状图，构建一套具备微观路径显著性与宏观驱动贡献的视觉方案。 **02 原图解析** - **有向拓扑网络**： - 由土壤属性、环境因子等五个核心潜变量节点构成。节点间的有向箭头表示因果流动方向。 - **关键视觉编码**： - **颜色映射**：红色代表正向促进作用，蓝色代表负向抑制作用，全图共享一致性颜色逻辑。 - **动态线宽**：箭头粗细严格映射路径系数的绝对值，越粗代表直接影响越强烈。 - **显著性标注**：路径上明确标注系数值及基于 $p$ 值的星号显著性（如 *** 代表 $p<0.001$）。 - **内嵌辅助面板**：右上角通过 `inset_axes` 嵌入水平柱状图，对比不同因子对目标变量（SOC 变异）的总效应（直接与间接效应之和）。 **论文原图** **03"
+  },
+  {
+    "id": "期刊图表复现：叠加二维核密度的渗透汽化膜性能预测对比图_1777455816",
+    "file": "期刊图表复现：叠加二维核密度的渗透汽化膜性能预测对比图_1777455816.md",
+    "title": "期刊图表复现：叠加二维核密度的渗透汽化膜性能预测对比图",
+    "journals": [],
+    "chart_families": [
+      "scatter_regression",
+      "density_scatter"
+    ],
+    "rc": {
+      "font.family": "['Times New Roman'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "16",
+      "axes.linewidth": "1.5",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": null,
+      "savefig.bbox": null
+    },
+    "palette_hex": [],
+    "cmaps": [
+      "jet"
+    ],
+    "grid": {
+      "gridspec": null,
+      "subplots": [
+        1,
+        2
+      ],
+      "figsize": [
+        12.0,
+        5.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 2,
+      "zorder_max": 3,
+      "zorder_distinct_levels": 2,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 0,
+      "transAxes": 1,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 1,
+      "bar": 0,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 1,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 1,
+      "legend_calls": 0,
+      "colorbar": 1
+    },
+    "code_lines": 52,
+    "narrative_arc": "single_focus",
+    "signature_tricks": [
+      "density_color_scatter",
+      "metric_text_box",
+      "alpha_layered_scatter"
+    ],
+    "preamble": "前言** 在机器学习辅助材料设计中，当数据集规模较大时，传统的散点图常面临数据点严重重叠（Overplotting）的问题。通过叠加二维核密度估计（2D KDE），研究者可以将散点密集程度映射为颜色，从而在直观展示模型预测精度的同时，揭示样本在不同物理量程下的聚集状态。本教程展示如何利用 Python 绘制带 2D KDE 着色的 Parity Plot 矩阵，用于多目标属性（如渗透汽化膜的通量与分离系数）的拟合验证。 **02 原图解析** - **多面板结构 (Multi-panel)**： - 采用 $1 \\times 2$ 布局，分别展示模型对 log(Flux) 与 log(Separation factor) 的预测表现。 - **关键视觉编码**： - **散点着色 (Density Mapping)**：利用二维核密度估计计算每个点的局部密度，并映射到 `jet` 或 `viridis` 色标上，从蓝（低密度）到红（高密度）直观展示数据聚集区。 - **1:1 参考线**：红色的对角实线代表“完美预测”的基准。 - **统计指标**：左上角嵌入 $R^2$ 与 RMSE，作为模型性能的硬核评估。 - **科研逻辑**：证明模型在处理宽量程（对数尺度）下的分离膜性能预测时，具备稳健的拟合能力，尤其是数据高密度聚集在对角线附近，说明了预测的可靠性。 **论文原图** **03"
+  },
+  {
+    "id": "期刊图表复现：基于预测区间与训练_测试划分的时序拟合效果对比_1777454854",
+    "file": "期刊图表复现：基于预测区间与训练_测试划分的时序拟合效果对比_1777454854.md",
+    "title": "期刊图表复现：基于预测区间与训练",
+    "journals": [],
+    "chart_families": [
+      "scatter_regression",
+      "time_series_pi"
+    ],
+    "rc": {
+      "font.family": "['Times New Roman'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "16",
+      "axes.linewidth": "1.5",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": null,
+      "savefig.bbox": null
+    },
+    "palette_hex": [],
+    "cmaps": [],
+    "grid": {
+      "gridspec": null,
+      "subplots": null,
+      "figsize": [
+        10.0,
+        5.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 7,
+      "zorder_max": 4,
+      "zorder_distinct_levels": 4,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 1,
+      "axhline": 0,
+      "transAxes": 0,
+      "despine_calls": 2,
+      "errorbar": 0,
+      "fill_between": 1,
+      "scatter": 1,
+      "bar": 0,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 2,
+      "legend_calls": 1,
+      "colorbar": 0
+    },
+    "code_lines": 48,
+    "narrative_arc": "train_test_diagnostic",
+    "signature_tricks": [
+      "group_divider_axvline",
+      "error_band_fill_between",
+      "alpha_layered_scatter"
+    ],
+    "preamble": "前言** 在机器学习预测研究中，展示模型在已知序列（训练集）与未知序列（测试集）上的一致性表现是证明模型稳健性的核心。这类带有“阴影带（Shadow Band）”的拟合图，不仅能对比真实值与预测值的偏差，还能直观量化预测的不确定性。本教程展示如何利用 Python 绘制包含 90% 预测区间的多层时序拟合图，通过垂直分割线构建训练与测试的清晰对比，全方位呈现模型的泛化能力边界。 **02 原图解析** - **主图层架构 (Multi-layer Structure)**： - **预测不确定性带**：代表 90% 预测区间（Prediction Interval）的半透明蓝色填充带。色带越窄，模型置信度越高。 - **真实观测点**：代表 Ground Truth 的黑色散点。 - **预测拟合线**：代表模型输出的红色折线，用于捕捉动态走势。 - **视觉逻辑划分**： - 利用灰色垂直虚线将面板划分为左侧的“训练集 (Training data set)”与右侧的“测试集 (Testing data set)”。 - **科研逻辑**：以土壤有机碳（SOC）动态预测为例，通过观察测试集数据是否处于 90% 预测区间内，来验证模型对未知扰动的追踪能力与稳健性。 **论文原图** **03"
+  },
+  {
+    "id": "期刊图表复现：多面板SHAP依赖图展示分子特征对自由基反应速率的非线性影响_1777454691",
+    "file": "期刊图表复现：多面板SHAP依赖图展示分子特征对自由基反应速率的非线性影响_1777454691.md",
+    "title": "期刊图表复现：多面板SHAP依赖图展示分子特征对自由基反应速率的非线性影响",
+    "journals": [],
+    "chart_families": [
+      "shap_composite",
+      "scatter_regression",
+      "ale_pdp"
+    ],
+    "rc": {
+      "font.family": "['Times New Roman'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "16",
+      "axes.linewidth": "1.5",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": null,
+      "savefig.bbox": null
+    },
+    "palette_hex": [
+      "#FFCCCC",
+      "#CCE5FF"
+    ],
+    "cmaps": [],
+    "grid": {
+      "gridspec": null,
+      "subplots": [
+        2,
+        3
+      ],
+      "figsize": [
+        12.0,
+        7.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 6,
+      "zorder_max": 2,
+      "zorder_distinct_levels": 3,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 1,
+      "transAxes": 0,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 1,
+      "bar": 0,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 0,
+      "legend_calls": 0,
+      "colorbar": 0
+    },
+    "code_lines": 41,
+    "narrative_arc": "multipanel_grid",
+    "signature_tricks": [
+      "shaded_zone_axvspan",
+      "dotted_zero_axhline",
+      "alpha_layered_scatter"
+    ],
+    "preamble": "前言** 在解释机器学习模型对化学反应性（如 PPCPs 与自由基反应速率）的预测逻辑时，SHAP 依赖图（Dependence Plots）能直观揭示特定分子描述符的贡献规律。本教程复刻自 *Water Research*，展示如何利用 Python 构建带“红蓝背景分区”的多面板 SHAP 图，通过视觉引导明确特征在不同取值范围内的促进或抑制作用，将复杂的非线性阈值效应转化为直观的视觉证据。 **02 原图解析** - **多面板网格布局**： - 采用 $2 \\times 3$ 布局，每个子面板独立聚焦一个分子描述符（如 $E_{GAP}$, $S$, $ESP_{pos\\ per}$ 等）。 - **关键视觉编码**： - **背景分色标记 (Background Shading)**：以 SHAP = 0 为界，上半部分（SHAP > 0）填充浅红色，代表促进效应（增加反应速率）；下半部分（SHAP < 0）填充浅蓝色，代表抑制效应。 - **散点趋势**：散点在 X 轴的分布反映了特征数据范围，在 Y 轴的起伏勾勒出模型识别到的非线性规律。 - **科研逻辑**：旨在揭示不同分子特征如何通过非线性机制影响目标化合物的反应性。零值参考线作为临界点，帮助研究者快速识别特征效应翻转的物理意义。 **论文原图** **03"
+  },
+  {
+    "id": "期刊图表复现：多面板SHAP依赖图解析特征主效应与交互作用_1777454475",
+    "file": "期刊图表复现：多面板SHAP依赖图解析特征主效应与交互作用_1777454475.md",
+    "title": "期刊图表复现：多面板SHAP依赖图解析特征主效应与交互作用",
+    "journals": [],
+    "chart_families": [
+      "shap_composite",
+      "scatter_regression",
+      "density_scatter",
+      "ale_pdp"
+    ],
+    "rc": {
+      "font.family": "['Times New Roman'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "16",
+      "axes.linewidth": "1.5",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": null,
+      "savefig.bbox": null
+    },
+    "palette_hex": [],
+    "cmaps": [
+      "coolwarm"
+    ],
+    "grid": {
+      "gridspec": null,
+      "subplots": null,
+      "figsize": [
+        14.0,
+        8.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 3,
+      "zorder_max": 2,
+      "zorder_distinct_levels": 2,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 1,
+      "transAxes": 1,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 1,
+      "bar": 0,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 1,
+      "legend_calls": 0,
+      "colorbar": 1
+    },
+    "code_lines": 46,
+    "narrative_arc": "multipanel_grid",
+    "signature_tricks": [
+      "pvalue_stars_overlay",
+      "dotted_zero_axhline",
+      "alpha_layered_scatter"
+    ],
+    "preamble": "前言** 在催化剂筛选与性能预测研究中，理解特征（如反应温度、金属负载量）对目标变量（如 $CH_4$ 转化率）的影响规律不仅涉及单变量的边际贡献，还涉及变量间的耦合效应。本教程展示如何利用 Python 绘制多面板 SHAP 依赖图，通过颜色映射展示交互效应（Interaction Effect），将高维解释逻辑压缩在直观的二维散点矩阵中。 **02 原图解析** - **网格布局与多维编码**： - **结构**：采用 $2 \\times 3$ 布局，展示 6 个核心特征（Reaction temperature, Bimetallic promoters 等）的 SHAP 响应曲线。 - **颜色映射 (Secondary Feature)**：散点颜色（由蓝到红）代表与之存在强交互的副特征取值。通过观察不同颜色点在垂直方向的分层，可以直观判断副特征如何调节主特征的效应。 - **SHAP Y 轴**：直接反映特征对预测输出（转化率）的增量贡献。 - **科研逻辑**：旨在揭示非线性阈值与最佳催化区间。例如，Panel (a) 显示温度升高显著提升了正向 SHAP 值，且颜色分层揭示了在不同助催化剂含量下温度效应的敏感性差异。 - **视觉注意**：由于不同特征的贡献量级相差巨大，各面板的 Y 轴量程通常是独立的，不宜共享坐标轴。 **论文原图** **03"
+  },
+  {
+    "id": "期刊图表复现：组合SHAP摘要图与饼图解析分子特征对自由基反应预测的全局影响_1777454644",
+    "file": "期刊图表复现：组合SHAP摘要图与饼图解析分子特征对自由基反应预测的全局影响_1777454644.md",
+    "title": "期刊图表复现：组合SHAP摘要图与饼图解析分子特征对自由基反应预测的全局影响",
+    "journals": [],
+    "chart_families": [
+      "shap_composite",
+      "scatter_regression",
+      "treemap_pie"
+    ],
+    "rc": {
+      "font.family": "['Times New Roman'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "16",
+      "axes.linewidth": "1.5",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": null,
+      "savefig.bbox": null
+    },
+    "palette_hex": [
+      "#4C72B0"
+    ],
+    "cmaps": [],
+    "grid": {
+      "gridspec": [
+        2,
+        3
+      ],
+      "subplots": null,
+      "figsize": [
+        16.0,
+        6.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 0,
+      "zorder_max": null,
+      "zorder_distinct_levels": 0,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 0,
+      "transAxes": 0,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 0,
+      "bar": 1,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 0,
+      "legend_calls": 0,
+      "colorbar": 1
+    },
+    "code_lines": 50,
+    "narrative_arc": "global_local",
+    "signature_tricks": [],
+    "preamble": "前言** 在环境化学或污染物反应速率的机器学习研究中，解释“黑盒”模型的决策机制至关重要。这类结合了特征重要性条形图、分类饼图与 SHAP（Shapley Additive exPlanations）摘要图的多面板复合图，能系统性地回答“哪些特征驱动了反应”以及“特征变化如何改变预测方向”。通过将宏观重要性排序与微观局部 SHAP 值分布对齐，研究者可以直观掌握特征的边际效应，使算法的决策过程透明化。 **02 原图解析** - **多面板复合结构**： - **Panel (a)**：水平特征重要性条形图，按全局贡献度自上而下对变量进行降序排列。 - **Panel (b)**：分类饼图，说明模型涉及的变量在量子化学、静电、分子和几何四类描述符上的整体占比。 - **Panel (c)**：SHAP 摘要图（蜂群图），每行对齐左侧特征，展示所有样本的离散分布与边际效应。 - **视觉编码策略**： - **颜色映射**：颜色代表原始特征数值（Low/High），X 轴位置映射 SHAP 值。 - **方向性判定**：散点位于中心零线右侧代表该特征值对预测目标产生正向推高作用，左侧则为抑制作用。 - **科研逻辑**：旨在揭示小样本数据集中隐藏的非线性模式。条形图建立了全局量化基准，而蜂群图则细化了单一特征在不同取值下的动态响应。 - **结论边界**：SHAP 反映的是模型层面的统计关联，不直接等价于物理因果机制；特征值色条是针对各变量自身分布的相对标度，不可跨行直接对比物理数值。 **论文原图** **03"
+  },
+  {
+    "id": "期刊图表：双Y轴直方图与累积频率曲线展示HPC数据集多变量分布特征_1777454431",
+    "file": "期刊图表：双Y轴直方图与累积频率曲线展示HPC数据集多变量分布特征_1777454431.md",
+    "title": "期刊图表：双Y轴直方图与累积频率曲线展示HPC数据集多变量分布特征",
+    "journals": [],
+    "chart_families": [
+      "scatter_regression",
+      "dual_axis",
+      "nmds_pca"
+    ],
+    "rc": {
+      "font.family": "['Times New Roman'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "16",
+      "axes.linewidth": "1.5",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": null,
+      "savefig.bbox": null
+    },
+    "palette_hex": [],
+    "cmaps": [],
+    "grid": {
+      "gridspec": null,
+      "subplots": [
+        3,
+        3
+      ],
+      "figsize": [
+        12.0,
+        10.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 4,
+      "zorder_max": 3,
+      "zorder_distinct_levels": 2,
+      "twinx": 1,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 0,
+      "transAxes": 0,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 0,
+      "bar": 0,
+      "boxplot": 0,
+      "hist": 1,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 0,
+      "legend_calls": 0,
+      "colorbar": 0
+    },
+    "code_lines": 43,
+    "narrative_arc": "multipanel_grid",
+    "signature_tricks": [
+      "twin_axes_color_spines"
+    ],
+    "preamble": "前言** 在机器学习（如 ANN 模型）预测材料性能的研究中，验证输入特征与输出变量的数据代表性是模型构建的基础。这类多变量分布统计图通常用于向读者直观展示构建数据库的统计特征与数值覆盖范围，证明数据集具备足够的多样性与广度，能够有效支撑高维非线性模型的泛化能力。 清晰地展示多个变量的频数分布及其累积趋势，能以极高的信息密度交代数据底座的健康度。画对了这类图，不仅能省去正文中大段冗长的数据描述，还能在审稿阶段提前打消评审对“数据分布是否集中偏倚”或“模型适用范围是否受限”的质疑，显著降低解释成本。 **02 原图解析** - **多面板结构**：采用矩阵式网格布局，每个独立子图分别代表构建可持续高性能混凝土（HPC）模型的一个输入变量（如水泥、粉煤灰、水、龄期等）或输出变量（抗压强度）。各面板独立展示对应变量在数据库中的分布情况。 - **双 Y 轴设计**： - **左侧主 Y 轴 (Frequency)**：对应直方图（柱状），直观反映数据的集中趋势。 - **右侧辅助 Y 轴 (Cumulative Frequency)**：对应折线图，通过点的连线反映数据从最小值到最大值的累积占比过程。 - **科研逻辑**：旨在证明数据库包含了广泛的混合比例和测试条件。例如，不同工业废料（如高炉矿渣、粉煤灰）的掺量以及抗压强度均覆盖了较宽的范围，这为模型提供了具有代表性的训练基础。 - **结论边界**：注意不同面板之间的 X 轴与左侧 Y 轴尺度并不共享；直方图仅反映静态统计分布，不代表变量之间的相关性或对强度的因果权重。 **论文原图** **03"
+  },
+  {
+    "id": "期刊复刻：多面板结合XGBoost特征重要性棒棒糖图与SHAP蜂群图_1777454599",
+    "file": "期刊复刻：多面板结合XGBoost特征重要性棒棒糖图与SHAP蜂群图_1777454599.md",
+    "title": "期刊复刻：多面板结合XGBoost特征重要性棒棒糖图与SHAP蜂群图",
+    "journals": [],
+    "chart_families": [
+      "shap_composite",
+      "scatter_regression",
+      "dual_axis",
+      "lollipop"
+    ],
+    "rc": {
+      "font.family": "['Times New Roman'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "16",
+      "axes.linewidth": "1.5",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": null,
+      "savefig.bbox": null
+    },
+    "palette_hex": [],
+    "cmaps": [],
+    "grid": {
+      "gridspec": null,
+      "subplots": [
+        1,
+        2
+      ],
+      "figsize": [
+        12.0,
+        6.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 2,
+      "zorder_max": 2,
+      "zorder_distinct_levels": 2,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 1,
+      "axhline": 0,
+      "transAxes": 0,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 1,
+      "bar": 0,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 0,
+      "legend_calls": 0,
+      "colorbar": 0
+    },
+    "code_lines": 35,
+    "narrative_arc": "composite_two_lane",
+    "signature_tricks": [
+      "group_divider_axvline"
+    ],
+    "preamble": "前言** 在机器学习辅助的构效关系（QSAR）或环境化学预测研究中，解释“黑盒”模型的决策机制至关重要。通过将特征重要性（Feature Importance）与 SHAP（SHapley Additive exPlanations）蜂群图组合展示，可以高效聚合信息：左侧体现特征的全局贡献，右侧揭示特征取值如何驱动预测方向。这种设计让读者能迅速建立起“数据权重”与“物理 / 化学机制”间的直观联系。 **02 原图解析** - **双面板结构**：采用 1 行 2 列布局，左右子图共享 Y 轴（即 MACCS 分子描述符），实现跨维度的严格对齐。 - **左图：棒棒糖图 (Lollipop Chart)**：使用水平线段引导视线，末端散点精确定位。相比传统条形图，其视觉噪音更低，在展示密集特征时更具优势。 - **右图：SHAP 蜂群图 (Beeswarm Plot)**：颜色映射特征取值（如子结构的有无），X 轴展示 SHAP 值。通过 X=0 基准线，直观判定特征的正负影响方向。 - **结论边界**：注意虽然 SHAP 提供了精确的数值归归因，但其结果属于模型层面的统计表现，并不等同于严格的因果关系；且两面板量纲不同，不可进行跨图绝对值比较。 **论文原图** **03"
+  },
+  {
+    "id": "期刊复刻：通过双侧棒棒糖图解析特征重要性与ALE主效应方向_1777455283",
+    "file": "期刊复刻：通过双侧棒棒糖图解析特征重要性与ALE主效应方向_1777455283.md",
+    "title": "期刊复刻：通过双侧棒棒糖图解析特征重要性与ALE主效应方向",
+    "journals": [],
+    "chart_families": [
+      "dual_axis",
+      "lollipop",
+      "ale_pdp"
+    ],
+    "rc": {
+      "font.family": "['Times New Roman'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "16",
+      "axes.linewidth": "1.5",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": null,
+      "savefig.bbox": null
+    },
+    "palette_hex": [
+      "#4A6B8A",
+      "#C0504D",
+      "#4F81BD"
+    ],
+    "cmaps": [],
+    "grid": {
+      "gridspec": null,
+      "subplots": [
+        1,
+        2
+      ],
+      "figsize": [
+        10.0,
+        6.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 5,
+      "zorder_max": 2,
+      "zorder_distinct_levels": 3,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 1,
+      "axhline": 0,
+      "transAxes": 0,
+      "despine_calls": 1,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 2,
+      "bar": 0,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 0,
+      "legend_calls": 0,
+      "colorbar": 0
+    },
+    "code_lines": 46,
+    "narrative_arc": "mirror_compare",
+    "signature_tricks": [
+      "group_divider_axvline"
+    ],
+    "preamble": "前言** 在模型全局解释中，单纯的重要性排名仅能说明“谁更关键”，却无法揭示“如何影响”。为了解决这一痛点，科研中常将排列特征重要性（PFI）与累积局部效应（ALE）的平均主效应结合展示。这种双面板棒棒糖图（Lollipop Chart）能够让读者在单一版面内同时建立起“变量贡献排序”与“影响方向”的双重认知，是模型可解释性分析中的高效方案。 **02 原图解析** - **布局逻辑**：采用 1 行 2 列的水平双面板布局，左右子图共用纵轴特征名称。 - **左图：PFI 绝对值**：展示输入特征的重要性绝对得分，决定了特征的整体阅读顺序（自上而下递减）。 - **右图：平均 ALE 主效应**：通过 X 轴正负向刻画特征对目标变量的影响。红色表示正向效应（促进），蓝色表示负向效应（抑制）。 - **视觉编码**：使用“线段 + 端点散点”的形式。相比柱状图，棒棒糖图线宽更细，在展示多变量时更具“呼吸感”，避免了画面拥挤。 - **结论解读**：作者指出 SBETS 具有最高重要性，且从 ALE 主效应看，其增大会提升 CO2 吸附能力；而温度 (T) 则呈现明显的负向影响。 **论文原图** **03"
+  },
+  {
+    "id": "期刊复现 _ Python绘制“镜像玫瑰”组合图，揭示多维模型性能差异_1777452890",
+    "file": "期刊复现 _ Python绘制“镜像玫瑰”组合图，揭示多维模型性能差异_1777452890.md",
+    "title": "期刊复现 ",
+    "journals": [],
+    "chart_families": [
+      "radar",
+      "shap_composite",
+      "mirror_radial",
+      "ale_pdp"
+    ],
+    "rc": {
+      "font.family": "['Times New Roman'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "16",
+      "axes.linewidth": "1.5",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": "600",
+      "savefig.bbox": "'tight'"
+    },
+    "palette_hex": [
+      "#33CCFF",
+      "#FFFF99"
+    ],
+    "cmaps": [],
+    "grid": {
+      "gridspec": null,
+      "subplots": null,
+      "figsize": null
+    },
+    "counts": {
+      "zorder_calls": 4,
+      "zorder_max": 10,
+      "zorder_distinct_levels": 2,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 0,
+      "transAxes": 0,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 0,
+      "bar": 4,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 2,
+      "legend_calls": 0,
+      "colorbar": 0
+    },
+    "code_lines": 50,
+    "narrative_arc": "mirror_compare",
+    "signature_tricks": [
+      "marginal_axes_grid"
+    ],
+    "preamble": "前言** 在机器学习课题中，常需要展示多模型在不同实验条件下（如高压 vs 低压）以及特征筛选前后（原特征 vs 简化特征）的多维性能对比。普通的柱状图往往显得拥挤且信息密度低。 今天我们要复刻一张来自 2025 年顶刊 **《Journal of Environmental Chemical Engineering》** 的 Figure 8。它巧妙地利用**极坐标系（Polar Coordinate）**，将压力条件做成“镜像”对比，将模型指标制成“花瓣”。这种“镜像玫瑰”设计既节省空间，又具有极强的视觉冲击力。 **02 原图解析** - **🦴 骨架 (Structure)**：本质上是**径向柱状图（Radial Bar Chart）**。通过极坐标将传统 X 轴（模型）映射为角度，Y 轴（性能指标）映射为半径。 - **🍰 核心技巧 —— “镜像图层”**： - **垂直分区**：上半球展示低压环境（5.8 bar），下半球镜像展示高压环境（65 bar）。 - **图层堆叠**：每个扇区内蓝色底座代表“原始特征模型”，覆盖其上的黄色细柱代表“简化特征模型”。这种设计能瞬间揭示特征剔除对模型性能的微小影响。 - **🎨 配色 (Palette)**：使用对比鲜明的天青色与鹅黄色，配合 L-Shape 风格的外部刻度尺，提升了整体专业感。 **论文原图** **科学逻辑分析**：研究通过机器学习筛选 MOF 吸附甲烷。作者想通过此图证明：将特征从 190 个减少到 10 个（黄色）后，模型在不同压力下的 RMSE 与 R² 表现几乎没有缩水。 **03"
+  },
+  {
+    "id": "期刊复现：Advanced Science “驼峰”阈值回归图解剖与复刻（附Python源码）_1777450933",
+    "file": "期刊复现：Advanced Science “驼峰”阈值回归图解剖与复刻（附Python源码）_1777450933.md",
+    "title": "期刊复现：Advanced Science “驼峰”阈值回归图解剖与复刻（附Python源码）",
+    "journals": [
+      "Science",
+      "Advanced Sci"
+    ],
+    "chart_families": [
+      "shap_composite",
+      "scatter_regression"
+    ],
+    "rc": {
+      "font.family": "['Arial'",
+      "mathtext.fontset": null,
+      "font.size": "14",
+      "axes.linewidth": "1.5",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": "600",
+      "savefig.bbox": null
+    },
+    "palette_hex": [
+      "#D9D9D9",
+      "#404040",
+      "#E87A6E",
+      "#E63946",
+      "#2AB7CA",
+      "#1E847F"
+    ],
+    "cmaps": [],
+    "grid": {
+      "gridspec": null,
+      "subplots": null,
+      "figsize": null
+    },
+    "counts": {
+      "zorder_calls": 6,
+      "zorder_max": 5,
+      "zorder_distinct_levels": 5,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 1,
+      "axhline": 0,
+      "transAxes": 1,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 1,
+      "scatter": 1,
+      "bar": 0,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 2,
+      "legend_calls": 1,
+      "colorbar": 0
+    },
+    "code_lines": 63,
+    "narrative_arc": "hero",
+    "signature_tricks": [
+      "group_divider_axvline",
+      "alpha_layered_scatter"
+    ],
+    "preamble": "前言** 在科研数据分析中，散点分布往往呈现非线性关系，例如典型的“驼峰”型相关性（Hump-shaped Relationship）。2025 年发表于顶刊 **《Advanced Science》** 的研究 (Wang et al.) 通过一张结合了双重拟合与阈值切割的复合回归图，直观揭示了微生物碳利用效率（CUE）随土壤有机碳（SOC）增加而先升后降的“阈值效应”。 **02 原图解析** - **“三明治”视觉结构**： - **骨架**：灰底白虚线网格，辅助量化但不喧宾夺主。 - **数据层**：代表土壤样本的珊瑚红散点。 - **核心层 (双重拟合)**：黑色主趋势线（反映全局非线性趋势）+ 红色垂直虚线（阈值锚点，将画布切分为低/高两个响应区间）。 - **科研逻辑**： - **爬坡期 (SOC < 54)**：资源限制解除，效率随碳源增加而上升。 - **滑坡期 (SOC > 54)**：养分失衡或环境胁迫，效率到达峰值后断崖式下跌。 - **视觉语言**：通过“双重拟合 + 阈值切割”，完美展示了生态系统中的阈值转折。 **论文原图** **03"
+  },
+  {
+    "id": "期刊复现：Advanced Science 贝叶斯山脊图 + 热图组合策略（附代码）_1777451123",
+    "file": "期刊复现：Advanced Science 贝叶斯山脊图 + 热图组合策略（附代码）_1777451123.md",
+    "title": "期刊复现：Advanced Science 贝叶斯山脊图 + 热图组合策略（附代码）",
+    "journals": [
+      "Science",
+      "Advanced Sci"
+    ],
+    "chart_families": [
+      "heatmap_pairwise",
+      "heatmap",
+      "ridgeline",
+      "ale_pdp"
+    ],
+    "rc": {
+      "font.family": "['Arial'",
+      "mathtext.fontset": null,
+      "font.size": "14",
+      "axes.linewidth": "1.5",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": "600",
+      "savefig.bbox": null
+    },
+    "palette_hex": [],
+    "cmaps": [
+      "RdBu_r"
+    ],
+    "grid": {
+      "gridspec": [
+        1,
+        5
+      ],
+      "subplots": null,
+      "figsize": [
+        16.0,
+        10.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 4,
+      "zorder_max": 5,
+      "zorder_distinct_levels": 4,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 2,
+      "axvline": 1,
+      "axhline": 0,
+      "transAxes": 1,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 1,
+      "scatter": 0,
+      "bar": 0,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 1,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 2,
+      "legend_calls": 0,
+      "colorbar": 1
+    },
+    "code_lines": 59,
+    "narrative_arc": "hero",
+    "signature_tricks": [
+      "imshow_gradient_box",
+      "axes_inset_overlay",
+      "group_divider_axvline",
+      "error_band_fill_between",
+      "ridgeline_offset_kde"
+    ],
+    "preamble": "前言** 在科研绘图中，展示复杂环境变量对核心指标的影响时，单一的热图或回归柱状图往往难以兼顾深度与直观性。2025 年发表于顶刊 **《Advanced Science》 (IF 14.3)** 的研究采用了“左右互搏”策略：左侧展示贝叶斯后验分布（山脊图），右侧对接相关性矩阵（热图），在一张图内完美整合了贝叶斯推断的稳健性与相关系数的直观性。 **02 原图解析** - **“不对称平衡”结构**： - **布局**：大框架分为左右两栏（Low SOC vs High SOC），每栏内部通过非均匀切分，将脊图与纤细的热图紧密嵌套。 - **核心技巧 —— 三明治图层**：利用 `zorder` 严格管理图层顺序。最底层为参考虚线，中间层为半透明填充色，最顶层为白色勾勒轮廓线，确保重叠山峰具有立体感。 - **科研逻辑**： - **左半图 (Low SOC, <54)**：资源限制解除逻辑。营养因子（N, P）的山峰位于 0 线右侧，呈正向促进。 - **右半图 (High SOC, >54)**：磷限制反转逻辑。碳磷比（C/P）变为蓝色负向山峰，证明驱动机制随阈值发生切换。 - **信息集成**：将贝叶斯后验概率（确信度）与相关系数（强弱）并列，提供板上钉钉的科学证据。 **论文原图** **03"
+  },
+  {
+    "id": "期刊复现：Nature Comms 双Y轴组合图_1777450693",
+    "file": "期刊复现：Nature Comms 双Y轴组合图_1777450693.md",
+    "title": "期刊复现：Nature Comms 双Y轴组合图",
+    "journals": [
+      "Nature Comms",
+      "Nature"
+    ],
+    "chart_families": [
+      "dual_axis"
+    ],
+    "rc": {
+      "font.family": "['Arial'",
+      "mathtext.fontset": null,
+      "font.size": "14",
+      "axes.linewidth": "1.5",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": "600",
+      "savefig.bbox": null
+    },
+    "palette_hex": [
+      "#E6553A"
+    ],
+    "cmaps": [],
+    "grid": {
+      "gridspec": null,
+      "subplots": null,
+      "figsize": [
+        8.0,
+        6.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 5,
+      "zorder_max": 10,
+      "zorder_distinct_levels": 3,
+      "twinx": 1,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 1,
+      "transAxes": 0,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 0,
+      "bar": 1,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 0,
+      "legend_calls": 0,
+      "colorbar": 0
+    },
+    "code_lines": 44,
+    "narrative_arc": "multipanel_grid",
+    "signature_tricks": [
+      "twin_axes_color_spines",
+      "dual_y_bar_line"
+    ],
+    "preamble": "前言** 在科研数据展示中，经常需要将量级完全不同的两组数据（如“样本总量”与“阳性比例”）放在同一张图中。2025 年发表于 **Nature Communications** 的研究通过优雅的“双轴设计”，完美展示了人类活动对环境中耐药基因（ARGs）的富集作用。本教程将深入解构其双轴布局与视觉对齐逻辑，解决双轴冲突导致的视觉失衡难题。 **02 原图解析** - **双 Y 轴结构 (Dual-Axis Chart)**： - **左轴 (黑)**：负责“数量（Count）”，对应背景柱状图。 - **右轴 (红)**：负责“比例（Proportion）”，对应前景折线图。 - **视觉编码策略**： - **三明治图层法**：显式指定 `zorder`，确保折线图（前景）浮于柱状图（背景）之上。 - **视觉链接 (Color Linking)**：将右侧 Y 轴及其刻度文字统一染红，与折线颜色一致，引导读者建立瞬时的视觉反射，降低认知负荷。 - **科研逻辑**：揭示了“采样量偏差”下的真相。例如，加工食品（Food）样本量虽少，但阳性比例却最高，有力证明了特定生境下的强富集效应。 **论文原图** **03"
+  },
+  {
+    "id": "期刊复现：Nature Nanotechnology 经典“画中画”组合图（附 Python 完整代_1777450514",
+    "file": "期刊复现：Nature Nanotechnology 经典“画中画”组合图（附 Python 完整代_1777450514.md",
+    "title": "期刊复现：Nature Nanotechnology 经典“画中画”组合图（附 Python 完整代",
+    "journals": [
+      "Nature Nano"
+    ],
+    "chart_families": [
+      "heatmap",
+      "scatter_regression"
+    ],
+    "rc": {
+      "font.family": "'sans-serif'",
+      "mathtext.fontset": null,
+      "font.size": null,
+      "axes.linewidth": "1.2",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": null,
+      "savefig.bbox": null
+    },
+    "palette_hex": [
+      "#ED9F78"
+    ],
+    "cmaps": [
+      "RdBu"
+    ],
+    "grid": {
+      "gridspec": null,
+      "subplots": null,
+      "figsize": [
+        8.0,
+        6.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 4,
+      "zorder_max": 3,
+      "zorder_distinct_levels": 2,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 3,
+      "axvline": 0,
+      "axhline": 0,
+      "transAxes": 1,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 1,
+      "bar": 1,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 1,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 0,
+      "legend_calls": 0,
+      "colorbar": 1
+    },
+    "code_lines": 49,
+    "narrative_arc": "inset_overlay",
+    "signature_tricks": [
+      "imshow_gradient_box",
+      "axes_inset_overlay",
+      "raincloud_combo",
+      "alpha_layered_scatter"
+    ],
+    "preamble": "前言** 在科研绘图中，柱状图虽基础但常面临信息密度低的质疑。当需要展示主要趋势（如碱基堆积能排位）同时兼顾多维验证（如方法相关性）时，传统分栏布局往往显得松散。**Nature Nanotechnology** 采用了一种极具巧思的“画中画” (Inset Axes) 策略：利用主图右上角的留白悬浮展示相关性热图，实现了空间利用率与论证严密性的高度统一。 **02 原图解析** - **“画中画”非对称结构**： - **主图**：降序柱状图，通过顶部留白为插图预留“领空”。 - **插图**：利用 `ax.inset_axes()` 悬浮嵌套在主图内部，避免了多子图导致的版面松散。 - **三明治图层法**： - **底层**：杏橙色 (#ED9F78) 柱体，展示平均值。 - **中层**：黑色工字误差棒。 - **顶层**：带有随机抖动 (Jitter) 的空心圆圈，展示原始数据点分布。 - **视觉逻辑**： - **主图**：英雄榜，展示 16 种 DNA 碱基堆积能的稳定性排名。 - **插图**：照妖镜，通过 $6 \\times 6$ 相关性热图证明新方法与前人研究的共性及差异。 **论文原图** **03"
+  },
+  {
+    "id": "期刊复现：Nature同款皮尔逊热力图_1777451326",
+    "file": "期刊复现：Nature同款皮尔逊热力图_1777451326.md",
+    "title": "期刊复现：Nature同款皮尔逊热力图",
+    "journals": [
+      "Nature Comms",
+      "Nature"
+    ],
+    "chart_families": [
+      "heatmap_pairwise",
+      "heatmap"
+    ],
+    "rc": {
+      "font.family": "['Arial'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "14",
+      "axes.linewidth": "1.2",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": "600",
+      "savefig.bbox": null
+    },
+    "palette_hex": [],
+    "cmaps": [],
+    "grid": {
+      "gridspec": null,
+      "subplots": null,
+      "figsize": [
+        12.0,
+        12.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 0,
+      "zorder_max": null,
+      "zorder_distinct_levels": 0,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 0,
+      "transAxes": 1,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 1,
+      "bar": 0,
+      "boxplot": 0,
+      "hist": 1,
+      "heatmap": 0,
+      "kde": 1,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 1,
+      "legend_calls": 0,
+      "colorbar": 0
+    },
+    "code_lines": 57,
+    "narrative_arc": "n×n_pairwise",
+    "signature_tricks": [
+      "density_color_scatter",
+      "upper_triangle_split"
+    ],
+    "preamble": "前言** 在处理具有多维特征的科研数据时，简单的散点矩阵往往会因刻度杂乱、标签重叠而难以解读。顶刊中的关系矩阵图通过“视觉降噪”，在单一画布上高效整合了单变量分布、双变量相关性及原始数据形态。本节复现自 **Nature Communications** 关于 PVRL 无创筛查的研究，其成对关系矩阵图（Pairwise Matrix Plot）是多维数据可视化的教科书级范本。 **02 原图解析** - **多维信息集成结构**： - **对角线（直方图+核密度曲线）**：展示单变量的数据分布特征（如偏态或正态性）。 - **下三角（散点图）**：展示变量间的原始观测形态，通过空心圈映射揭示线性或非线性关联。 - **上三角（数值色块）**：展示 Pearson 相关系数，并辅以浅色背景突出量化结果。 - **科研价值**：用于验证核心特征间的区分度与共性。例如，通过观察相关系数是否超过 0.8 来诊断多重共线性，同时保留具有互补生物学信息的关键指标。 - **视觉控制**：通过极致的刻度清理与紧凑布局，确保在 6x6 甚至更大规模的网格中依然保持清爽。 **论文原图** **03"
+  },
+  {
+    "id": "期刊复现：SHAP依赖图解析环境因子对目标变量的影响方向与程度_1777454034",
+    "file": "期刊复现：SHAP依赖图解析环境因子对目标变量的影响方向与程度_1777454034.md",
+    "title": "期刊复现：SHAP依赖图解析环境因子对目标变量的影响方向与程度",
+    "journals": [],
+    "chart_families": [
+      "shap_composite",
+      "scatter_regression",
+      "ale_pdp"
+    ],
+    "rc": {
+      "font.family": "['Times New Roman'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "16",
+      "axes.linewidth": "1.5",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": null,
+      "savefig.bbox": null
+    },
+    "palette_hex": [
+      "#808080"
+    ],
+    "cmaps": [],
+    "grid": {
+      "gridspec": null,
+      "subplots": null,
+      "figsize": [
+        8.0,
+        6.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 3,
+      "zorder_max": 2,
+      "zorder_distinct_levels": 3,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 1,
+      "axhline": 0,
+      "transAxes": 0,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 1,
+      "bar": 0,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 0,
+      "legend_calls": 0,
+      "colorbar": 1
+    },
+    "code_lines": 51,
+    "narrative_arc": "single_focus",
+    "signature_tricks": [
+      "group_divider_axvline",
+      "raincloud_combo"
+    ],
+    "preamble": "前言** 在基于机器学习的环境与地学研究中，SHAP 摘要图（Summary Plot / Beeswarm Plot）常用于全局特征重要性的验证与解释。通过在一个面板中展示特征的重要性排名、数值分布及其对模型预测的推拉作用，研究者可以快速诊断环境因子对目标指标（如新兴污染物 ECs 传输）的驱动方向。 **02 原图解析** - **单面板水平蜂群布局**： - **Y 轴**：特征按平均绝对贡献度降序排列。 - **X 轴**：SHAP 值，代表特征对预测结果的影响大小。 - **核心视觉编码**： - **参考线**：垂直虚线区分促进（正 SHAP）与抑制（负 SHAP）作用。 - **色彩映射**：利用蓝（Low）到红（High）的渐变色条编码特征原始数值。 - **密度表现**：散点沿 Y 轴抖动展开（Beeswarm 效果），直观反映数据在特定 SHAP 区间的分布密度。 - **科研结论**：揭示了 Parent ECs 浓度、DEM 等因子对污染物传输的显著促进或抑制效应。 **论文原图** **结论边界**：SHAP 摘要图展示的是全局统计关联方向，不直接代表物理因果。若需探究非线性阈值，建议辅助局部依赖图。 **03"
+  },
+  {
+    "id": "期刊复现：SHAP蜂群图解析环境因子对目标变量的影响方向与程度_1777455105",
+    "file": "期刊复现：SHAP蜂群图解析环境因子对目标变量的影响方向与程度_1777455105.md",
+    "title": "期刊复现：SHAP蜂群图解析环境因子对目标变量的影响方向与程度",
+    "journals": [],
+    "chart_families": [
+      "shap_composite",
+      "scatter_regression",
+      "ale_pdp"
+    ],
+    "rc": {
+      "font.family": "['Times New Roman'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "16",
+      "axes.linewidth": "1.5",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": null,
+      "savefig.bbox": null
+    },
+    "palette_hex": [
+      "#808080"
+    ],
+    "cmaps": [],
+    "grid": {
+      "gridspec": null,
+      "subplots": null,
+      "figsize": [
+        8.0,
+        6.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 3,
+      "zorder_max": 2,
+      "zorder_distinct_levels": 3,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 1,
+      "axhline": 0,
+      "transAxes": 0,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 1,
+      "bar": 0,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 0,
+      "legend_calls": 0,
+      "colorbar": 1
+    },
+    "code_lines": 53,
+    "narrative_arc": "single_focus",
+    "signature_tricks": [
+      "group_divider_axvline",
+      "raincloud_combo"
+    ],
+    "preamble": "前言** 在基于机器学习的环境与地学研究中，SHAP 摘要图（Summary Plot / Beeswarm Plot）是突破模型“黑盒”限制的核心工具。它能够在一个面板中同时展示特征重要性排名、变量数值分布，以及它们对模型预测结果的贡献方向。通过这种直观的视觉反馈，研究者可以快速识别环境因子（如地形、气候）对目标变量的驱动逻辑。 **02 原图解析** - **单面板水平蜂群布局**： - **Y 轴**：输入特征按平均绝对贡献度（全局重要性）降序排列。 - **X 轴**：SHAP 值，定量展示特征对模型预测的具体影响幅度。 - **视觉编码要素**： - **零位参考线**：垂直虚线区分促进（SHAP > 0）与抑制（SHAP < 0）效应。 - **色彩映射**：利用蓝（Low）到红（High）的渐变映射特征原始数值，揭示高低值对应的预测偏向。 - **密度抖动 (Beeswarm)**：在 X 轴数值密集处沿 Y 轴展开，反映数据分布的密度状态。 - **科研结论**：揭示了 Parent ECs 浓度与污染物传输的正相关性，为环境治理提供了统计学上的归因证据。 **论文原图** **结论边界**：SHAP 值代表模型归因，不代表严格因果。若需探究非线性阈值拐点，建议结合 SHAP 局部依赖图。 **03"
+  },
+  {
+    "id": "期刊复现：利用组合式箱线折线图与气泡热力图可视化模型超参数稳定性_1777456122",
+    "file": "期刊复现：利用组合式箱线折线图与气泡热力图可视化模型超参数稳定性_1777456122.md",
+    "title": "期刊复现：利用组合式箱线折线图与气泡热力图可视化模型超参数稳定性",
+    "journals": [],
+    "chart_families": [
+      "heatmap",
+      "scatter_regression",
+      "box"
+    ],
+    "rc": {
+      "font.family": "['Times New Roman'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "16",
+      "axes.linewidth": "1.5",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": null,
+      "savefig.bbox": null
+    },
+    "palette_hex": [],
+    "cmaps": [
+      "viridis"
+    ],
+    "grid": {
+      "gridspec": null,
+      "subplots": [
+        2,
+        2
+      ],
+      "figsize": [
+        8.0,
+        6.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 2,
+      "zorder_max": 10,
+      "zorder_distinct_levels": 2,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 0,
+      "transAxes": 1,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 1,
+      "bar": 0,
+      "boxplot": 1,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 1,
+      "legend_calls": 0,
+      "colorbar": 1
+    },
+    "code_lines": 45,
+    "narrative_arc": "single_focus",
+    "signature_tricks": [
+      "density_color_scatter",
+      "alpha_layered_scatter"
+    ],
+    "preamble": "前言** 机器学习模型在预测复杂环境化学行为时，其性能高度依赖于超参数配置。此类图表通常用于验证模型对参数变化的敏感性，并解释最优解的选取依据。通过将单变量分布（箱线折线图）与多变量交互（气泡热力图）进行多面板展示，能够直观证明模型在寻找全局最优解过程中的稳定性与鲁棒性，显著降低正文中的解释成本。 **02 原图解析** - **多面板结构 (2x2)**： - **子图 A、B、C**：单变量参数验证。X 轴为超参数（如学习率、树的数量），Y 轴为模型 $R^2$。图层叠加了折线图（均值趋势）与箱线图（多次重复下的分布情况）。 - **子图 D**：四维气泡热力图。展示双变量联合调优。X/Y 轴对应两个超参数，气泡颜色映射 $R^2$ 水平，气泡大小编码第三变量（如计算成本或稳定性指标）。 - **科研价值**：揭示了模型性能在特定参数区间内的峰值及其集中度。箱体越紧凑，说明模型对该点的数据响应越稳定。 **论文原图** **结论边界**：子图 A-C 仅量化单参数影响，忽略了高阶交互；子图 D 的网格密度决定了搜索精细度，热力图展示的是离散网格点的表现。 **03"
+  },
+  {
+    "id": "期刊复现：双Y轴分组柱状与折线组合图评估多模型预测性能_1777455934",
+    "file": "期刊复现：双Y轴分组柱状与折线组合图评估多模型预测性能_1777455934.md",
+    "title": "期刊复现：双Y轴分组柱状与折线组合图评估多模型预测性能",
+    "journals": [],
+    "chart_families": [
+      "scatter_regression",
+      "dual_axis"
+    ],
+    "rc": {
+      "font.family": "['Times New Roman'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "16",
+      "axes.linewidth": "1.5",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": null,
+      "savefig.bbox": null
+    },
+    "palette_hex": [
+      "#4B74B2",
+      "#F08A5D",
+      "#2CA02C"
+    ],
+    "cmaps": [],
+    "grid": {
+      "gridspec": null,
+      "subplots": null,
+      "figsize": [
+        10.0,
+        6.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 4,
+      "zorder_max": 4,
+      "zorder_distinct_levels": 3,
+      "twinx": 1,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 0,
+      "transAxes": 0,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 0,
+      "bar": 2,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 0,
+      "legend_calls": 1,
+      "colorbar": 0
+    },
+    "code_lines": 51,
+    "narrative_arc": "multipanel_grid",
+    "signature_tricks": [
+      "twin_axes_color_spines",
+      "dual_y_bar_line"
+    ],
+    "preamble": "前言** 在机器学习应用于材料性能（如地质聚合物混凝土动态性能）预测的研究中，验证模型准确性并对比算法优劣是核心。这类多指标分组柱状图与折线图的组合（Combo Chart），常用于同时呈现训练集与测试集上的多项评价指标（如 $R^2$、RMSE、MAE）。将误差控制（绝对水平）与方差解释（拟合优度）整合在同一视图内，能显著提升信息密度，节省排版空间与文字解释成本。 **02 原图解析** - **单面板双 Y 轴结构**：X 轴代表不同模型。 - **视觉编码**： - **左侧 Y 轴 (RMSE/MAE)**：对应分组柱状图。颜色区分数据集（Train/Test），柱高反映误差量级。 - **右侧 Y 轴 ($R^2$)**：对应折线图。利用特定形状（如带圆点的连线）标示精度的趋势。 - **图例系统**：明确划分柱体与折线对应的指标和数据集。 - **科研逻辑**：直观对比各算法的精度上限与泛化稳定性。通过双轴隔离量纲冲突，使得误差指标与相关性指标能够在同一横坐标下对齐。 **论文原图** **结论边界**：左右轴量纲完全独立，读者应关注不同模型间的横向趋势对比，而非柱体与折线的绝对高度。测试集指标的波动是衡量模型泛化能力的核心。 **03"
+  },
+  {
+    "id": "期刊复现：双面板NMDS散点图通过颜色分组评估水质期群落差异_1777453986",
+    "file": "期刊复现：双面板NMDS散点图通过颜色分组评估水质期群落差异_1777453986.md",
+    "title": "期刊复现：双面板NMDS散点图通过颜色分组评估水质期群落差异",
+    "journals": [],
+    "chart_families": [
+      "scatter_regression",
+      "dual_axis",
+      "nmds_pca"
+    ],
+    "rc": {
+      "font.family": "['Times New Roman'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "16",
+      "axes.linewidth": "1.5",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": null,
+      "savefig.bbox": null
+    },
+    "palette_hex": [],
+    "cmaps": [],
+    "grid": {
+      "gridspec": null,
+      "subplots": [
+        1,
+        2
+      ],
+      "figsize": [
+        10.0,
+        5.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 4,
+      "zorder_max": 3,
+      "zorder_distinct_levels": 2,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 0,
+      "transAxes": 2,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 2,
+      "bar": 0,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 2,
+      "legend_calls": 1,
+      "colorbar": 0
+    },
+    "code_lines": 53,
+    "narrative_arc": "single_focus",
+    "signature_tricks": [],
+    "preamble": "前言** 在环境科学与生态学研究中，当需要分析多个采样点位在不同空间或时间维度上的群落结构相似性时，非度量多维尺度分析（NMDS）降维散点图是首选。它通过点间空间距离直观呈现高维数据的相异程度。多面板组合与统一视觉映射能够直接说明模型结论的稳健性，帮助读者快速理解不同时期（如调水期与非调水期）群落结构的分离或重叠。 **02 原图解析** - **水平多面板布局 (1x2)**：分别对应调水期 (WDP) 和非调水期 (NWDP) 样本。 - **视觉编码**： - **颜色映射**：散点颜色代表地理或水体分组，协助识别空间分布规律。 - **空间距离**：基于 Bray-Curtis 相异性的降维分布，反映样本特征的相似度。 - **模型指标**：文本框标注 Stress 值（拟合优度）。Stress < 0.2 表明模型良好保留了原有多维关系。 - **科研结论**：作者通过对比指出，WDP 时期群落表现出明显的空间分异，而 NWDP 时期各组间界限则较为模糊。 **论文原图** **结论边界**：NMDS 坐标轴数值无实际物理意义，核心价值在于样本间的相对距离。面板间对比的是分散趋势而非坐标绝对位置。 **03"
+  },
+  {
+    "id": "期刊复现：双面板组合图展示特征重要性权重与模型性能演变_1777456015",
+    "file": "期刊复现：双面板组合图展示特征重要性权重与模型性能演变_1777456015.md",
+    "title": "期刊复现：双面板组合图展示特征重要性权重与模型性能演变",
+    "journals": [],
+    "chart_families": [
+      "scatter_regression",
+      "dual_axis"
+    ],
+    "rc": {
+      "font.family": "['Times New Roman'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "16",
+      "axes.linewidth": "1.5",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": null,
+      "savefig.bbox": null
+    },
+    "palette_hex": [
+      "#D62728",
+      "#1F77B4"
+    ],
+    "cmaps": [],
+    "grid": {
+      "gridspec": null,
+      "subplots": [
+        2,
+        1
+      ],
+      "figsize": [
+        8.0,
+        7.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 3,
+      "zorder_max": 3,
+      "zorder_distinct_levels": 3,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 0,
+      "transAxes": 0,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 2,
+      "bar": 2,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 0,
+      "legend_calls": 1,
+      "colorbar": 0
+    },
+    "code_lines": 47,
+    "narrative_arc": "multipanel_grid",
+    "signature_tricks": [],
+    "preamble": "前言** 在机器学习辅助的材料信息学研究中（如预测铝合金抗拉强度），面对复杂的合金成分与工艺参数，特征降维至关重要。这类特征重要性与性能评估组合图，通常用于验证“递归特征消除 (RFE)”过程的合理性。将特征权重与引入特征后模型性能的演变趋势上下对齐展示，能够清晰交代模型最终保留或剔除变量的依据，极大节省在正文中解释特征截断阈值的篇幅。 **02 原图解析** - **垂直双面板布局**：共享 X 轴（特征数量/顺序）。 - **上半部分 —— 权重排名**：柱状图比较各特征的相对重要性。 - **下半部分 —— 性能演变**：折线散点图展示随着特征集合扩充，模型评价指标（如 $R^2$）的变化趋势。 - **视觉编码**： - **红蓝分类**：柱状图利用双色编码。红色代表最终选入模型的关键特征；蓝色代表因权重较低或冗余而被剔除的特征。 - **极值标注**：性能曲线的最佳节点使用红色五角星标记。 - **指示标注**：添加橙色箭头与文本，直接列出最优节点对应的特征组合。 - **科研逻辑**：验证特征筛选的有效性。随着高权重特征逐个引入，模型 $R^2$ 经历快速上升期后到达平台，红色星标定下性能峰值，为最终特征集选取提供量化支持。 **论文原图** **结论边界**：X 轴通常隐含了贪婪筛选的步序。相关性不直接等同于因果物理关联。 **03"
+  },
+  {
+    "id": "期刊复现：基于H-statistic的特征交互重要性与二维等高线依赖图解析_1777455674",
+    "file": "期刊复现：基于H-statistic的特征交互重要性与二维等高线依赖图解析_1777455674.md",
+    "title": "期刊复现：基于H-statistic的特征交互重要性与二维等高线依赖图解析",
+    "journals": [],
+    "chart_families": [
+      "heatmap",
+      "scatter_regression",
+      "ale_pdp"
+    ],
+    "rc": {
+      "font.family": "['Times New Roman'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "16",
+      "axes.linewidth": "1.5",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": null,
+      "savefig.bbox": null
+    },
+    "palette_hex": [
+      "#4A708B"
+    ],
+    "cmaps": [
+      "viridis"
+    ],
+    "grid": {
+      "gridspec": [
+        3,
+        2
+      ],
+      "subplots": null,
+      "figsize": [
+        10.0,
+        8.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 2,
+      "zorder_max": 4,
+      "zorder_distinct_levels": 2,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 0,
+      "transAxes": 0,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 1,
+      "bar": 1,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 1,
+      "annotation_text": 0,
+      "legend_calls": 0,
+      "colorbar": 1
+    },
+    "code_lines": 48,
+    "narrative_arc": "single_focus",
+    "signature_tricks": [
+      "density_color_scatter",
+      "alpha_layered_scatter"
+    ],
+    "preamble": "前言** 在机器学习辅助的材料性能预测（如渗透蒸发膜分离性能）中，评估单一特征往往不足以揭示变量间的复杂耦合机理。由特征交互重要性条形图与二维等高线偏依赖图（Partial Dependence Plots）组成的复合面板图，常用于验证模型中哪两项变量的共同作用对预测目标影响最显著，以及这种协同或拮抗作用的非线性趋势。 **02 原图解析** - **复合结构**： - **左面板 (a)**：横向条形图，展示基于 **H-statistic** 计算出的不同特征对（如 $T$ 与 $W_c$）的交互作用强度排名。 - **右面板 (b, c, d)**：垂直排列的二维等高线热力图，对应排名前三的变量组合，展示目标预测值的响应梯度。 - **视觉编码**： - **颜色梯度**：热力图通过色条映射目标值，展示高响应区域。 - **样本密度**：叠加白色散点，表示实际样本分布，辅助判断预测高值区的可靠性。 - **科研逻辑**：直观回答“哪些变量发生了强交互”以及“在具体取值空间内性能如何波动”。 **论文原图** **结论边界**：右侧各子图拥有独立色条，不可跨图直接对比颜色绝对深度。高交互重要性反映的是统计依赖，不完全等同于绝对因果律。 **03"
+  },
+  {
+    "id": "期刊复现：基于RF-XGB的SHAP部分依赖图解析关键参数阈值_1777454077",
+    "file": "期刊复现：基于RF-XGB的SHAP部分依赖图解析关键参数阈值_1777454077.md",
+    "title": "期刊复现：基于RF-XGB的SHAP部分依赖图解析关键参数阈值",
+    "journals": [],
+    "chart_families": [
+      "shap_composite",
+      "scatter_regression",
+      "ale_pdp"
+    ],
+    "rc": {
+      "font.family": "['Times New Roman'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "16",
+      "axes.linewidth": "1.5",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": null,
+      "savefig.bbox": null
+    },
+    "palette_hex": [
+      "#1F77B4"
+    ],
+    "cmaps": [
+      "viridis"
+    ],
+    "grid": {
+      "gridspec": null,
+      "subplots": [
+        1,
+        3
+      ],
+      "figsize": [
+        15.0,
+        4.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 5,
+      "zorder_max": 2,
+      "zorder_distinct_levels": 2,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 1,
+      "transAxes": 0,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 2,
+      "bar": 0,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 0,
+      "legend_calls": 0,
+      "colorbar": 0
+    },
+    "code_lines": 48,
+    "narrative_arc": "single_focus",
+    "signature_tricks": [
+      "density_color_scatter",
+      "dotted_zero_axhline",
+      "alpha_layered_scatter"
+    ],
+    "preamble": "前言** 在机器学习与材料性能预测类研究中，展示模型学习到的物理量关系是“打开黑盒”的核心环节。SHAP 部分依赖图（SHAP Partial Dependence Plot）主要用于呈现特征变量如何影响最终目标的边际贡献。通过将特征值与 SHAP 值映射在二维空间，读者能快速捕捉到使得目标变量最大化的最优参数区间和临界阈值。 **02 原图解析** - **多面板阵列**：通常采用 1xN 并排组合，每个子面板聚焦一个关键特征（如激活温度、激活剂比例）。 - **视觉编码**： - **坐标系**：X 轴为特征物理取值，Y 轴为 SHAP 贡献值。 - **水平零线 (Baseline)**：y=0 处的一条参考线，用于区分特征的促进（正值）或抑制（负值）作用。 - **趋势线与散点**：散点代表样本分布，拟合线揭示非线性影响规律。 - **科研结论**：作者通过此图量化了 N 掺杂生物炭制备的阈值：比表面积（SSA）在 800°C 达到峰值。 **论文原图** **结论边界**：SHAP 依赖关系受数据分布密度影响。在数据稀疏区间，散点的发散代表不确定性增加，不宜过度外推。 **03"
+  },
+  {
+    "id": "期刊复现：基于SHAP复合图揭示高能分子特征对性能的全局与局部影响_1777454774",
+    "file": "期刊复现：基于SHAP复合图揭示高能分子特征对性能的全局与局部影响_1777454774.md",
+    "title": "期刊复现：基于SHAP复合图揭示高能分子特征对性能的全局与局部影响",
+    "journals": [],
+    "chart_families": [
+      "shap_composite",
+      "scatter_regression"
+    ],
+    "rc": {
+      "font.family": "['Times New Roman'",
+      "mathtext.fontset": null,
+      "font.size": "14",
+      "axes.linewidth": "1.2",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": null,
+      "savefig.bbox": null
+    },
+    "palette_hex": [
+      "#4B74B2"
+    ],
+    "cmaps": [],
+    "grid": {
+      "gridspec": [
+        2,
+        2
+      ],
+      "subplots": null,
+      "figsize": [
+        14.0,
+        10.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 0,
+      "zorder_max": null,
+      "zorder_distinct_levels": 0,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 2,
+      "axvline": 1,
+      "axhline": 0,
+      "transAxes": 1,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 3,
+      "bar": 0,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 1,
+      "legend_calls": 0,
+      "colorbar": 0
+    },
+    "code_lines": 43,
+    "narrative_arc": "global_local",
+    "signature_tricks": [
+      "axes_inset_overlay",
+      "group_divider_axvline",
+      "raincloud_combo"
+    ],
+    "preamble": "前言** 在分子模拟与高能材料预测领域，单纯的回归精度（如 $R^2$）已不足以支撑严谨的学术论证。研究者通常需要将模型归因（SHAP 全局解释）与预测精度评估（Parity Plot）以及独立验证集表现有机整合。通过在一个多面板复合图中同时展示特征贡献、预测偏差与验证一致性，能够强有力地证明模型的物理合理性与外部泛化能力。 **02 原图解析** - **异构多面板结构 (2x2 布局)**： - **子图 (a) SHAP 摘要图**：揭示影响高能分子爆速/爆压的关键分子描述符。通过蜂群分布映射特征取值对输出的影响方向。 - **子图 (b) 全局重要性条形图**：基于平均绝对 SHAP 值量化特征排名。 - **子图 (c) Parity Plot (预测 vs 实验)**：对比训练集与测试集的拟合效果，内嵌误差评估指标表。 - **子图 (d) 独立验证集表现**：通过新样本的散点分布，进一步压实模型的鲁棒性证据。 - **视觉逻辑**：利用统一的配色方案（如训练集用灰色，测试集用蓝色）贯穿全图，保持视觉逻辑的连续性。 **论文原图** **03"
+  },
+  {
+    "id": "期刊复现：基于上三角局部填充饼图的相关性矩阵解析合金成分与性能关系_1777455707",
+    "file": "期刊复现：基于上三角局部填充饼图的相关性矩阵解析合金成分与性能关系_1777455707.md",
+    "title": "期刊复现：基于上三角局部填充饼图的相关性矩阵解析合金成分与性能关系",
+    "journals": [],
+    "chart_families": [
+      "heatmap_pairwise",
+      "treemap_pie"
+    ],
+    "rc": {
+      "font.family": "['Times New Roman'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "16",
+      "axes.linewidth": "1.5",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": null,
+      "savefig.bbox": null
+    },
+    "palette_hex": [],
+    "cmaps": [],
+    "grid": {
+      "gridspec": null,
+      "subplots": null,
+      "figsize": [
+        8.0,
+        8.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 0,
+      "zorder_max": null,
+      "zorder_distinct_levels": 0,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 0,
+      "transAxes": 0,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 0,
+      "bar": 0,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 0,
+      "legend_calls": 0,
+      "colorbar": 1
+    },
+    "code_lines": 63,
+    "narrative_arc": "mirror_compare",
+    "signature_tricks": [],
+    "preamble": "前言** 在材料信息学与机器学习交叉领域，分析复杂合金成分、加工工艺与最终力学性能间的关联是核心任务。传统相关性矩阵多采用全尺寸网格加颜色映射，当变量维度增加时，密集的色块容易掩盖关键特征间的共线性。利用局部填充饼图与上三角矩阵结合的可视化策略，不仅能减少冗余的对称信息，还能通过扇形面积直观展示相关性的绝对强度，显著降低文字解释成本。 **02 原图解析** - **布局逻辑**：采用上三角矩阵排布，剔除对角线以下的重复信息与对角线上数值为 1 的自相关项，使视觉焦点集中在变量间的唯一比较上。 - **视觉编码**： - **面积映射**：圆内扇形的填充比例（局部饼图）直接映射相关系数的绝对大小 $|r|$。面积越大，代表相关性越强。 - **颜色映射**：扇区颜色映射相关系数的正负与具体数值，通常使用冷暖色调区分（如红色代表正相关，蓝色代表负相关）。 - **科研价值**：通过此类图表，可以清晰观测到合金元素或时效处理参数对强度、韧性及应力腐蚀敏感性的协同或拮抗作用。 **论文原图** **结论边界**：相关性矩阵展示的是统计学共变趋势，不可等同于物理机制上的因果关系。矩阵必须共享统一的色条与面积映射尺度，以确保跨面板对比的有效性。 **03"
+  },
+  {
+    "id": "期刊复现：基于多面板组合的SHAP依赖图解析特征对模型预测的非线性影响_1777455596",
+    "file": "期刊复现：基于多面板组合的SHAP依赖图解析特征对模型预测的非线性影响_1777455596.md",
+    "title": "期刊复现：基于多面板组合的SHAP依赖图解析特征对模型预测的非线性影响",
+    "journals": [],
+    "chart_families": [
+      "shap_composite",
+      "scatter_regression",
+      "ale_pdp"
+    ],
+    "rc": {
+      "font.family": "['Times New Roman'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "16",
+      "axes.linewidth": "1.5",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": null,
+      "savefig.bbox": null
+    },
+    "palette_hex": [],
+    "cmaps": [],
+    "grid": {
+      "gridspec": null,
+      "subplots": [
+        3,
+        2
+      ],
+      "figsize": [
+        12.0,
+        14.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 3,
+      "zorder_max": 3,
+      "zorder_distinct_levels": 3,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 1,
+      "transAxes": 0,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 1,
+      "scatter": 1,
+      "bar": 0,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 0,
+      "legend_calls": 0,
+      "colorbar": 1
+    },
+    "code_lines": 47,
+    "narrative_arc": "multipanel_grid",
+    "signature_tricks": [
+      "marginal_axes_grid",
+      "dotted_zero_axhline",
+      "alpha_layered_scatter"
+    ],
+    "preamble": "前言** 在机器学习用于材料性能预测（如 CO2 吸附容量）的研究中，模型的可解释性至关重要。多面板网格排列的 SHAP 依赖图（SHAP Dependence Plot）能够详细验证单个输入特征如何影响预测输出，同时揭示特征间的潜在交互作用。这种多维度展示方式能直观呈现变量在不同区间内的正负促进作用，显著提升论文的学术深度。 **02 原图解析** - **结构组织**：采用多面板网格布局。每个子图对应一个输入特征（如 Pressure, Temperature 等）。 - **视觉编码**： - **坐标映射**：X 轴为特征数值，Y 轴为 SHAP 值（对预测结果的边际贡献度）。 - **交互特征映射**：散点颜色对应另一个与之存在强交互的特征，展示特征间的协同效应。 - **趋势建模**：叠加非线性拟合实线及其 95% 置信区间（阴影区域），量化统计不确定性。 - **基准标定**：Y=0 的红色虚线作为零效应基准，直观划分影响方向。 - **科研背景**：作者利用此图解析了 MgO 基吸附剂预测逻辑，标定了关键参数跨越零值增益的临界阈值。 **论文原图** **结论边界**：需要注意，SHAP 相关性不等于物理因果关系。各面板 X 轴量纲不同，不可跨图直接对比绝对数值跨度。 **03"
+  },
+  {
+    "id": "期刊复现：基于梯度提升树(GBDT)的多面板预测误差评估图_1777456338",
+    "file": "期刊复现：基于梯度提升树(GBDT)的多面板预测误差评估图_1777456338.md",
+    "title": "期刊复现：基于梯度提升树(GBDT)的多面板预测误差评估图",
+    "journals": [],
+    "chart_families": [
+      "scatter_regression",
+      "dual_axis",
+      "box"
+    ],
+    "rc": {
+      "font.family": null,
+      "mathtext.fontset": null,
+      "font.size": null,
+      "axes.linewidth": null,
+      "xtick.direction": null,
+      "ytick.direction": null,
+      "savefig.dpi": null,
+      "savefig.bbox": null
+    },
+    "palette_hex": [
+      "#0072B2"
+    ],
+    "cmaps": [],
+    "grid": {
+      "gridspec": null,
+      "subplots": null,
+      "figsize": null
+    },
+    "counts": {
+      "zorder_calls": 1,
+      "zorder_max": 3,
+      "zorder_distinct_levels": 1,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 0,
+      "transAxes": 0,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 1,
+      "bar": 0,
+      "boxplot": 1,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 0,
+      "legend_calls": 1,
+      "colorbar": 0
+    },
+    "code_lines": 37,
+    "narrative_arc": "train_test_diagnostic",
+    "signature_tricks": [
+      "raincloud_combo"
+    ],
+    "preamble": "前言** 在环境材料分析或机制预测研究中，包含多种指标对比的多面板图常用于严密验证模型的预测能力与泛化稳定性。将不同类型材料的吸附性能差异、测试集样本的真实值与预测值的匹配度，以及模型整体相对误差的分布整合在同一视图中，能够形成极其扎实的证据链。 **02 原图解析** - **横向三面板布局**： - **左图**：并排分组柱状图，展示 WK10 与 A-WK10 材料在各类重金属离子上的吸附量水平。 - **中图**：双 Y 轴设计。主轴通过相邻柱状图比对观测值与预测值的贴合度；副轴叠加折线图勾勒相对误差起伏。 - **右图**：箱线图结合底层数据散点，对比基准模型与优化模型在全局误差上的收敛幅度。 - **视觉逻辑**：利用颜色一致性引导跨图层的逻辑联系。中图为了容纳高吸附元素（如 Pb），通常需要拉伸 Y 轴量纲。 **论文原图** **03"
+  },
+  {
+    "id": "期刊复现：基于随机森林(RF)的多维模型性能评估与预测残差可视化图谱_1777456409",
+    "file": "期刊复现：基于随机森林(RF)的多维模型性能评估与预测残差可视化图谱_1777456409.md",
+    "title": "期刊复现：基于随机森林(RF)的多维模型性能评估与预测残差可视化图谱",
+    "journals": [],
+    "chart_families": [
+      "forest",
+      "scatter_regression"
+    ],
+    "rc": {
+      "font.family": null,
+      "mathtext.fontset": null,
+      "font.size": null,
+      "axes.linewidth": null,
+      "xtick.direction": null,
+      "ytick.direction": null,
+      "savefig.dpi": null,
+      "savefig.bbox": null
+    },
+    "palette_hex": [
+      "#9BCBEB",
+      "#F6CFA3",
+      "#9BD28C",
+      "#FA9875",
+      "#8DB6CD",
+      "#B00000"
+    ],
+    "cmaps": [],
+    "grid": {
+      "gridspec": null,
+      "subplots": null,
+      "figsize": [
+        14.0,
+        10.6
+      ]
+    },
+    "counts": {
+      "zorder_calls": 0,
+      "zorder_max": null,
+      "zorder_distinct_levels": 0,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 1,
+      "transAxes": 3,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 3,
+      "bar": 2,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 3,
+      "legend_calls": 1,
+      "colorbar": 0
+    },
+    "code_lines": 44,
+    "narrative_arc": "train_test_diagnostic",
+    "signature_tricks": [
+      "dotted_zero_axhline"
+    ],
+    "preamble": "前言** 在环境工程领域的机器学习研究中，单纯给出一个模型预测结果往往是不够的。审稿人更看重的是模型在不同算法间的横向优劣对比，以及最优模型在测试集上的稳健性。针对磺胺甲恶唑（SMX）去除率预测这类典型回归任务，一份合格的“模型性能报告”通常需要包含三部分：算法选型的指标对比、预测值与真实值的拟合轨迹，以及残差在零线附近的分布状态。 **02 原图解析** - **结构组织**：该图由三个面板（a、b、c）构成，逻辑严密。 - **面板 (a) —— 算法海选**：通过横向并列柱状图展示了 KNN、DT、GBM、SVM、XGBoost 和 RFR 在训练集和测试集上的 $R^2$ 表现。RFR 在测试集上的表现通常作为后续分析的基石。 - **面板 (b) —— 压力测试**：采用了 1:1 对角线散点图，横坐标为实测值，纵坐标为预测值。散点贴近黑色虚线（1:1 Line）的程度直观反映了拟合精度。 - **面板 (c) —— 深度透视**：残差分析图。展示了预测值与残差（Measured - Predicted）的关系。理想状态下，残差应围绕红色虚线（零线）随机对称分布，证明模型没有系统性偏差。 **论文原图** **03"
+  },
+  {
+    "id": "期刊复现：多变量散点图矩阵解析特征与比冲的相关性_1777454813",
+    "file": "期刊复现：多变量散点图矩阵解析特征与比冲的相关性_1777454813.md",
+    "title": "期刊复现：多变量散点图矩阵解析特征与比冲的相关性",
+    "journals": [],
+    "chart_families": [],
+    "rc": {
+      "font.family": "['Times New Roman'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "16",
+      "axes.linewidth": "1.5",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": null,
+      "savefig.bbox": null
+    },
+    "palette_hex": [
+      "#1F77B4"
+    ],
+    "cmaps": [],
+    "grid": {
+      "gridspec": null,
+      "subplots": [
+        2,
+        3
+      ],
+      "figsize": [
+        14.0,
+        8.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 2,
+      "zorder_max": 2,
+      "zorder_distinct_levels": 2,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 0,
+      "transAxes": 0,
+      "despine_calls": 2,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 1,
+      "bar": 0,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 0,
+      "legend_calls": 0,
+      "colorbar": 0
+    },
+    "code_lines": 50,
+    "narrative_arc": "n×n_pairwise",
+    "signature_tricks": [
+      "colored_marker_edge",
+      "alpha_layered_scatter"
+    ],
+    "preamble": "前言** 这类图表在化学、材料及航天推进剂的机器学习设计论文中，常被称为“多变量相关性特征散点图矩阵”或“属性-性能分布图”。在固体推进剂高能分子设计场景中，它主要用于验证分子物化特征（如碳/氧/氮含量、生成焓 Delta H_f、密度 rho 等）与核心目标性能（如比冲 I_sp）之间的多维分布关系，帮助直观框定高能分子在多维特征空间中的理想聚集区域。 **02 原图解析** - **多面板网格布局**：采用典型的网格布局（Grid Panel）。所有子图在 Y 轴上共享同一目标变量（比冲 I_sp），在 X 轴上分别对应不同的分子描述符。 - **视觉编码**： - **坐标映射**：散点位置直接反映分子在属性与比冲二维平面上的绝对位置，揭示最优特征数值区间。 - **独立 X 轴尺度**：由于百分比、焓值与密度量纲差异巨大，各子图保持独立的 X 轴刻度，避免视觉压缩。 - **科研逻辑**：通过观测散点的高优聚集区，证明机器学习模型能够捕捉并生成符合推进剂能量要求的高比冲（High I_sp）分子结构特征。 **论文原图** **结论边界**：需要注意，散点的聚集仅代表相关性与分布状态，不可将其孤立解读为单一特征对最终性能的绝对因果影响。 **03"
+  },
+  {
+    "id": "期刊复现：多面板回归预测散点图对比不同模型真实与预测偏差_1777455863",
+    "file": "期刊复现：多面板回归预测散点图对比不同模型真实与预测偏差_1777455863.md",
+    "title": "期刊复现：多面板回归预测散点图对比不同模型真实与预测偏差",
+    "journals": [],
+    "chart_families": [
+      "forest",
+      "scatter_regression"
+    ],
+    "rc": {
+      "font.family": "['Times New Roman'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "16",
+      "axes.linewidth": "1.5",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": null,
+      "savefig.bbox": null
+    },
+    "palette_hex": [],
+    "cmaps": [],
+    "grid": {
+      "gridspec": null,
+      "subplots": [
+        2,
+        3
+      ],
+      "figsize": [
+        12.0,
+        8.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 4,
+      "zorder_max": 2,
+      "zorder_distinct_levels": 2,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 0,
+      "transAxes": 1,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 1,
+      "bar": 0,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 3,
+      "legend_calls": 0,
+      "colorbar": 0
+    },
+    "code_lines": 46,
+    "narrative_arc": "multipanel_grid",
+    "signature_tricks": [
+      "metric_text_box",
+      "alpha_layered_scatter"
+    ],
+    "preamble": "前言** 在机器学习回归任务中，多面板预测散点图（Parity Plot）常被用来直观验证模型的预测性能。通过将实验真实值与模型预测值分别映射到坐标轴上，这类图表能够清晰地展示模型对目标变量的拟合精度。在《Machine learning-driven multi-objective optimization and dynamic performance prediction of geopolymer concrete》中，作者对比了 SVR、随机森林、Stacking 集成模型等在预测地质聚合物混凝土（GPC）动态性能时的准确度。 将多模型性能评估集成到统一框架下，能大幅降低解释成本。通过观察数据点在 1:1 理想参考线附近的聚集程度，读者可以建立对各模型优劣的直观判断，辅助以定量的评价指标确保严谨性。 **02 原图解析** - **结构组织**：采用多面板网格（如 2×3 布局），每个子图独立展示一种模型。X 轴为实验真实值，Y 轴为模型预测值，确保横向对比的公平性。 - **视觉编码**： - **1:1 理想拟合线**（对角实线，y=x）：绝对参考标准，点越贴近该线说明精度越高。 - **误差带**（虚线）：划定 ±15%（典型值）的预测偏差阈值，评估容错能力。 - **统计指标**：在子图内部嵌入 R²、RMSE 等定量指标。 - **科研结论**：作者通过此图证明了 Stacking 集成模型散点最紧密包裹在 1:1 对角线周围，具有显著优势。 **论文原图** **结论边界**：散点聚集仅代表数值拟合度，不代表因果关系；所有面板必须共享相同的坐标轴尺度以确保视觉对比有效。 **03"
+  },
+  {
+    "id": "期刊复现：多面板回归预测散点图对比不同模型真实与预测偏差_1777455897",
+    "file": "期刊复现：多面板回归预测散点图对比不同模型真实与预测偏差_1777455897.md",
+    "title": "期刊复现：多面板回归预测散点图对比不同模型真实与预测偏差",
+    "journals": [],
+    "chart_families": [
+      "scatter_regression",
+      "time_series_pi"
+    ],
+    "rc": {
+      "font.family": "['Times New Roman', 'SimHei', 'DejaVu Sans']plt.rcParams['mathtext.fontset'] = 'stix'       # 公式字体使用 STIX (类似 LaTeX)",
+      "mathtext.fontset": null,
+      "font.size": "16                  # 默认字号plt.rcParams['axes.linewidth'] = 1.5            # 坐标轴线宽plt.rcParams['xtick.direction'] = 'in'          # X轴刻度朝内plt.rcParams['ytick.direction'] = 'in'          # Y轴刻度朝内plt.rcParams['xtick.major.width'] = 1.2         # 主刻度线宽plt.rcParams['ytick.major.width'] = 1.2",
+      "axes.linewidth": null,
+      "xtick.direction": null,
+      "ytick.direction": null,
+      "savefig.dpi": null,
+      "savefig.bbox": null
+    },
+    "palette_hex": [],
+    "cmaps": [],
+    "grid": {
+      "gridspec": [
+        2,
+        1
+      ],
+      "subplots": null,
+      "figsize": [
+        10.0,
+        6.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 4,
+      "zorder_max": 3,
+      "zorder_distinct_levels": 3,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 1,
+      "axhline": 1,
+      "transAxes": 0,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 1,
+      "bar": 0,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 2,
+      "legend_calls": 1,
+      "colorbar": 0
+    },
+    "code_lines": 20,
+    "narrative_arc": "multipanel_grid",
+    "signature_tricks": [
+      "dotted_zero_axhline",
+      "alpha_layered_scatter"
+    ],
+    "preamble": "前言** 在机器学习辅助材料性能（如地质聚合物混凝土动态抗压强度）的回归预测类研究中，直观且全面地展示模型的拟合效果与误差分布是验证核心结论的关键环节。单纯的折线图难以精细刻画局部误差，而单一的残差图又会剥离整体的趋势背景。实验值-预测值时序对比与残差分析组合图能够很好地兼顾全局趋势与局部细节。 这类组合图若能精准传达信息并处理好布局对齐，能在审稿和阅读时大幅降低解释成本。读者无需在多张图表之间反复横跳，只需沿着统一的坐标轴进行垂直比对，即可同时掌握模型在训练阶段的拟合程度以及在测试阶段的泛化表现。 **02 原图解析** 这张图通常采用上下堆叠的多面板结构。上方面板的主图层展示目标变量（如动态抗压强度 DCS）的实验值与模型（如 SVR、RF 等）预测值的对比情况，X 轴为样本编号，Y 轴为目标变量数值；下方面板则专门用来展示对应样本的残差值，X 轴与上方面板严格共享对齐，Y 轴代表误差量级。左右两部分通过一条贯穿上下图的垂直虚线，明确划分出训练集（Training Data）与测试集（Testing Data）。 关键视觉编码层面，主要依靠图元形状、线型与颜色来进行区分。实验值与预测值通常使用不同颜色的线段和散点标记（如黑色实线配圆点代表真实值，红色虚线配方块代表预测值）；下方的残差子图则多采用单一颜色的散点或柱状图来展示误差的波动范围；垂直虚线作为关键的参考线，辅助区分数据所处的验证阶段。 根据论文背景，作者使用该图旨在直观对比各类机器学习算法对地质聚合物混凝土动态性能的预测精度，残差的分布形态直接反映了模型是否存在系统性的高估或低估偏差。**不确定：原文未说明残差图中个别极端离群点是否经过了特殊的数据清洗或截断处理。** 在结论边界上，不同面板的 Y 轴尺度并不一致，残差面板的视觉波动幅度不能直接等同于预测值面板的绝对误差，读图时需严格参照各自的坐标轴刻度，相关性展示也不代表因果关系的成立。 **论文原图** **03"
+  },
+  {
+    "id": "期刊复现：多面板箱线图对比多模型不同评估指标的误差分布_1777455635",
+    "file": "期刊复现：多面板箱线图对比多模型不同评估指标的误差分布_1777455635.md",
+    "title": "期刊复现：多面板箱线图对比多模型不同评估指标的误差分布",
+    "journals": [],
+    "chart_families": [
+      "scatter_regression",
+      "box",
+      "ale_pdp"
+    ],
+    "rc": {
+      "font.family": "['Times New Roman'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "16",
+      "axes.linewidth": "1.5",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": null,
+      "savefig.bbox": null
+    },
+    "palette_hex": [
+      "#4A90E2",
+      "#F5A623"
+    ],
+    "cmaps": [],
+    "grid": {
+      "gridspec": null,
+      "subplots": [
+        1,
+        3
+      ],
+      "figsize": [
+        15.0,
+        5.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 0,
+      "zorder_max": null,
+      "zorder_distinct_levels": 0,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 0,
+      "transAxes": 0,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 0,
+      "bar": 0,
+      "boxplot": 1,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 0,
+      "legend_calls": 1,
+      "colorbar": 0
+    },
+    "code_lines": 45,
+    "narrative_arc": "multipanel_grid",
+    "signature_tricks": [],
+    "preamble": "前言** 在机器学习辅助材料性能预测（如渗透蒸发膜分离预测）中，评估算法的稳定性和泛化能力是核心环节。传统的表格展示往往会掩盖模型在交叉验证下的性能波动。多面板箱线图通过并排展示 MAE、RMSE、R² 等指标，能够直白呈现误差的分布特征，帮助读者一眼锁定高精度且鲁棒性强的优势模型。 **02 原图解析** - **结构布局**：采用 1行3列 的水平多面板布局。X 轴为被评估的模型（RF、SVM、XGBoost、ANN 等），Y 轴为指标数值。 - **视觉编码**： - **颜色分组**：区分训练集（Training set）与测试集（Testing set），直观监测过拟合风险。 - **箱体特征**：中位线代表核心表现，箱体高度（IQR）反映稳定性，离群点揭示极端误差。 - **科研逻辑**：通过对比各算法箱体的紧凑程度与中位线高度，量化模型在特定任务中的性能边界。 **论文原图** **结论边界**：由于量纲不同，MAE、RMSE 与 R² 必须保持独立的 Y 轴刻度。此外，箱线图会掩盖数据的多峰分布，需结合样本量进行综合判断。 **03"
+  },
+  {
+    "id": "期刊复现：子图平铺展示比表面积与孔容的全局SHAP值与关键特征排行_1777454297",
+    "file": "期刊复现：子图平铺展示比表面积与孔容的全局SHAP值与关键特征排行_1777454297.md",
+    "title": "期刊复现：子图平铺展示比表面积与孔容的全局SHAP值与关键特征排行",
+    "journals": [],
+    "chart_families": [
+      "shap_composite",
+      "scatter_regression"
+    ],
+    "rc": {
+      "font.family": "['Times New Roman'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "16",
+      "axes.linewidth": "1.5",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": null,
+      "savefig.bbox": null
+    },
+    "palette_hex": [],
+    "cmaps": [],
+    "grid": {
+      "gridspec": null,
+      "subplots": [
+        1,
+        3
+      ],
+      "figsize": [
+        15.0,
+        6.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 2,
+      "zorder_max": 3,
+      "zorder_distinct_levels": 2,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 0,
+      "transAxes": 0,
+      "despine_calls": 2,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 0,
+      "bar": 1,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 1,
+      "legend_calls": 0,
+      "colorbar": 0
+    },
+    "code_lines": 58,
+    "narrative_arc": "global_local",
+    "signature_tricks": [],
+    "preamble": "前言** 在机器学习预测研究中，全局 SHAP 特征重要性柱状图主要用于量化输入变量对不同预测目标的整体贡献度。在《Fuel》关于 N 掺杂生物质炭的研究中，作者需要同步展示元素组成、制备参数与制备方法如何分别驱动比表面积（SSA）、总孔容（Vt）和氮含量（NC）。这种子图平铺的设计能高效整合多个模型的解释信息，使驱动不同目标的核心变量差异一目了然。 **02 原图解析** - **水平 1×3 多面板布局**：面板 (a)、(b)、(c) 分别对应三个预测目标（SSA、Vt、NC）。 - **视觉编码**： - **柱子长度**：代表 `mean(|SHAP value|)`。长度越长，说明该特征对模型预测结果的全局影响幅度越大。 - **数值标注**：直接在柱体末端或内部标注具体 SHAP 均值，弥补目视估算误差。 - **颜色映射**：应用从暖（红）到冷（蓝）的过渡，强化头部特征的视觉权重。 - **科研逻辑**：验证了制备工艺与原料成分在不同目标预测中的主导地位。例如，在 NC 预测中，原料的 N 含量起到了关键驱动作用。 **论文原图** **结论边界**：X 轴仅代表影响幅度，不说明相关性正负；且三个面板的 X 轴尺度存在数量级差异，绝对长度不可跨面板对比。 **03"
+  },
+  {
+    "id": "期刊复现：组合重要性条形图与SHAP蜂群图解析特征的全局预测贡献_1777454956",
+    "file": "期刊复现：组合重要性条形图与SHAP蜂群图解析特征的全局预测贡献_1777454956.md",
+    "title": "期刊复现：组合重要性条形图与SHAP蜂群图解析特征的全局预测贡献",
+    "journals": [],
+    "chart_families": [
+      "shap_composite",
+      "scatter_regression",
+      "dual_axis",
+      "treemap_pie"
+    ],
+    "rc": {
+      "font.family": "['Times New Roman'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "16",
+      "axes.linewidth": "1.5",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": null,
+      "savefig.bbox": null
+    },
+    "palette_hex": [],
+    "cmaps": [
+      "coolwarm"
+    ],
+    "grid": {
+      "gridspec": [
+        1,
+        2
+      ],
+      "subplots": null,
+      "figsize": [
+        12.0,
+        6.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 0,
+      "zorder_max": null,
+      "zorder_distinct_levels": 0,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 0,
+      "transAxes": 0,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 0,
+      "bar": 1,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 0,
+      "legend_calls": 0,
+      "colorbar": 1
+    },
+    "code_lines": 53,
+    "narrative_arc": "global_local",
+    "signature_tricks": [
+      "pvalue_stars_overlay",
+      "marginal_axes_grid"
+    ],
+    "preamble": "前言** 在机器学习相关的机制研究中，解释模型预测的驱动因素与达到高预测精度同等重要。这类组合了全局特征重要性（Feature Importance）与 SHAP 摘要图（SHAP Summary Plot）的多面板图表，常用于系统性地打开复杂模型的“黑盒”。通过将特征的绝对贡献权重与特征取值的正负向预测效应并列展示，研究者能够直观地论证哪些变量主导了系统动态。 **02 原图解析** - **左右双面板（Panel）结构**： - **左侧面板 (a)**：水平条形图，按降序展示各个特征对模型预测的相对重要性（Relative Importance），并内嵌饼图汇总变量分类贡献占比。 - **右侧面板 (b)**：SHAP 蜂群图（Beeswarm Plot），Y 轴顺序与左侧对齐，X 轴表示特征对模型输出的边际贡献。 - **视觉编码**： - **分类联动**：左侧条形图颜色与内嵌饼图扇区对应（如绿色代表土壤属性，蓝色代表生物炭属性）。 - **SHAP 映射**：散点位置反映拉动方向，颜色渐变反映特征自身数值高低。 - **科研结论**：揭示了土壤磷（Soil P）对碳动态预测的主导地位及其非线性作用方向。 **论文原图** **结论边界**：SHAP 摘要图反映的是模型学习到的非线性关联，而非严格物理因果律。颜色映射基于特征自身分布归一化，不可跨行比对。 **03"
+  },
+  {
+    "id": "期刊复现：联合等高线热图与边缘分布图验证模型预测精度与参数寻优_1777454914",
+    "file": "期刊复现：联合等高线热图与边缘分布图验证模型预测精度与参数寻优_1777454914.md",
+    "title": "期刊复现：联合等高线热图与边缘分布图验证模型预测精度与参数寻优",
+    "journals": [],
+    "chart_families": [
+      "heatmap",
+      "scatter_regression",
+      "dual_axis",
+      "marginal_joint"
+    ],
+    "rc": {
+      "font.family": "['Times New Roman'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "16",
+      "axes.linewidth": "1.5",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": null,
+      "savefig.bbox": null
+    },
+    "palette_hex": [],
+    "cmaps": [
+      "viridis"
+    ],
+    "grid": {
+      "gridspec": [
+        4,
+        8
+      ],
+      "subplots": null,
+      "figsize": [
+        14.0,
+        6.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 1,
+      "zorder_max": 3,
+      "zorder_distinct_levels": 1,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 0,
+      "transAxes": 1,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 1,
+      "bar": 0,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 1,
+      "legend_calls": 0,
+      "colorbar": 1
+    },
+    "code_lines": 61,
+    "narrative_arc": "marginal_joint",
+    "signature_tricks": [
+      "density_color_scatter",
+      "metric_text_box"
+    ],
+    "preamble": "前言** 在机器学习辅助的地球科学与环境科学论文中，验证超参数选取的合理性与最终拟合精度是关键环节。左图通过二维连续插值展示了参数搜索空间内的误差变化，明确论证了收敛性；右图通过对比预测值与真实值，并在边缘叠加概率密度特征，验证了模型的全局预测精度与残差稳定性。这种组合图表直接回应了关于模型“黑盒”与“过拟合”的质疑，显著提升了论证的说服力。 **02 原图解析** - **独立并列双面板**： - **左面板 (a) —— 参数调优**：等高线图，横纵轴比较 `n_estimators` 与 `max_depth` 的组合空间。利用背景色级代表 RMSE 水平，冷暖渐变勾勒出误差“洼地”，并精准标注最优参数点。 - **右面板 (b) —— 精度验证**：回归散点图嵌套边缘直方图。主图比较观测值与预测值，对角虚线为 $y=x$ 理想拟合线。顶部和右侧的直方图展示了各维度的边缘数据分布密度。 - **科研结论**：作者通过 (a) 锁定了最优超参数组合，通过 (b) 证明了模型在全量程（尤其是数据密集区）的高精度表现。 **论文原图** **结论边界**：面板 (a) 的误差空间受限于搜索边界；面板 (b) 中边缘直方图显示数据在极端高值区较稀疏，提示在极端样本上的预测不确定性可能增加。 **03"
+  },
+  {
+    "id": "期刊复现：通过多子图布局对比城市化梯度对气体排放量的非线性影响_1777454251",
+    "file": "期刊复现：通过多子图布局对比城市化梯度对气体排放量的非线性影响_1777454251.md",
+    "title": "期刊复现：通过多子图布局对比城市化梯度对气体排放量的非线性影响",
+    "journals": [],
+    "chart_families": [
+      "scatter_regression",
+      "box",
+      "ale_pdp"
+    ],
+    "rc": {
+      "font.family": "['Times New Roman'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "16",
+      "axes.linewidth": "1.5",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": null,
+      "savefig.bbox": null
+    },
+    "palette_hex": [
+      "#4C72B0",
+      "#DD8452"
+    ],
+    "cmaps": [],
+    "grid": {
+      "gridspec": null,
+      "subplots": [
+        1,
+        2
+      ],
+      "figsize": [
+        10.0,
+        4.5
+      ]
+    },
+    "counts": {
+      "zorder_calls": 0,
+      "zorder_max": null,
+      "zorder_distinct_levels": 0,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 0,
+      "transAxes": 0,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 0,
+      "bar": 0,
+      "boxplot": 2,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 0,
+      "legend_calls": 1,
+      "colorbar": 0
+    },
+    "code_lines": 46,
+    "narrative_arc": "multipanel_grid",
+    "signature_tricks": [],
+    "preamble": "前言** 在环境科学与生态学研究中，评估多重宏观因素（如季节交替与城市化水平）对连续型变量（如温室气体通量）的协同影响是一项核心任务。由于环境数据通常具有极大的动态范围与组内方差，简单的均值图表往往难以呈现真实的分布规律。通过构建并列的多面板分组分布图，研究者能有效嵌套分类变量与连续数值，直观验证环境驱动模式。 **02 原图解析** - **多面板并行布局 (1x2)**： - **左侧面板**：展示 CH_4 通量。 - **右侧面板**：展示 CO_2 通量。 - **视觉编码**： - **分类与分组**：横坐标为城市化梯度（低、中、高），同一梯度下按季节（Cool-dry vs Warm-wet）并排对比。 - **颜色映射**：不同颜色直接对应季节，使差异在不同梯度下清晰可辨。 - **非线性尺度**：Y 轴采用对数坐标，以容纳跨越数个数量级的通量数据。 - **统计特征**：通过箱体、中位数线及误差线展示数据的集中趋势与离散程度。 - **科研逻辑**：证明城市化改变了河流气体排放的季节模式。 **论文原图** **结论边界**：左右面板 Y 轴量纲独立。读者应评估各面板内部的相对趋势，不可直接跨面板对比箱体绝对高度。 **03"
+  },
+  {
+    "id": "期刊复现：通过多面板SHAP依赖图解析特征对转化率的主效应与交互作用_1777454562",
+    "file": "期刊复现：通过多面板SHAP依赖图解析特征对转化率的主效应与交互作用_1777454562.md",
+    "title": "期刊复现：通过多面板SHAP依赖图解析特征对转化率的主效应与交互作用",
+    "journals": [],
+    "chart_families": [
+      "shap_composite",
+      "scatter_regression",
+      "ale_pdp"
+    ],
+    "rc": {
+      "font.family": "['Times New Roman'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "16",
+      "axes.linewidth": "1.5",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": null,
+      "savefig.bbox": null
+    },
+    "palette_hex": [],
+    "cmaps": [
+      "RdYlBu_r"
+    ],
+    "grid": {
+      "gridspec": null,
+      "subplots": [
+        2,
+        2
+      ],
+      "figsize": [
+        15.0,
+        10.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 1,
+      "zorder_max": 3,
+      "zorder_distinct_levels": 1,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 1,
+      "transAxes": 0,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 1,
+      "bar": 0,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 0,
+      "legend_calls": 0,
+      "colorbar": 1
+    },
+    "code_lines": 45,
+    "narrative_arc": "multipanel_grid",
+    "signature_tricks": [
+      "dotted_zero_axhline"
+    ],
+    "preamble": "前言** 在机器学习辅助的催化剂筛选中，解构核心特征的贡献是论证模型物理合理性的关键。SHAP 依赖图通过展示关键变量（如比表面积、反应温度）如何非线性地影响目标指标（如 CH_4 与 CO_2 转化率），直观揭示了特征的主效应及其与次要特征的交互作用。这种多面板散点图能精准锁定变量的作用区间，极大降低正文的解释成本。 **02 原图解析** - **2×2 多面板网格**： - **行**：对应不同指标（如 CH_4 转化率、CO_2 转化率）。 - **列**：对比核心特征（如比表面积、反应温度）。 - **视觉编码**： - **坐标系**：X 轴为主特征真实值，Y 轴为 SHAP 贡献值。 - **阈值参考**：Y=0 水平线区分正向提升与负向抑制作用。 - **颜色映射**：从蓝到红代表次要特征的高低，点在 Y 轴方向的分层揭示了显著的交互效应。 - **科研结论**：作者利用此图量化了转化率随温度升高的转折点，并指出了高负载量与高碱性对特定区间的增益效果。 **论文原图** **结论边界**：SHAP 值代表特征归因贡献，不代表绝对转化率。各面板色条尺度独立，不可跨图比对颜色深度。 **03"
+  },
+  {
+    "id": "期刊复现：通过带边缘密度的联合残差图全面评估预测模型性能_1777454731",
+    "file": "期刊复现：通过带边缘密度的联合残差图全面评估预测模型性能_1777454731.md",
+    "title": "期刊复现：通过带边缘密度的联合残差图全面评估预测模型性能",
+    "journals": [],
+    "chart_families": [
+      "scatter_regression",
+      "marginal_joint"
+    ],
+    "rc": {
+      "font.family": "['Times New Roman'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "16",
+      "axes.linewidth": "1.5",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": null,
+      "savefig.bbox": null
+    },
+    "palette_hex": [
+      "#1F77B4",
+      "#FF7F0E"
+    ],
+    "cmaps": [],
+    "grid": {
+      "gridspec": [
+        3,
+        2
+      ],
+      "subplots": null,
+      "figsize": [
+        7.0,
+        8.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 3,
+      "zorder_max": 3,
+      "zorder_distinct_levels": 3,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 1,
+      "transAxes": 1,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 3,
+      "bar": 0,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 2,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 1,
+      "legend_calls": 0,
+      "colorbar": 0
+    },
+    "code_lines": 56,
+    "narrative_arc": "marginal_joint",
+    "signature_tricks": [
+      "perfect_fit_diagonal",
+      "metric_text_box",
+      "dotted_zero_axhline",
+      "alpha_layered_scatter"
+    ],
+    "preamble": "前言** 在基于机器学习的高能分子性能预测中，准确评估模型的泛化能力与误差分布至关重要。这类结合了边缘概率密度与残差分析的联合预测性能图，通常用于验证模型在全量程上的无偏性。通过多面板组合，不仅能展现拟合度，还能直观反映样本的空间集中度，揭示模型误差是否存在异方差性或系统性偏倚。 **02 原图解析** - **多面板组合结构**： - **核心奇偶校验图 (Parity Plot)**：主面板比较真实值与预测值。对角虚线 ($y=x$) 代表完美预测。 - **边缘密度图 (Marginal Density)**：顶部和右侧展示真实值与预测值在训练集/测试集上的分布。 - **底部残差图 (Residual Plot)**：衡量残差随真实值的波动情况，诊断有无误差偏倚。 - **视觉编码**：使用两种颜色区分训练集与测试集。主面板内标注决定系数 ($R^2$) 与均方根误差 (RMSE)。 - **科研价值**：通过边缘密度的重合度验证数据划分的合理性，利用残差的随机散布证明回归模型的鲁棒性。 **论文原图** **结论边界**：散点绘制层级 (zorder) 与透明度会影响视觉判断；主面板与辅助残差面板的横坐标必须严格共享尺度，否则会造成误差分布的误读。 **03"
+  },
+  {
+    "id": "期刊复现：随机森林(RF)模型驱动的EFI特征重要度条形图与SHAP圆环图可视化_1777456510",
+    "file": "期刊复现：随机森林(RF)模型驱动的EFI特征重要度条形图与SHAP圆环图可视化_1777456510.md",
+    "title": "期刊复现：随机森林(RF)模型驱动的EFI特征重要度条形图与SHAP圆环图可视化",
+    "journals": [],
+    "chart_families": [
+      "forest",
+      "shap_composite",
+      "scatter_regression",
+      "dual_axis",
+      "treemap_pie"
+    ],
+    "rc": {
+      "font.family": null,
+      "mathtext.fontset": null,
+      "font.size": null,
+      "axes.linewidth": null,
+      "xtick.direction": null,
+      "ytick.direction": null,
+      "savefig.dpi": null,
+      "savefig.bbox": null
+    },
+    "palette_hex": [
+      "#D6EAF8",
+      "#5A9BBF"
+    ],
+    "cmaps": [],
+    "grid": {
+      "gridspec": null,
+      "subplots": null,
+      "figsize": [
+        15.0,
+        6.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 1,
+      "zorder_max": 0,
+      "zorder_distinct_levels": 1,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 0,
+      "transAxes": 0,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 0,
+      "bar": 1,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 0,
+      "legend_calls": 0,
+      "colorbar": 0
+    },
+    "code_lines": 58,
+    "narrative_arc": "composite_two_lane",
+    "signature_tricks": [
+      "imshow_gradient_box",
+      "pvalue_stars_overlay",
+      "colored_marker_edge"
+    ],
+    "preamble": "原图解析** - **左右双面板结构**： - **左侧面板**：水平柱状图，展示基于随机森林提取的 EFI 重要性得分（EFI importance scores）。 - **右侧面板**：中心镂空圆环图（Donut Chart），映射特征的 Mean(|SHAP value|)。 - **视觉设计**： - **渐变色阶**：柱状图应用由浅入深的颜色渐变，配合末端红色数值标签。 - **防重叠引线系统**：圆环图引入智能折线引线，将低权重变量数值牵引至外围，解决密集标注遮挡问题。 - **科研结论**：从模型内在结构（基尼重要性）与样本扰动（全局边际贡献）两个维度对特征重要性进行交叉印证。 **论文原图** **注意**：左图 EFI 分数与右图 SHAP 值属于不同统计量纲，数值绝对大小无法跨面板直接比较。 **03 原图复现** 核心在于控制 matplotlib 的子图空间比例以及定制特殊的图形元素。利用 `GridSpec` 划分非对称布局，并手动编写带有垂直间距检测的引线逻辑。 **复刻结果展示** **04 复现"
+  },
+  {
+    "id": "期刊配图优化：Python绘制“双面板PCA得分图”，优雅展示多配方综合评价_1777451762",
+    "file": "期刊配图优化：Python绘制“双面板PCA得分图”，优雅展示多配方综合评价_1777451762.md",
+    "title": "期刊配图优化：Python绘制“双面板PCA得分图”，优雅展示多配方综合评价",
+    "journals": [
+      "Materials Today"
+    ],
+    "chart_families": [
+      "dual_axis",
+      "nmds_pca"
+    ],
+    "rc": {
+      "font.family": "['Arial'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "14",
+      "axes.linewidth": "1.2",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": "600",
+      "savefig.bbox": "'tight'"
+    },
+    "palette_hex": [],
+    "cmaps": [],
+    "grid": {
+      "gridspec": null,
+      "subplots": null,
+      "figsize": null
+    },
+    "counts": {
+      "zorder_calls": 0,
+      "zorder_max": null,
+      "zorder_distinct_levels": 0,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 0,
+      "transAxes": 0,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 0,
+      "bar": 1,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 1,
+      "legend_calls": 0,
+      "colorbar": 0
+    },
+    "code_lines": 40,
+    "narrative_arc": "single_focus",
+    "signature_tricks": [],
+    "preamble": "前言** 在多变量分析（Multivariate Analysis）中，如何清晰地展示高维数据的降维结果及其物理意义是科研绘图的难点。本文复现自 *Materials Today Communications*，展示如何利用 1x2 双面板组合图系统呈现 PCA（主成分分析）得分。左面板通过堆叠柱状图解释主成分的构成逻辑，右面板则展示加权后的综合排名。这种设计通过“分析过程”与“最终结果”的并列展示，显著提升了多配方优化实验的说服力。 **02 原图解析** - **布局结构**：采用 1x2 子图（Subplots）结构，两图共享“零点基准线”（Zero Line）作为视觉锚点。 - **左图 (a)**：正负向堆叠柱状图。展示不同实验组在 PC1、PC2、PC3 三个维度上的得分分布，揭示各组分的特征差异。 - **右图 (b)**：独立柱状图。展示加权综合得分（Total Score），直观锁定全局最优解（MVP）与最差配方。 - **视觉编码**： - **分流堆叠逻辑**：为了处理有正有负的得分，绘图逻辑必须动态维护 `bottom_pos` 和 `bottom_neg` 基准面，防止数据块相互覆盖。 - **智能标注**：根据柱子极性自动调整标签偏移量（正值向上、负值向下），确保数值不与 0 轴线冲突。 - **三明治图层法**：严格控制 `zorder`（网格=0 < 柱子=3 < 基准线=4 < 文本=5），确保视觉层次分明。 **论文原图** **03"
+  },
+  {
+    "id": "期刊配图复现 _ Matplotlib 挑战“多面板+三Y轴”组合图_1777451488",
+    "file": "期刊配图复现 _ Matplotlib 挑战“多面板+三Y轴”组合图_1777451488.md",
+    "title": "期刊配图复现 ",
+    "journals": [
+      "Materials Today"
+    ],
+    "chart_families": [
+      "dual_axis"
+    ],
+    "rc": {
+      "font.family": "['Arial'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "14",
+      "axes.linewidth": "1.2",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": "600",
+      "savefig.bbox": "'tight'"
+    },
+    "palette_hex": [
+      "#D3D3D3",
+      "#E67E22",
+      "#27AE60"
+    ],
+    "cmaps": [],
+    "grid": {
+      "gridspec": [
+        2,
+        6
+      ],
+      "subplots": null,
+      "figsize": [
+        10.0,
+        8.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 4,
+      "zorder_max": 4,
+      "zorder_distinct_levels": 3,
+      "twinx": 2,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 0,
+      "transAxes": 0,
+      "despine_calls": 0,
+      "errorbar": 3,
+      "fill_between": 0,
+      "scatter": 0,
+      "bar": 1,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 0,
+      "legend_calls": 0,
+      "colorbar": 0
+    },
+    "code_lines": 51,
+    "narrative_arc": "multipanel_grid",
+    "signature_tricks": [
+      "twin_axes_color_spines",
+      "colored_marker_edge",
+      "dual_y_bar_line"
+    ],
+    "preamble": "前言** 在材料科学、环境工程等领域，研究者常需在同一面板内展示多个量纲迥异的性能指标（如抗压强度、抗折强度、劈裂抗拉强度）。分图展示难以捕捉变量间的同步趋势，而简单的双 Y 轴又往往轴位不足。本教程复刻自《Materials Today Communications》，展示如何利用 `GridSpec` 异形布局与 `twinx` 悬空轴技术，在一张图中完美融合三种力学指标，提升信息传达的效率与美感。 **02 原图解析** - **GridSpec 异形布局**： - 图表并非标准的 $2 \\times 3$ 对称网格。第一行包含 3 张子图，第二行包含 2 张子图且需居中对齐。直接使用 `subplots` 会导致排版失衡，需通过 `GridSpec` 进行按比例定制空间。 - **三轴系统 (Triple-Axis)**： - **主轴 (左)**：绘制抗压强度（灰色柱状图）。 - **副轴 1 (右)**：绘制抗折强度（橙色散点）。 - **副轴 2 (右侧悬空)**：绘制劈裂抗拉强度（绿色散点）。通过将坐标轴向外推移（outward position），解决了多轴重叠的视觉冲突。 - **科研逻辑**：展示聚类改性机制砂混凝土（MMSC）的早期性能。随着聚合物掺量增加，由于早期水化抑制作用，各项力学指标均呈现同步下降趋势。 **论文原图** **03"
+  },
+  {
+    "id": "期刊配图复现 _ Python 绘制多面板分层热力图，完美展示混合模型性能增量_1777452639",
+    "file": "期刊配图复现 _ Python 绘制多面板分层热力图，完美展示混合模型性能增量_1777452639.md",
+    "title": "期刊配图复现 ",
+    "journals": [],
+    "chart_families": [
+      "heatmap"
+    ],
+    "rc": {
+      "font.family": "['Times New Roman'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "16",
+      "axes.linewidth": "1.5",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": "600",
+      "savefig.bbox": "'tight'"
+    },
+    "palette_hex": [],
+    "cmaps": [
+      "RdBu_r"
+    ],
+    "grid": {
+      "gridspec": null,
+      "subplots": null,
+      "figsize": [
+        14.0,
+        10.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 0,
+      "zorder_max": null,
+      "zorder_distinct_levels": 0,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 0,
+      "transAxes": 0,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 0,
+      "bar": 0,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 1,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 0,
+      "legend_calls": 0,
+      "colorbar": 1
+    },
+    "code_lines": 58,
+    "narrative_arc": "multipanel_grid",
+    "signature_tricks": [
+      "diverging_cell_label"
+    ],
+    "preamble": "前言** 在水文建模与深度学习研究中，当涉及多个站点、多类基准模型及多种评估指标时，冗长的表格往往难以直观传达信息。高质量期刊（如 *Water Resources Management*, 2024）通常采用“高维数据浓缩矩阵”。本教程复刻自一篇关于水文混合模型的论文，展示如何在一个版面内优雅地呈现 120 个性能增量点，通过颜色深浅让模型间的性能博弈一目了然。 **02 原图解析** - **多面板分层结构**： - 图表包含 4 行，每行对应一个站点。每行内分为两个对比面板（如 Compared to HBV 和 Compared to LSTM）以及一个专属色条。 - **GridSpec 布局**：利用非对称网格比例（如 1:1:0.05），为色条预留“VIP 专座”，防止其挤压主图空间。 - **关键视觉编码**： - **Gridline Separation**：格子间的白色间隙显著提升了矩阵的颗粒感，防止相邻色块视觉糊化。 - **对称归一化 (Diverging Norm)**：这是“增量图”的核心。将 0 值锁定为白色，蓝色代表性能提升，黄/绿色代表性能下降。 - **科研发现**：通过观察发现，引入时变参数的模型（HLBDCT）在所有站点和指标上均呈现深蓝色，证明了其相对于基准模型的稳健优势。 **论文原图** **03"
+  },
+  {
+    "id": "期刊配图复现 _ Python绘制“趋势+分布”时序混合图_1777451814",
+    "file": "期刊配图复现 _ Python绘制“趋势+分布”时序混合图_1777451814.md",
+    "title": "期刊配图复现 ",
+    "journals": [],
+    "chart_families": [
+      "scatter_regression",
+      "time_series_pi",
+      "box"
+    ],
+    "rc": {
+      "font.family": "['Arial'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "14",
+      "axes.linewidth": "1.2",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": "600",
+      "savefig.bbox": "'tight'"
+    },
+    "palette_hex": [],
+    "cmaps": [],
+    "grid": {
+      "gridspec": [
+        2,
+        4
+      ],
+      "subplots": null,
+      "figsize": [
+        14.0,
+        8.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 2,
+      "zorder_max": 2,
+      "zorder_distinct_levels": 2,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 0,
+      "transAxes": 1,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 1,
+      "scatter": 0,
+      "bar": 0,
+      "boxplot": 1,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 1,
+      "legend_calls": 1,
+      "colorbar": 0
+    },
+    "code_lines": 60,
+    "narrative_arc": "single_focus",
+    "signature_tricks": [
+      "error_band_fill_between"
+    ],
+    "preamble": "前言** 在环境科学与气候建模研究中，研究者往往需要同时展示未来几十年的演变趋势（Trend）以及特定终点时刻的预测分布范围（Distribution）。传统的做法是分别绘制折线图与箱线图再进行后期拼接，但这极度缺乏灵活性。本教程展示如何利用 Python 构建一个“混合坐标系”，让时序折线与离散箱线在同一坐标空间内和谐共存，并实现多污染物个性化配色的自动化管理。 **02 原图解析** - **异形布局与混合轴**： - **布局结构**：采用“上 4 下 3”非对称网格。利用 `GridSpec` 进行灵活切分，避免了标准网格带来的多余空白。 - **混合坐标系**：X 轴主体为连续时间序列（如 2030-2060），右侧通过人为拉长坐标轴空间，在离散刻度位（如 2066-2070）强行嵌入箱线图。 - **视觉编码逻辑**： - **字典驱动配色**：为不同污染物（AQI, $SO_2$, $NO_2$ 等）定制独立色卡。通过样式与数据分离的设计，使"
+  },
+  {
+    "id": "期刊配图复现 _ Python绘制多面板SHAP蜂群图_1777452005",
+    "file": "期刊配图复现 _ Python绘制多面板SHAP蜂群图_1777452005.md",
+    "title": "期刊配图复现 ",
+    "journals": [],
+    "chart_families": [
+      "shap_composite",
+      "ale_pdp"
+    ],
+    "rc": {
+      "font.family": "['Arial'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "14",
+      "axes.linewidth": "1.2",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": "600",
+      "savefig.bbox": "'tight'"
+    },
+    "palette_hex": [],
+    "cmaps": [
+      "viridis"
+    ],
+    "grid": {
+      "gridspec": [
+        2,
+        6
+      ],
+      "subplots": null,
+      "figsize": [
+        24.0,
+        12.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 5,
+      "zorder_max": 10,
+      "zorder_distinct_levels": 3,
+      "twinx": 0,
+      "twiny": 1,
+      "inset_axes": 0,
+      "axvline": 1,
+      "axhline": 0,
+      "transAxes": 0,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 1,
+      "bar": 1,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 0,
+      "legend_calls": 0,
+      "colorbar": 0
+    },
+    "code_lines": 62,
+    "narrative_arc": "multipanel_grid",
+    "signature_tricks": [
+      "density_color_scatter",
+      "twin_axes_color_spines",
+      "pvalue_stars_overlay",
+      "marginal_axes_grid",
+      "raincloud_combo",
+      "colored_marker_edge"
+    ],
+    "preamble": "前言** 在解释性人工智能（XAI）研究中，展示变量重要性及其影响方向是核心环节。传统的 `shap.summary_plot()` 往往信息密度较低且版面单一。高质量期刊（如 *Journal of Environmental Management*）通常采用多面板组合图，利用“三明治图层”技法，将变量重要性排名（条形图）与样本分布细节（蜂群散点）完美融合。本教程展示如何通过 `GridSpec` 布局实现“上三下二”的居中排布，并手写高效的蜂群抖动算法，提升解释图表的信息分层与学术美感。 **02 原图解析** - **“上三下二”非对称布局**： - 图表包含 5 个区域（东西南北中）的模型解释。第一行放置 3 张图，第二行放置 2 张图并居中对齐。通过将画布切分为 $2 \\times 6$ 网格并跨列占位，实现了错落有致的专业排版。 - **三明治图层 (The Sandwich Trick)**： - **底层**：紫色半透明条形图，展示变量的平均绝对重要性（Mean |SHAP Value|）。 - **顶层**：高斯分布着色的蜂群散点，展示各样本点对模型输出的具体推力方向。 - **科研逻辑**：以空气质量（AQI）驱动因子分析为例。全国范围内气温（TEMP）是首要因子且呈负相关；而在西部干旱区，降水（PR）的重要性则显著提升。这种多面板对比直观揭示了驱动机制的地理差异。 **论文原图** **03"
+  },
+  {
+    "id": "期刊配图复现 _ Python绘制机器学习“预测-实验”对比图_1777452713",
+    "file": "期刊配图复现 _ Python绘制机器学习“预测-实验”对比图_1777452713.md",
+    "title": "期刊配图复现 ",
+    "journals": [
+      "Science"
+    ],
+    "chart_families": [
+      "scatter_regression"
+    ],
+    "rc": {
+      "font.family": "['Times New Roman'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "16",
+      "axes.linewidth": "1.5",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": "600",
+      "savefig.bbox": "'tight'"
+    },
+    "palette_hex": [
+      "#D62728",
+      "#1F77B4"
+    ],
+    "cmaps": [],
+    "grid": {
+      "gridspec": null,
+      "subplots": null,
+      "figsize": null
+    },
+    "counts": {
+      "zorder_calls": 0,
+      "zorder_max": null,
+      "zorder_distinct_levels": 0,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 0,
+      "transAxes": 2,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 0,
+      "bar": 0,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 1,
+      "legend_calls": 0,
+      "colorbar": 0
+    },
+    "code_lines": 48,
+    "narrative_arc": "single_focus",
+    "signature_tricks": [],
+    "preamble": "前言** 在回归模型评估中，仅展示预测值与真实值的散点分布往往不足以支撑严谨的学术论证。高质量的期刊插图（如 *Materials Science & Engineering R*）通常采用复合布局：在同一视域下对齐展示训练集与测试集的拟合效果，并利用轴外空间悬浮嵌入 RMSE、R² 等关键统计指标。这种设计既保证了数据展示的连贯性，又有效避免了文字标签对密集数据点的遮挡。 **02 原图解析** - **布局结构**：采用“双图例 + 轴外统计面板”的对称式设计。 - **主绘图区**：X 轴为样本序号，Y 轴为目标变量（如比电容）。通过垂直分割线明确划分 Training set 与 Testing set。 - **悬浮图例**：通过手动构建代理对象（Proxy Artist），将 Actual/Predicted 说明分别锚定在左右上角。 - **外部统计框**：利用 `clip_on=False` 技术，将包含评价指标的红色方框悬浮于主坐标轴右侧，实现信息的高度集成。 - **视觉编码**： - **三明治图层法**：散点（zorder=3）叠放在背景网格（zorder=1）之上。散点带有极细的白色描边（edgecolors='white'），增强了重叠区域的辨识度（“呼吸感”）。 - **颜色区分**：冷暖色调对撞，明确区分实验观测值与模型预测值。 **论文原图** **03"
+  },
+  {
+    "id": "期刊配图复现 _ 手把手教你用 Python 绘制 SHAP 全局与局部解释组合图_1777452973",
+    "file": "期刊配图复现 _ 手把手教你用 Python 绘制 SHAP 全局与局部解释组合图_1777452973.md",
+    "title": "期刊配图复现 ",
+    "journals": [],
+    "chart_families": [
+      "shap_composite",
+      "scatter_regression",
+      "dual_axis",
+      "ale_pdp"
+    ],
+    "rc": {
+      "font.family": "['Times New Roman'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "16",
+      "axes.linewidth": "1.5",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": "600",
+      "savefig.bbox": "'tight'"
+    },
+    "palette_hex": [
+      "#1F77B4"
+    ],
+    "cmaps": [],
+    "grid": {
+      "gridspec": [
+        1,
+        3
+      ],
+      "subplots": null,
+      "figsize": [
+        10.0,
+        6.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 3,
+      "zorder_max": 3,
+      "zorder_distinct_levels": 2,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 1,
+      "axhline": 1,
+      "transAxes": 2,
+      "despine_calls": 2,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 1,
+      "bar": 1,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 2,
+      "legend_calls": 0,
+      "colorbar": 1
+    },
+    "code_lines": 62,
+    "narrative_arc": "global_local",
+    "signature_tricks": [
+      "group_divider_axvline",
+      "raincloud_combo",
+      "alpha_layered_scatter"
+    ],
+    "preamble": "前言** 在机器学习辅助材料发现（Materials Discovery）的研究中，单纯的 $R^2$ 或 RMSE 已无法满足顶刊对机理解释的渴望。本教程复刻自《Journal of Environmental Chemical Engineering》，展示如何通过一张优雅的“Bar + Beeswarm”组合图，一站式呈现特征的全局重要性（Global Importance）与局部影响方向（Local Interpretation）。这种图表能够清晰揭示“谁最重要”以及“如何影响（正相关或负相关）”，是提升论文逻辑深度的核心利器。 **02 原图解析** - **双面板布局结构**： - **左面板：Global Interpretation**。水平条形图，按平均绝对 SHAP 值排序，直观展示特征对模型预测的整体贡献权重。 - **右面板：Local Interpretation**。蜂群散点图，横轴为 SHAP 值，颜色映射特征取值（蓝低红高）。 - **科研逻辑**：以配体共价半径特征 `f-lig-S-2` 为例，其红点主要分布在 0 线右侧，说明该特征与吸附量呈正相关。而孔隙率特征 `Vf` 的红点分布在左侧，反映了低压条件下过大孔隙率可能抑制吸附的反直觉现象。 - **视觉亮点**：左右面板每一行严格对齐，通过 `alpha` 参数处理数万个数据点的重叠，确保高密度信息的清晰表达。 **论文原图** **03"
+  },
+  {
+    "id": "期刊配图复现：如何用Python绘制多模型评估密度散点图矩阵_1777452095",
+    "file": "期刊配图复现：如何用Python绘制多模型评估密度散点图矩阵_1777452095.md",
+    "title": "期刊配图复现：如何用Python绘制多模型评估密度散点图矩阵",
+    "journals": [],
+    "chart_families": [
+      "scatter_regression",
+      "density_scatter"
+    ],
+    "rc": {
+      "font.family": "['Arial'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "14",
+      "axes.linewidth": "1.2",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": "600",
+      "savefig.bbox": "'tight'"
+    },
+    "palette_hex": [
+      "#D62728",
+      "#1F77B4"
+    ],
+    "cmaps": [
+      "viridis"
+    ],
+    "grid": {
+      "gridspec": [
+        3,
+        6
+      ],
+      "subplots": null,
+      "figsize": [
+        20.0,
+        12.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 2,
+      "zorder_max": 3,
+      "zorder_distinct_levels": 2,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 0,
+      "transAxes": 1,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 1,
+      "bar": 0,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 1,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 1,
+      "legend_calls": 1,
+      "colorbar": 1
+    },
+    "code_lines": 73,
+    "narrative_arc": "n×n_pairwise",
+    "signature_tricks": [
+      "density_color_scatter",
+      "alpha_layered_scatter"
+    ],
+    "preamble": "前言** 在环境科学、气象预测或生物信息领域，当处理海量回归预测数据时，简单的散点图往往会陷入“Overplotting（点重叠）”灾难，形成无法识别分布重心的“墨团”。高质量的期刊图表（如 *Journal of Environmental Management*, 2025）通常采用多面板密度散点矩阵。通过高斯核密度着色解决了重叠问题，并利用精妙的网格布局展示不同模型在多个区域的性能博弈，使数据分布趋势与统计指标一目了然。 **02 原图解析** - **3×5 矩阵竞技场布局**： - **行维度**：代表不同的模型（如 TabPFN、XGBoost、LightGBM）。 - **列维度**：代表不同的研究区域（如 East, National, West 等）。 - **核心视觉编码**： - **三明治图层法**：底层为 1:1 红色虚线（理想基准），中层为线性拟合蓝色实线（带 95% 置信区间），顶层为高斯核密度着色散点。 - **密度排序 (Sorting)**：关键技巧是将高密度点置于视觉最上层，防止热力中心被离群点覆盖。 - **科研逻辑**：通过共享坐标轴尺度与正方形比例（Equal Aspect），确保不同模型在同一基准下公平对齐。 **论文原图** **03"
+  },
+  {
+    "id": "期刊配图：云雨图结合半小提琴与抖动散点展示不同城市化水平的通量差异_1777454339",
+    "file": "期刊配图：云雨图结合半小提琴与抖动散点展示不同城市化水平的通量差异_1777454339.md",
+    "title": "期刊配图：云雨图结合半小提琴与抖动散点展示不同城市化水平的通量差异",
+    "journals": [],
+    "chart_families": [
+      "scatter_regression",
+      "violin",
+      "raincloud",
+      "box",
+      "ale_pdp"
+    ],
+    "rc": {
+      "font.family": "['Times New Roman'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "16",
+      "axes.linewidth": "1.5",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": null,
+      "savefig.bbox": null
+    },
+    "palette_hex": [],
+    "cmaps": [],
+    "grid": {
+      "gridspec": null,
+      "subplots": [
+        1,
+        2
+      ],
+      "figsize": [
+        12.0,
+        5.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 3,
+      "zorder_max": 3,
+      "zorder_distinct_levels": 3,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 0,
+      "transAxes": 0,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 0,
+      "bar": 0,
+      "boxplot": 1,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 0,
+      "legend_calls": 0,
+      "colorbar": 0
+    },
+    "code_lines": 54,
+    "narrative_arc": "single_focus",
+    "signature_tricks": [
+      "raincloud_combo",
+      "colored_marker_edge"
+    ],
+    "preamble": "前言** 在水文地球化学与环境生态研究中，比较不同分类组别（如城市化程度、季节）的通量差异是核心论证环节。传统的箱线图容易掩盖数据的多峰分布。这类“云雨图（Raincloud Plot）”通过结合核密度图、箱线图与抖动散点，能够在同一维度内完整保留原始数据分布与统计特征。本教程复刻自《Water Research》，展示了如何通过分布重心与中位线的移动，直观论证城市化对温室气体排放模式的影响。 **02 原图解析** - **多面板组合结构**： - **横轴**：分类变量（如高/中/低城市化水平）。 - **纵轴**：独立的气体通量指标（如 $CH_4$ 与 $CO_2$），各子图采用独立尺度。 - **关键视觉编码**： - **半小提琴图（“云”）**：核密度估计（KDE），展示数据分布的“胖瘦”，即样本聚集区。 - **抖动散点（“雨”）**：代表实际观测值，横向抖动（Jitter）用于防止点重叠，纵向位置反映真实强度。 - **内置箱线图（中心层）**：标定中位数与四分位距，提供精确的统计基准。 - **科研结论**：高度城市化的河流在冷干季节具有更高的 $CH_4$ 通量。云雨图的密度曲线与散点簇位移直接支撑了这一分组差异结论。 **论文原图** **03"
+  },
+  {
+    "id": "期刊配图：利用多面板2D-PDP揭示机器学习模型的双变量交互与控制边界_1777454521",
+    "file": "期刊配图：利用多面板2D-PDP揭示机器学习模型的双变量交互与控制边界_1777454521.md",
+    "title": "期刊配图：利用多面板2D-PDP揭示机器学习模型的双变量交互与控制边界",
+    "journals": [],
+    "chart_families": [
+      "forest",
+      "shap_composite",
+      "scatter_regression",
+      "ale_pdp"
+    ],
+    "rc": {
+      "font.family": "['Times New Roman'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "16",
+      "axes.linewidth": "1.5",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": null,
+      "savefig.bbox": null
+    },
+    "palette_hex": [],
+    "cmaps": [
+      "viridis"
+    ],
+    "grid": {
+      "gridspec": null,
+      "subplots": [
+        2,
+        2
+      ],
+      "figsize": [
+        12.0,
+        10.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 0,
+      "zorder_max": null,
+      "zorder_distinct_levels": 0,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 0,
+      "transAxes": 0,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 0,
+      "bar": 0,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 4,
+      "annotation_text": 0,
+      "legend_calls": 0,
+      "colorbar": 1
+    },
+    "code_lines": 49,
+    "narrative_arc": "multipanel_grid",
+    "signature_tricks": [
+      "density_color_scatter"
+    ],
+    "preamble": "前言** 在机器学习辅助的催化剂性能预测与筛选任务中，单纯的特征重要性排名往往无法揭示多个变量（如操作参数与催化剂特性）之间的非线性协同作用。多面板二维部分依赖图（2D-PDP）通过“等高线填充叠加特定百分位轮廓线”的编码方式，能够直观展示双变量的耦合交互如何共同影响模型输出。这类图表不仅能定位最佳参数区间，还能清晰识别在不同范围内究竟是哪一个特征掌握着“主导控制权”。 **02 原图解析** - **多面板网格结构**： - 各个子图独立对比不同代表性特征对（如温度 T 与空速 WHSV、T 与 $C_{Ni}$ 等）对预测目标的联合作用。 - **视觉编码逻辑**： - **等高线填充 (Contourf)**：背景色深浅代表模型预测的目标值期望大小，直观呈现非线性响应面。 - **嵌套轮廓线 (Contour Lines)**： - **蓝色点划线 (Q1)**：反映低预测值区间的变量主导情况。 - **绿色实线 (中位线)**：标志着变量间交互影响力的显现。 - **红色虚线 (Q3)**：划定高值区的最优操作边界。 - **科研意图**：评估随机森林（RF）等模型中的双变量交互效应，识别全局交互趋势。注意跨面板对比时颜色映射尺度的统一。 **论文原图** **03"
+  },
+  {
+    "id": "期刊配图：基于GS-XGBoost与SHAP特征重要性的条形图与蜂群图组合可视化_1777456159",
+    "file": "期刊配图：基于GS-XGBoost与SHAP特征重要性的条形图与蜂群图组合可视化_1777456159.md",
+    "title": "期刊配图：基于GS-XGBoost与SHAP特征重要性的条形图与蜂群图组合可视化",
+    "journals": [],
+    "chart_families": [
+      "shap_composite",
+      "scatter_regression",
+      "dual_axis"
+    ],
+    "rc": {
+      "font.family": null,
+      "mathtext.fontset": null,
+      "font.size": null,
+      "axes.linewidth": null,
+      "xtick.direction": null,
+      "ytick.direction": null,
+      "savefig.dpi": null,
+      "savefig.bbox": null
+    },
+    "palette_hex": [
+      "#4A90E2",
+      "#E94B3C"
+    ],
+    "cmaps": [],
+    "grid": {
+      "gridspec": null,
+      "subplots": null,
+      "figsize": [
+        16.0,
+        6.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 2,
+      "zorder_max": 3,
+      "zorder_distinct_levels": 1,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 2,
+      "axvline": 1,
+      "axhline": 0,
+      "transAxes": 1,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 1,
+      "bar": 1,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 0,
+      "legend_calls": 0,
+      "colorbar": 1
+    },
+    "code_lines": 62,
+    "narrative_arc": "composite_two_lane",
+    "signature_tricks": [
+      "axes_inset_overlay",
+      "pvalue_stars_overlay",
+      "raincloud_combo",
+      "alpha_layered_scatter"
+    ],
+    "preamble": "原图解析** - **非对称双面板结构**： - **左侧：全局重要性条形图**。以平均绝对 SHAP 值为横轴。亮点在于利用虚线括号对特征进行物理意义归类（如“吸附剂表征”与“反应条件”），并将繁杂的同类结构变量合并为单一条目，突出主要矛盾。 - **右侧：SHAP 蜂群分布图**。横轴为 SHAP 值，纵轴为特征名。散点颜色映射特征取值（蓝低红高），水平偏移反映对预测值的正负推力。 - **科研逻辑**：通过蜂群图中散点簇的偏移方向与色彩分布，可直观读出驱动模式。例如，红点（高值）集中在右侧代表正向相关。 **论文原图** **03 原图复现** **"
+  },
+  {
+    "id": "期刊配图：基于NSGA-II的三维帕累托前沿散点图可视化多目标权衡解_1777455972",
+    "file": "期刊配图：基于NSGA-II的三维帕累托前沿散点图可视化多目标权衡解_1777455972.md",
+    "title": "期刊配图：基于NSGA-II的三维帕累托前沿散点图可视化多目标权衡解",
+    "journals": [],
+    "chart_families": [
+      "pareto"
+    ],
+    "rc": {
+      "font.family": "['Times New Roman'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "16",
+      "axes.linewidth": "1.5",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": null,
+      "savefig.bbox": null
+    },
+    "palette_hex": [],
+    "cmaps": [
+      "viridis"
+    ],
+    "grid": {
+      "gridspec": null,
+      "subplots": null,
+      "figsize": [
+        12.0,
+        5.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 1,
+      "zorder_max": 5,
+      "zorder_distinct_levels": 1,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 0,
+      "transAxes": 0,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 2,
+      "bar": 0,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 0,
+      "legend_calls": 1,
+      "colorbar": 0
+    },
+    "code_lines": 49,
+    "narrative_arc": "multipanel_grid",
+    "signature_tricks": [
+      "density_color_scatter"
+    ],
+    "preamble": "前言** 在工程材料优化设计中，成本、碳排放与力学性能等指标往往相互制约。提升某一性能通常以牺牲另一指标为代价。这类三维帕累托前沿（Pareto Front）散点图，通过展示基于机器学习与启发式算法（如 NSGA-II）搜寻到的非劣解集，能够直观呈现各目标之间的非线性权衡边界，直接指导工程实践中的决策平衡。 **02 原图解析** - **多面板三维矩阵布局**： - **空间映射**：将三个冲突目标（如成本、碳排放 GWP、强度）分别映射在 X、Y、Z 三维轴上。 - **分组对比**：通过子面板区分不同强度等级（如 C30/C40/C50）下的优化结果。 - **关键视觉编码**： - **前沿曲面**：密集的球形散点构筑出帕累托最优边界，其分布趋势反映了指标间的此消彼长。 - **决策标定**：利用星号（*）标记在特定偏好下选出的代表性最优解，使理论最优与工程实操挂钩。 - **深度增强**：通过颜色随某一轴向的数值梯度映射，增强三维空间的立体感。 - **科研意图**：验证 NSGA-II 算法在复杂约束下寻找最优混合比例的可行性，并锁定推荐配比方案。 **论文原图** **注意**：跨面板比较时需确保三维坐标轴尺度统一，以避免透视压缩导致的视觉偏差。 **03"
+  },
+  {
+    "id": "期刊配图：基于机器学习的Spearman相关性热力图与模型预测效果组合分析_1777456565",
+    "file": "期刊配图：基于机器学习的Spearman相关性热力图与模型预测效果组合分析_1777456565.md",
+    "title": "期刊配图：基于机器学习的Spearman相关性热力图与模型预测效果组合分析",
+    "journals": [
+      "Cell"
+    ],
+    "chart_families": [
+      "forest",
+      "shap_composite",
+      "heatmap_pairwise",
+      "heatmap",
+      "scatter_regression",
+      "dual_axis",
+      "ale_pdp"
+    ],
+    "rc": {
+      "font.family": null,
+      "mathtext.fontset": null,
+      "font.size": null,
+      "axes.linewidth": null,
+      "xtick.direction": null,
+      "ytick.direction": null,
+      "savefig.dpi": null,
+      "savefig.bbox": null
+    },
+    "palette_hex": [],
+    "cmaps": [],
+    "grid": {
+      "gridspec": null,
+      "subplots": null,
+      "figsize": null
+    },
+    "counts": {
+      "zorder_calls": 0,
+      "zorder_max": null,
+      "zorder_distinct_levels": 0,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 1,
+      "axvline": 0,
+      "axhline": 0,
+      "transAxes": 0,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 2,
+      "bar": 0,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 0,
+      "legend_calls": 0,
+      "colorbar": 0
+    },
+    "code_lines": 51,
+    "narrative_arc": "n×n_pairwise",
+    "signature_tricks": [
+      "axes_inset_overlay",
+      "pvalue_stars_overlay"
+    ],
+    "preamble": "原图解析** - **2x2 全景评估结构**： - **(c) 数据分布视角**：Spearman 相关性热图，结合“数值+颜色”矩阵与星号显著性标注，诊断多重共线性。 - **(d) 模型解释视角**：带聚类树的平均绝对 SHAP 值条形图，揭示关键特征及其层次归属。 - **(e) 预测精度视角**：奇偶校验散点图，对比训练/测试集拟合优度。 - **(f) 外部泛化视角**：双 Y 轴验证图，通过主轴散点与次轴 RMSE/百分比误差柱状图评估模型鲁棒性。 - **视觉设计亮点**： - **表格嵌入**：在散点图中直接嵌入包含 RMSE、MAE 和运算时间的评估指标表，避免了后期排版的繁琐。 - **聚类分层**：利用 Dendrogram 树状线与 cutoff 阈值，直观划分特征重要性等级。 **论文原图** **03 原图复现** **"
+  },
+  {
+    "id": "期刊配图：基于极坐标系的多面板雷达图对比多维环境变量与模型表现_1777454388",
+    "file": "期刊配图：基于极坐标系的多面板雷达图对比多维环境变量与模型表现_1777454388.md",
+    "title": "期刊配图：基于极坐标系的多面板雷达图对比多维环境变量与模型表现",
+    "journals": [],
+    "chart_families": [
+      "radar"
+    ],
+    "rc": {
+      "font.family": "['Times New Roman'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "16",
+      "axes.linewidth": "1.5",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": null,
+      "savefig.bbox": null
+    },
+    "palette_hex": [
+      "#1F77B4",
+      "#FF7F0E"
+    ],
+    "cmaps": [],
+    "grid": {
+      "gridspec": null,
+      "subplots": null,
+      "figsize": [
+        6.0,
+        6.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 4,
+      "zorder_max": 3,
+      "zorder_distinct_levels": 2,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 0,
+      "transAxes": 0,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 0,
+      "bar": 0,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 1,
+      "contourf": 0,
+      "annotation_text": 0,
+      "legend_calls": 1,
+      "colorbar": 0
+    },
+    "code_lines": 57,
+    "narrative_arc": "multipanel_grid",
+    "signature_tricks": [],
+    "preamble": "前言** 在复杂流域环境与污染传输研究中，评估多个驱动因素（如土地利用、气候、地形）的综合影响是一项多维度任务。雷达图（Radar Chart）通过将多个变量映射到同一极坐标系的径向轴上，能够直观展示数据的“形状”特征。这类图表常用于对比不同水文期环境因子的差异，或解释机器学习模型在多项评价指标上的综合表现。 **02 原图解析** - **极坐标多轴结构**： - **径向轴**：均匀分布各评估因子，顶点位置映射数值大小。 - **多边形面积**：多轴数据点连接而成的封闭区域，直观反映各情境下的综合强度。 - **关键视觉编码**： - **透明度填充**：不同分组采用半透明色彩填充（Alpha），强调形状特征同时解决图层重叠后的遮挡问题。 - **同心圆网格**：提供数值基准，确保不同轴向上的数据具备视觉可比性。 - **科研意图**：解码流域尺度下新污染物（ECs）传输的阈值效应，论证土地利用和气候因子在不同情境（如丰枯水期）下的多维响应差异。 **论文原图** **结论边界**：雷达图的形状受轴排列顺序影响。跨面板对比时，必须确保所有面板共享完全一致的径向尺度。 **03"
+  },
+  {
+    "id": "期刊配图：基于线性拟合与误差带的距离衰减散点图解析群落空间演变_1777454120",
+    "file": "期刊配图：基于线性拟合与误差带的距离衰减散点图解析群落空间演变_1777454120.md",
+    "title": "期刊配图：基于线性拟合与误差带的距离衰减散点图解析群落空间演变",
+    "journals": [],
+    "chart_families": [
+      "scatter_regression",
+      "density_scatter"
+    ],
+    "rc": {
+      "font.family": "['Times New Roman'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "16",
+      "axes.linewidth": "1.5",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": null,
+      "savefig.bbox": null
+    },
+    "palette_hex": [
+      "#D62728",
+      "#1F77B4"
+    ],
+    "cmaps": [],
+    "grid": {
+      "gridspec": null,
+      "subplots": null,
+      "figsize": [
+        7.0,
+        5.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 1,
+      "zorder_max": 1,
+      "zorder_distinct_levels": 1,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 0,
+      "transAxes": 2,
+      "despine_calls": 2,
+      "errorbar": 0,
+      "fill_between": 1,
+      "scatter": 1,
+      "bar": 0,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 2,
+      "legend_calls": 1,
+      "colorbar": 0
+    },
+    "code_lines": 53,
+    "narrative_arc": "single_focus",
+    "signature_tricks": [
+      "error_band_fill_between"
+    ],
+    "preamble": "前言** 在环境生态学与水质分析研究中，群落相似性的距离衰减图（Distance-Decay Plot）是评估空间异质性的核心视觉工具。这类图表通过验证地理距离的增加是否导致样本间成分构成的显著差异化，直观反映群落随空间演变的速率。在这篇针对大型调水工程的论文中，作者通过拟合曲线斜率的对比，论证了调水工程对沿线水质均质化的促进作用。 **02 原图解析** - **单面板多图层叠加结构**： - **横坐标**：采样点间的地理距离（Geographic Distance）。 - **纵坐标**：群落相似度（如 Bray-Curtis 相似性）。 - **关键视觉编码**： - **色彩分组**：通过鲜明双色区分调水期（WDP）与非调水期（NWDP）两组数据。 - **拟合趋势**：贯穿高密度散点的直线为线性回归拟合线，直接反映衰减速率。 - **不确定性度量**：拟合线周围的半透明色带代表误差带（置信区间），表征拟合的稳定性。 - **统计显著性**：图内注有 $R^2$ 与 $p$ 值，用于定量验证空间异质性的统计学意义。 - **科研结论**：非调水期（NWDP）拟合线斜率更陡，说明空间分布差异显著；而调水期（WDP）曲线平缓，证实了调水对沿线群落分布的稳定作用。 **论文原图** **03"
+  },
+  {
+    "id": "期刊配图：基于组合多面板条形图对比多条件下的机器学习特征重要性_1777453942",
+    "file": "期刊配图：基于组合多面板条形图对比多条件下的机器学习特征重要性_1777453942.md",
+    "title": "期刊配图：基于组合多面板条形图对比多条件下的机器学习特征重要性",
+    "journals": [],
+    "chart_families": [
+      "scatter_regression"
+    ],
+    "rc": {
+      "font.family": "['Times New Roman'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "16",
+      "axes.linewidth": "1.5",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": null,
+      "savefig.bbox": null
+    },
+    "palette_hex": [
+      "#FFB74D",
+      "#2B0E68",
+      "#D26E17",
+      "#466B6C"
+    ],
+    "cmaps": [],
+    "grid": {
+      "gridspec": null,
+      "subplots": [
+        2,
+        2
+      ],
+      "figsize": [
+        14.0,
+        11.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 0,
+      "zorder_max": null,
+      "zorder_distinct_levels": 0,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 0,
+      "transAxes": 0,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 0,
+      "bar": 4,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 1,
+      "legend_calls": 1,
+      "colorbar": 0
+    },
+    "code_lines": 54,
+    "narrative_arc": "multipanel_grid",
+    "signature_tricks": [],
+    "preamble": "前言** 在机器学习辅助材料设计或性能预测的论文中，组合多面板图常用于验证模型的特征权重分布。这类图表不仅能直观展示全局变量（如化学组成）的绝对贡献度，还能解释特征组在不同操作条件（如不同温度、压力）下的相对重要性演变。通过将全局平均重要度与特定条件下的占比图对齐，可以极大地增强论文论证的逻辑连贯性。 **02 原图解析** - **2×2 多面板任务结构**： - **左侧列 (a, c)**：水平条形图，展示化学组成与孔隙结构特征对模型的全局 MDA（Mean Decrease Accuracy）重要性排名。 - **右侧列 (b, d)**：堆叠柱状图，展示不同压力与温度下，三类特征群组（P, PT, CC）重要性的百分比分布。 - **核心视觉编码**： - **绝对值映射**：条形长度映射重要性指标数值大小。 - **分类色彩**：在堆叠图中通过深紫、橙、灰绿区分不同特征群组。 - **物理分组标识**：通过 X 轴间隙与底部黑色括号辅助线，在单坐标系内清晰划分出 $0^\\circ$C 与 $25^\\circ$C 两个实验环境。 - **结论边界**：右侧面板为百分比占比图，用于评估内部结构变化，不宜直接跨面板对比绝对数值大小。 **论文原图** **03"
+  },
+  {
+    "id": "期刊配图：基于高斯核密度的3x3多面板散点图评估混合水文模型模拟性能_1777453582",
+    "file": "期刊配图：基于高斯核密度的3x3多面板散点图评估混合水文模型模拟性能_1777453582.md",
+    "title": "期刊配图：基于高斯核密度的3x3多面板散点图评估混合水文模型模拟性能",
+    "journals": [],
+    "chart_families": [
+      "scatter_regression",
+      "density_scatter"
+    ],
+    "rc": {
+      "font.family": "['Times New Roman'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "16",
+      "axes.linewidth": "1.5",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": null,
+      "savefig.bbox": null
+    },
+    "palette_hex": [
+      "#D62728"
+    ],
+    "cmaps": [
+      "RdBu_r"
+    ],
+    "grid": {
+      "gridspec": null,
+      "subplots": [
+        3,
+        3
+      ],
+      "figsize": [
+        14.0,
+        10.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 0,
+      "zorder_max": null,
+      "zorder_distinct_levels": 0,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 0,
+      "transAxes": 1,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 1,
+      "bar": 0,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 1,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 2,
+      "legend_calls": 0,
+      "colorbar": 1
+    },
+    "code_lines": 57,
+    "narrative_arc": "n×n_pairwise",
+    "signature_tricks": [
+      "density_color_scatter",
+      "marginal_axes_grid"
+    ],
+    "preamble": "前言** 在水文模型与深度学习的交叉研究中，验证模型对观测数据的拟合能力是核心环节。这类多面板密度散点图常用于展示模拟值与基准数据（如 MODIS ET）之间的相关性和系统性偏差。相比于简单的散点，高斯核密度着色能够直接暴露海量数据重叠下的真实分布核心，而 1:1 参考线与 NSE/r 指标标注则提供了直观的量化基准。 **02 原图解析** - **3×3 验证矩阵结构**： - **行维度**：代表不同的研究区域（如 WS、XHB、LDX 流域）。 - **列维度**：代表不同的物理-深度学习耦合机制（如 HLUDC、HLBDC、HLBDCT）。 - **核心视觉编码**： - **高斯核密度 (Gaussian KDE)**：散点颜色映射至 RdBu_r 发散型色条，红色代表高密度区，直观揭示预测重心。 - **对齐基准**：红色 1:1 虚线作为理想预测基准；黑色实线为实际线性拟合线，其夹角反映了模型的系统性偏差。 - **定量指标**：每个面板右下角嵌入 NSE 与 r 值，通过 LaTeX 风格渲染提升专业感。 - **科研逻辑**：通过共享 X/Y 轴尺度，确保了不同耦合机制在同一量纲下的公平对齐。 **论文原图** **03"
+  },
+  {
+    "id": "期刊配图：多面板预测散点与SHAP局部依赖特征解释组合图_1777456052",
+    "file": "期刊配图：多面板预测散点与SHAP局部依赖特征解释组合图_1777456052.md",
+    "title": "期刊配图：多面板预测散点与SHAP局部依赖特征解释组合图",
+    "journals": [],
+    "chart_families": [
+      "forest",
+      "shap_composite",
+      "scatter_regression",
+      "ale_pdp"
+    ],
+    "rc": {
+      "font.family": "['Times New Roman'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "16",
+      "axes.linewidth": "1.5",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": null,
+      "savefig.bbox": null
+    },
+    "palette_hex": [],
+    "cmaps": [],
+    "grid": {
+      "gridspec": [
+        2,
+        2
+      ],
+      "subplots": null,
+      "figsize": [
+        14.0,
+        10.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 2,
+      "zorder_max": 3,
+      "zorder_distinct_levels": 2,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 0,
+      "transAxes": 1,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 1,
+      "bar": 0,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 1,
+      "legend_calls": 1,
+      "colorbar": 0
+    },
+    "code_lines": 49,
+    "narrative_arc": "multipanel_grid",
+    "signature_tricks": [
+      "perfect_fit_diagonal",
+      "metric_text_box",
+      "alpha_layered_scatter"
+    ],
+    "preamble": "前言** 在机器学习辅助材料性质预测的研究中，单纯的性能指标难以支撑机理探讨。这类将模型性能验证（预测散点图）与模型归因（SHAP 特征重要性与局部依赖图 PDP）结合的综合分析图，不仅能验证模型对目标变量（如 N 官能团）的预测精度，更能透明化核心工艺参数的影响趋势。这种从“整体评估”到“局部归因”的递进式布局，极大地增强了论文论证的连贯性。 **02 原图解析** - **多面板组合布局 (Multi-panel)**： - **上方/左侧**：预测奇偶校验图 (Parity Plot) + 残差分布，量化训练/测试集的整体偏差。 - **下方/右侧**：SHAP 全局重要性图 + 关键变量的局部依赖图 (PDP)，揭示变量的边际效应。 - **核心视觉编码**： - **拟合参考线**：预测图中的 $y=x$ 实线为理想基准，配合散点紧凑程度反映预测精度。 - **归因映射**：SHAP 图通过红蓝色彩编码特征数值高低，横轴映射贡献方向。 - **趋势曲线**：PDP 图利用平滑曲线展示单一变量（如温度）在整个取值区间对预测结果的边际影响。 - **科研结论**：验证了随机森林模型对 N-A, N-5 等官能团的高精度预测（$R^2$ 达 0.904-0.943），并揭示了温度驱动的氮官能团演变路径。 **论文原图** **03"
+  },
+  {
+    "id": "机器学习：集PSO多目标优化与SHAP的回归预测模型_ 从数据清洗 → 多模型对比 → 贝叶斯寻优 _1777458801",
+    "file": "机器学习：集PSO多目标优化与SHAP的回归预测模型_ 从数据清洗 → 多模型对比 → 贝叶斯寻优 _1777458801.md",
+    "title": "机器学习：集PSO多目标优化与SHAP的回归预测模型",
+    "journals": [],
+    "chart_families": [
+      "radar",
+      "forest",
+      "shap_composite",
+      "heatmap_pairwise",
+      "heatmap",
+      "scatter_regression",
+      "pareto",
+      "ale_pdp"
+    ],
+    "rc": {
+      "font.family": null,
+      "mathtext.fontset": null,
+      "font.size": null,
+      "axes.linewidth": null,
+      "xtick.direction": null,
+      "ytick.direction": null,
+      "savefig.dpi": null,
+      "savefig.bbox": null
+    },
+    "palette_hex": [],
+    "cmaps": [],
+    "grid": {
+      "gridspec": null,
+      "subplots": null,
+      "figsize": null
+    },
+    "counts": {
+      "zorder_calls": 0,
+      "zorder_max": null,
+      "zorder_distinct_levels": 0,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 0,
+      "transAxes": 0,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 0,
+      "bar": 0,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 0,
+      "legend_calls": 0,
+      "colorbar": 0
+    },
+    "code_lines": 25,
+    "narrative_arc": "multipanel_grid",
+    "signature_tricks": [],
+    "preamble": "前言** 在机器学习工程化应用中，构建一个从数据清洗到决策优化的闭环系统是提升研究深度的关键。本框架集成了异常值稳健清洗、多模型贝叶斯寻优（Hyperopt）、多目标粒子群优化（MOPSO）以及 SHAP 全链路解释，旨在解决复杂物理/化学系统中的工艺参数寻优与响应机制解析难题。 **02 框架结构解析** - **代理模型层 (Surrogate)**：支持 XGBoost、CatBoost、RandomForest 等 9 种算法，通过贝叶斯优化自动锁定最优超参。 - **决策优化层 (Optimization)**：引入 MOPSO 算法，在相互制约的多个目标（如产率 vs 成本）之间搜索 Pareto 前沿，并提供折中最优解。 - **机理解释层 (Interpretation)**：利用 SHAP 工具（Beeswarm、依赖图、Waterfall）将“黑盒”决策透明化，验证物理规律的一致性。 **原始数据可视化** **皮尔逊相关性热图** **03"
+  },
+  {
+    "id": "绝美！Nature 这张雷达图，被我用 Python 像素级扒下来了！_1777449664",
+    "file": "绝美！Nature 这张雷达图，被我用 Python 像素级扒下来了！_1777449664.md",
+    "title": "绝美！Nature 这张雷达图，被我用 Python 像素级扒下来了！",
+    "journals": [
+      "Nature"
+    ],
+    "chart_families": [
+      "radar",
+      "ale_pdp"
+    ],
+    "rc": {
+      "font.family": "['Times New Roman', 'Arial', 'DejaVu Sans']",
+      "mathtext.fontset": "'stix'",
+      "font.size": "16",
+      "axes.linewidth": "1.5",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": "600",
+      "savefig.bbox": "'tight'"
+    },
+    "palette_hex": [],
+    "cmaps": [],
+    "grid": {
+      "gridspec": null,
+      "subplots": null,
+      "figsize": [
+        8.0,
+        8.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 3,
+      "zorder_max": 10,
+      "zorder_distinct_levels": 3,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 0,
+      "transAxes": 0,
+      "despine_calls": 0,
+      "errorbar": 1,
+      "fill_between": 0,
+      "scatter": 0,
+      "bar": 0,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 1,
+      "contourf": 0,
+      "annotation_text": 2,
+      "legend_calls": 0,
+      "colorbar": 0
+    },
+    "code_lines": 65,
+    "narrative_arc": "hero",
+    "signature_tricks": [
+      "polygon_polar_grid",
+      "polar_value_marker"
+    ],
+    "preamble": "前言** 一张好图不仅是数据的容器，更是科研品味的体现。今天我们要挑战的是 **Nature 正刊** (Vol 626, 2024) 中的 Figure 3c。这张图用极简的视觉语言讲透了半导体纤维的物理性能：如何在保持光电性能的同时，兼具如衣物般的柔韧性。 **论文名称：High-quality semiconductor fibres via mechanical design.** **论文原图** **02 原图解析** - **🦴 骨架 (Structure) —— 虚幻的七边形**：Matplotlib 默认的极坐标网格是圆形的，但原图为了硬朗的科技感，将其重构为正七边形，并采用笔直的虚线网格。 - **🍰 核心技巧 —— “三明治”图层法**：采用半透明填充（底层）、加粗实线（中层）与带误差棒的散点（顶层）堆叠，确保了数据的深度与清晰度。 - **🎨 配色 (Palette)**：深蓝 (Navy Blue) 代表 Ge，绯红 (Crimson) 代表 Si。冷暖对比强烈且稳重，是典型的“顶刊级”审美。 **科学逻辑分析**：研究通过“熔芯法”将传统的脆性半导体（Si, Ge）制备成纤维。雷达图多维度展示了纤维在响应度（Responsivity）、NEP、带宽及机械强度（Yield/Impact/Torsional strength）上的卓越表现。 **03"
+  },
+  {
+    "id": "进阶绘图：解决“多变量拥挤”痛点——Python 绘制带显著性星号与斜向色条的三角热图_1777452320",
+    "file": "进阶绘图：解决“多变量拥挤”痛点——Python 绘制带显著性星号与斜向色条的三角热图_1777452320.md",
+    "title": "进阶绘图：解决“多变量拥挤”痛点——Python 绘制带显著性星号与斜向色条的三角热图",
+    "journals": [],
+    "chart_families": [
+      "heatmap_pairwise",
+      "heatmap",
+      "scatter_regression"
+    ],
+    "rc": {
+      "font.family": "'Times New Roman'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "14",
+      "axes.linewidth": "1.5",
+      "xtick.direction": null,
+      "ytick.direction": null,
+      "savefig.dpi": null,
+      "savefig.bbox": null
+    },
+    "palette_hex": [
+      "#A50026",
+      "#F46D43",
+      "#FFFFBF",
+      "#74ADD1",
+      "#313695"
+    ],
+    "cmaps": [],
+    "grid": {
+      "gridspec": null,
+      "subplots": null,
+      "figsize": [
+        16.0,
+        16.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 0,
+      "zorder_max": null,
+      "zorder_distinct_levels": 0,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 0,
+      "transAxes": 0,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 0,
+      "bar": 0,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 1,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 3,
+      "legend_calls": 0,
+      "colorbar": 0
+    },
+    "code_lines": 71,
+    "narrative_arc": "mirror_compare",
+    "signature_tricks": [
+      "upper_triangle_split"
+    ],
+    "preamble": "前言** 当面临多变量相关性分析时，默认的方块热力图往往显得冗余且拥挤。导师常说：“图表需要重点，不能只是数据的大乱炖。” 今天我们要复刻的这张图，来自 2025 年 **《Separation and Purification Technology》** 的一篇关于机器学习预测 MOF 材料性能的顶刊论文。作者通过**带分组括号的下三角热图**，将 16 个维度的复杂关系梳理得极具逻辑性。我们将深度复刻其“斜向色条”与“分组括号”等高阶视觉引导设计。 **02 原图解析** - **手术切口（The Cut）**：利用遮罩（Mask）技术切掉右上三角对称矩阵，消除 50% 的冗余信息，为逻辑标注留出空间。 - **骨架延伸（The Extension）**：在切除后的负空间增加**分组大括号（Brackets）**，将变量划分为操作条件、孔结构等逻辑板块。 - **视觉引导（The Flow）**：将 Colorbar（色条）平行于矩阵斜边放置。这种**斜向色条**设计不仅节省空间，更形成了一种自然的视觉流向。 **论文原图** **科学解码**：图表展示了 MOF 的输入特征与输出目标间的关联。深蓝色块代表强正相关（如 BET 与吸附量），而显出的 `***` 星号则提供了统计显著性的铁证。 **03"
+  },
+  {
+    "id": "顶刊同款！Python绘制堆叠小提琴图_1777452180",
+    "file": "顶刊同款！Python绘制堆叠小提琴图_1777452180.md",
+    "title": "顶刊同款！Python绘制堆叠小提琴图",
+    "journals": [],
+    "chart_families": [
+      "scatter_regression",
+      "violin",
+      "box",
+      "ale_pdp"
+    ],
+    "rc": {
+      "font.family": "['Times New Roman'",
+      "mathtext.fontset": "'stix'",
+      "font.size": "14",
+      "axes.linewidth": "1.5",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": "600",
+      "savefig.bbox": "'tight'"
+    },
+    "palette_hex": [
+      "#F79698",
+      "#6CA6F0",
+      "#98E6B6",
+      "#FBC285"
+    ],
+    "cmaps": [],
+    "grid": {
+      "gridspec": null,
+      "subplots": [
+        3,
+        1
+      ],
+      "figsize": [
+        7.0,
+        11.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 3,
+      "zorder_max": 3,
+      "zorder_distinct_levels": 3,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 0,
+      "transAxes": 0,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 1,
+      "bar": 0,
+      "boxplot": 2,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 1,
+      "legend_calls": 0,
+      "colorbar": 0
+    },
+    "code_lines": 76,
+    "narrative_arc": "hero",
+    "signature_tricks": [
+      "colored_marker_edge"
+    ],
+    "preamble": "前言** 做科研最怕数据画成图后平淡无奇。特别是对比多个模型（Model Comparison）时，传统的柱状图只能显示平均值，却掩盖了模型稳定性的真相。 今天我们要复刻的这张图，来自顶刊 **《Renewable Energy》** (IF=8.7) 的最新论文。作者巧妙地利用**“堆叠小提琴图” (Stacked Violin Plot)**，在一个版面内同时展示了 R²、MAE、RMSE 三个维度的模型评估结果。 **02 原图解析** 在编写"
+  },
+  {
+    "id": "顶刊复刻 _ 这种“中心挖空”+“立体高光”的雷达图，到底是怎么画出来的？_1777451060",
+    "file": "顶刊复刻 _ 这种“中心挖空”+“立体高光”的雷达图，到底是怎么画出来的？_1777451060.md",
+    "title": "顶刊复刻 ",
+    "journals": [],
+    "chart_families": [
+      "radar",
+      "scatter_regression"
+    ],
+    "rc": {
+      "font.family": "['Arial'",
+      "mathtext.fontset": null,
+      "font.size": "14",
+      "axes.linewidth": "1.5",
+      "xtick.direction": "'in'",
+      "ytick.direction": "'in'",
+      "savefig.dpi": "600",
+      "savefig.bbox": "'tight'"
+    },
+    "palette_hex": [],
+    "cmaps": [],
+    "grid": {
+      "gridspec": null,
+      "subplots": null,
+      "figsize": null
+    },
+    "counts": {
+      "zorder_calls": 3,
+      "zorder_max": 14,
+      "zorder_distinct_levels": 3,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 0,
+      "transAxes": 0,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 3,
+      "bar": 0,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 0,
+      "legend_calls": 0,
+      "colorbar": 0
+    },
+    "code_lines": 39,
+    "narrative_arc": "inset_overlay",
+    "signature_tricks": [
+      "polygon_polar_grid",
+      "colored_marker_edge",
+      "alpha_layered_scatter"
+    ],
+    "preamble": "前言** 在模型多维评估中，雷达图（Radar Chart）是展示“全方位性能”的首选工具。然而，默认的雷达图往往面临指标差异不显、视觉扁平化等问题。本文复刻自交通运输领域顶刊，展示如何通过“中心挖空”（非零起点坐标）、“多边形网格”以及“伪 3D 玻璃质感”等高阶技巧，将 MAPE、MAE、RMSE 与 R² 等指标转化为极具视觉张力的学术证据。 **02 原图解析** - **布局结构**：采用 2x2 子图布局，每个单元均为独立的极坐标系（Polar Axes）。 - **非零起点设计**：径向轴起点不设为 0（如 R² 圆心设为 0.5），通过“坐标截断”放大模型间的微小性能差异，专治指标挤压。 - **手绘多边形网格**：关掉默认的圆形网格，手动计算顶点坐标并绘制虚线多边形，赋予图表硬朗的科技感。 - **视觉编码**： - **伪 3D 粒子效果**：每个数据点由“底色实心圆 + 白色描边 + 中心高光点”三层叠加而成，呈现出如同“玻璃珠”般的通透感。 - **方向性叙事**：误差类指标（MAPE/MAE/RMSE）向圆心收缩代表优化，拟合类指标（R²）向外扩张代表优异，构建直观的“凹凸对比”逻辑。 **论文原图** **03"
+  },
+  {
+    "id": "顶刊审美 _ 用 Python 绘制带“垂直渐变特效”的组合箱线图_1777451428",
+    "file": "顶刊审美 _ 用 Python 绘制带“垂直渐变特效”的组合箱线图_1777451428.md",
+    "title": "顶刊审美 ",
+    "journals": [],
+    "chart_families": [
+      "scatter_regression",
+      "gradient_box",
+      "box",
+      "ale_pdp"
+    ],
+    "rc": {
+      "font.family": "['Arial', 'Times New Roman', 'DejaVu Sans']",
+      "mathtext.fontset": "'stix'  # 公式字体像 LaTeX",
+      "font.size": "14            # 论文标准字号",
+      "axes.linewidth": "1.2      # 坐标轴加粗",
+      "xtick.direction": "'in'    # 刻度朝内",
+      "ytick.direction": "'in'",
+      "savefig.dpi": "600         # 投稿级分辨率",
+      "savefig.bbox": "'tight'    # 自动切除白边"
+    },
+    "palette_hex": [
+      "#E0E0E0",
+      "#F06292",
+      "#C2185B"
+    ],
+    "cmaps": [],
+    "grid": {
+      "gridspec": null,
+      "subplots": null,
+      "figsize": null
+    },
+    "counts": {
+      "zorder_calls": 9,
+      "zorder_max": 10,
+      "zorder_distinct_levels": 6,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 0,
+      "transAxes": 0,
+      "despine_calls": 0,
+      "errorbar": 0,
+      "fill_between": 0,
+      "scatter": 1,
+      "bar": 0,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 1,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 0,
+      "legend_calls": 0,
+      "colorbar": 0
+    },
+    "code_lines": 86,
+    "narrative_arc": "single_focus",
+    "signature_tricks": [
+      "imshow_gradient_box",
+      "raincloud_combo",
+      "alpha_layered_scatter"
+    ],
+    "preamble": "前言** 做科研的同学大概都有过这种痛苦：辛辛苦苦跑了十几种模型，画出来的图要么是单调的柱状图，要么是乱糟糟的散点图。想展示分布，又想展示均值；想看整体趋势，又想看原始数据的密度。 别慌，今天我们复刻的这张图，来自 **Journal of Building Engineering (IF 6.4)** 的一篇关于地聚物（Geopolymer）机器学习预测的综述。这张图（Fig. 7）堪称“信息密度与美学平衡”的典范，它不仅是一张箱线图，更是一个**“算法性能仪表盘”**。 **论文原图** 它在一个 2×2 的网格里，同时展示了 R²、MAE、RMSE 三种指标，并且运用了**垂直渐变填充**、**抖动散点叠加**、**手动构造图例**等高级技巧。今天我们就用 Python (Matplotlib) 完整复现。 **02 原图解析** 在绘图之前，我们需要理清图层逻辑。这张图由三个核心部分组成： - **🦴 骨架 (Structure)**： 采用 GridSpec 网格布局。作者牺牲了右下角子图的位置，专门用于放置复杂的图例，使版面显得透气且避免遮挡数据。 - **🍰 核心技巧 —— “三明治图层法”**： 箱体具有从上到下由浅入深的渐变质感。正确的图层顺序是：最底层网格线 👉 抖动散点（Jitter Points）👉 半透明渐变箱体 👉 最顶层中位线、均值点和离群值。 - **🎨 配色 (Palette)**： 使用定性色板，饱和度控制得当，每个算法分配一种固定颜色，方便跨子图进行视觉关联。 **科学逻辑分析**： - **EA (集成算法)**：R² 箱体位置高且短，说明稳健性最强。 - **LM (线性模型)**：箱子极长，说明在处理非线性反应时极不稳定。 - **数据密度**：Other 和 NN 的散点密集，反映了该领域研究的热度。 **03"
+  },
+  {
+    "id": "高级感！Python复刻Cell顶刊散点柱状图_1777451193",
+    "file": "高级感！Python复刻Cell顶刊散点柱状图_1777451193.md",
+    "title": "高级感！Python复刻Cell顶刊散点柱状图",
+    "journals": [
+      "Cell"
+    ],
+    "chart_families": [],
+    "rc": {
+      "font.family": "['Arial', 'DejaVu Sans']",
+      "mathtext.fontset": null,
+      "font.size": "14            # 提升默认字号",
+      "axes.linewidth": "1.5      # 加粗坐标轴",
+      "xtick.direction": "'in'    # 刻度朝内",
+      "ytick.direction": "'in'",
+      "savefig.dpi": "600         # 印刷级分辨率",
+      "savefig.bbox": "'tight'"
+    },
+    "palette_hex": [],
+    "cmaps": [],
+    "grid": {
+      "gridspec": null,
+      "subplots": null,
+      "figsize": [
+        9.0,
+        7.0
+      ]
+    },
+    "counts": {
+      "zorder_calls": 3,
+      "zorder_max": 3,
+      "zorder_distinct_levels": 3,
+      "twinx": 0,
+      "twiny": 0,
+      "inset_axes": 0,
+      "axvline": 0,
+      "axhline": 0,
+      "transAxes": 0,
+      "despine_calls": 2,
+      "errorbar": 1,
+      "fill_between": 0,
+      "scatter": 1,
+      "bar": 1,
+      "boxplot": 0,
+      "hist": 0,
+      "heatmap": 0,
+      "kde": 0,
+      "polar": 0,
+      "contourf": 0,
+      "annotation_text": 1,
+      "legend_calls": 0,
+      "colorbar": 0
+    },
+    "code_lines": 50,
+    "narrative_arc": "single_focus",
+    "signature_tricks": [
+      "raincloud_combo"
+    ],
+    "preamble": "前言** 在科研论文中，图表是作者逻辑的视觉体现。许多同学在复刻顶刊图表时，常遇到组别拥挤、层级混乱等痛点。 本文复刻的对象是 2024 年发表于 **《Cell》** 的关于人胎脑类器官（FeBOs）的研究。原图 Figure 2H 是一张极具代表性的“散点+柱状图+误差棒”组合图。它通过非均匀的横坐标布局，清晰展示了背侧（dorsal）与腹侧（ventral）区域标记物的组成差异。我们将深度拆解其“配色饱和度”与“图层顺序”等核心设计细节。 **论文原图** **科学背景**：研究验证 FeBOs 是否保留来源区域的空间特征。通过定量分析 PAX6（背侧高表达）与 NKX2-1（腹侧高表达）等关键发育蛋白的百分比，证明了类器官在长期体外培养中依然维持着原始解剖部位的分子印记。 **02 原图解析** 这张图通过三个视觉逻辑层级构建了“高级感”： - **画布结构与“呼吸感”**：手动调整横轴坐标，在 dorsal 和 ventral 组群之间制造物理间隙。这种“留白”暗示了两组数据属于不同的解剖系统。 - **信息叠加层级**：柱体（Bar）表达均值作为背景；误差棒（Error bar）表达统计标准差；散点（Scatter）展示单样本分布细节。 - **标注引导系统**：顶部的粗横线与加粗文本构成了清晰的“导航层”。 **复刻关键点**：必须防止散点重合导致样本感官减少，并确保顶部标注线不与数据最高点冲突。通过水平偏移（Jitter）算法和动态 y 轴上限计算可以完美解决。 **03"
+  }
+]

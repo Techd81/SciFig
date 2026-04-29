@@ -165,6 +165,15 @@ These palettes are still restrained and colorblind-aware, but provide stronger f
 - `treated`, `drug`, `stimulated`, `case` -> treatment color unless a domain playbook overrides it
 - `rescue` -> `#4C956C`
 - `vehicle` -> `#6C757D`
+- `train` -> `#4C78A8`
+- `test` -> `#E45756`
+- `actual`, `observed`, `experimental` -> `#1F4E79`
+- `predicted`, `fitted`, `estimated` -> `#C8553D`
+- `feature_low` -> cool side of diverging scale
+- `feature_high` -> warm side of diverging scale
+- `negative_correlation` -> cool side of diverging scale
+- `positive_correlation` -> warm side of diverging scale
+- `optimal`, `pareto`, `selected` -> `#00A087`
 - `low risk` -> lighter sequential tone
 - `high risk` -> darker sequential tone
 - `down-regulated` -> cool side of diverging scale
@@ -180,3 +189,7 @@ These palettes are still restrained and colorblind-aware, but provide stronger f
 6. Sort categories deterministically before assigning fallback colors.
 7. If categories exceed the palette length, keep color stable and add marker shape, line style, or facet grouping instead of cycling indistinguishable colors.
 8. For visual-impact mode, use one dark anchor, one warm highlight, and one cool support family; do not turn every group into a highlight.
+9. Prediction diagnostics use actual/observed as the cool anchor and predicted/fitted as the warm highlight unless the input already defines a validated semantic map.
+10. Density-colored scatter may use a sequential scale, but it needs a label or QA-tracked motif counter so it reads as local density instead of decorative color.
+11. Feature-importance and SHAP-like views use cool-to-warm low/high feature semantics only when feature-value columns exist; otherwise use neutral ranked bars/lollipops.
+12. Use hollow or edged marker variants for sample/source overlays so color remains reserved for the primary scientific variable.

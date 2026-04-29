@@ -43,10 +43,51 @@ End-to-end workflow for turning real experimental data into submission-ready sci
 3. **Narrative multi-panel design**: Treat multi-panel figures as a story with hero, support, validation, and mechanism panels rather than a loose grid of unrelated plots.
 4. **Palette governance**: Prefer restrained, colorblind-safe palettes; keep semantic mappings consistent across panels; avoid rainbow and uncontrolled red-green contrasts.
 5. **Statistical honesty**: No inferential claims without replicate or cohort meaning. When data only support descriptive visualization, say so.
-6. **Reference visual grammar**: Add data-supported evidence layers that make figures look like dense top-journal panels: metric tables, perfect-fit/reference lines, density halos, sample-shape overlays, matrix cell labels, p-value stars only when supplied, and dual-axis error bars only when error columns exist.
+6. **Reference visual grammar**: Add data-supported evidence layers that make figures look like dense top-journal panels: metric tables, perfect-fit/reference lines, density halos, marginal distributions, density-colored points, sample-shape overlays, matrix cell labels, p-value stars only when supplied, and dual-axis error bars only when error columns exist.
 7. **Policy-driven defaults**: Thresholds for scale, crowding, visual density, render retries, and export QA come from shared workflow policies rather than ad-hoc literals.
 8. **Agent-assisted quality gates**: Use read-only Agents for complex schema review, chart/stat planning, layout/palette audit, generated-code review, and rendered QA.
 9. **Reproducibility-first**: Every figure should be exportable as code plus metadata, source-data manifests, render-QA evidence, and methods-ready statistical descriptions.
+10. **Template-mining grounded**: All "顶刊感" choices (rcParams kernel, sandwich layering, palette, GridSpec recipes, in-axes idioms, narrative arcs) trace back to the 77 reference cases under `template/articles/`, distilled into the 7-module knowledge base under `template-mining/`. Operational helpers live in `phases/code-gen/template_mining_helpers.py`.
+
+## Template-Mining Knowledge Base
+
+`template-mining/` is the project's canonical reference layer for visual grammar. **All Phase 2 narrative-arc / chart-family decisions and Phase 3 styling decisions must consult this knowledge base** instead of inventing patterns.
+
+**Loading protocol** (see `template-mining/INDEX.md`):
+
+1. **Always** load `template-mining/INDEX.md` before Phase 2/3 decisions.
+2. **Phase 2** narrative + chart selection:
+   - Read `06-narrative-arcs.md` to bind the figure to one of 10 corpus arcs.
+   - Read `04-grid-recipes.md` if `panel_count > 1`.
+   - Lookup `case-index.json` for ≥3 cases matching `chart_families` or `narrative_arc`.
+3. **Phase 3** code generation:
+   - Read `01-rcparams-kernel.md` for the kernel; call `apply_journal_kernel(variant, journalProfile)`.
+   - Read `02-zorder-recipes.md` for the matching chart family; call `apply_zorder_recipe(family, ax, layers)`.
+   - Read `03-palette-bank.md` to bind palette names to hex; call `resolve_palette(name)` and `role_color(role)`.
+   - Read `05-annotation-idioms.md` to apply in-axes idioms; call `add_metric_box`, `add_perfect_fit_diagonal`, `add_zero_reference`, `add_group_dividers`, `add_panel_label`, `density_color_scatter`, `add_polygon_polar_grid`, `draw_gradient_box` from `template_mining_helpers`.
+   - Read `07-techniques/<family>.md` only if the chart family has a dedicated deep-dive (radar, shap-composite, dual-axis, heatmap-pairwise, marginal-joint, time-series-pi, lollipop-bipolar, gradient-box, inset-distribution).
+4. **Phase 4** render QA: every required motif from the chosen arc + family must be present (`arc_required_motifs(arc)`); failures route back to Phase 3.
+
+**Re-extraction**: when `template/articles/` changes, run `python .claude/skills/scifig-generate/template-mining/_extraction/extract.py` then `enrich.py` to refresh `case-index.json`, `stats.md`, `narratives.md`. Then audit the "Distilled Universal Findings" section in `INDEX.md`.
+
+**Operational entry point** — Phase 3 generators should start with:
+
+```python
+from template_mining_helpers import (
+    apply_journal_kernel, resolve_palette, role_color,
+    add_metric_box, add_perfect_fit_diagonal, add_zero_reference,
+    add_group_dividers, add_panel_label,
+    density_sort, density_color_scatter,
+    add_polygon_polar_grid, draw_gradient_box,
+    build_grid, select_narrative_arc, arc_required_motifs,
+    arc_default_grid, apply_zorder_recipe, bootstrap_chart,
+)
+
+apply_journal_kernel(variant="hero", journalProfile=journalProfile)
+fig, axes, palette = bootstrap_chart(arc="hero", panel_count=1,
+                                     palette="nature_radar_dual",
+                                     journalProfile=journalProfile)
+```
 
 ## Interactive Preference Collection
 
@@ -146,6 +187,7 @@ Phase 4: Export, Source Data, Statistical Report
 | Domains    | [specs/domain-playbooks.md](specs/domain-playbooks.md)                         | Domain-specific plotting, stats, and panel guidance       |
 | Policies   | [specs/workflow-policies.md](specs/workflow-policies.md)                       | Shared thresholds, visual impact, performance, QA, agents |
 | Prefs      | [specs/preference-collection.md](specs/preference-collection.md)               | Preference collection helpers, bilingual card templates   |
+| Motifs     | [specs/template-visual-motifs.md](specs/template-visual-motifs.md)             | Template-derived evidence motifs and QA counters          |
 | Layouts    | [templates/panel-layout-recipes.md](templates/panel-layout-recipes.md)         | Reusable multi-panel story recipes                        |
 | Palettes   | [templates/palette-presets.md](templates/palette-presets.md)                   | Reusable categorical/sequential/diverging palette presets |
 
@@ -185,13 +227,14 @@ Blocking agent findings must route back to the owning phase before advancing. Ne
 7. If legend space is tight, adjust columns, shorten labels, reduce spacing, increase margins, or reflow panels before allowing any legend to overlap curves, bars, points, error bars, confidence bands, grids, or heatmap cells.
 8. Use shared legends or shared colorbars when panels encode the same semantics.
 9. Multi-panel figures must have an explicit panel blueprint before code generation.
-10. For implemented single-panel charts, increase Nature/Cell-style information density through data-derived summaries, in-plot explanatory labels, reference lines, callouts, insets, sample-size labels, metric tables, prediction diagnostics, density halos, matrix labels, and effect-size context before adding new chart types.
-11. Do not invent statistics for visual impact. Every p-value, AUC, effect size, threshold count, or fitted parameter must come from the supplied data or a documented upstream result.
-12. Prefer vector export and generate source-data friendly artifacts for quantitative panels.
-13. If domain inference is weak, fall back to general biomedical rules instead of overfitting to a guessed specialty.
-14. If statistical assumptions are uncertain, downgrade to a conservative or descriptive choice and explain why.
-15. If rendered QA reports overlap, blank/tiny output, any remaining in-axes legend, too few visual enhancements, missing reference visual grammar motifs, missing in-plot explanatory labels, non-editable vector text, or missing formats, return to Phase 3 or Phase 2 before declaring completion.
-16. Use `specs/workflow-policies.md` for thresholds and budgets; do not add new magic numbers in phase logic without naming the policy.
+10. For implemented single-panel charts, increase Nature/Cell-style information density through data-derived summaries, in-plot explanatory labels, reference lines, callouts, insets, sample-size labels, metric tables, prediction diagnostics, marginal distributions, density-colored points, density halos, matrix labels, and effect-size context before adding new chart types.
+11. Treat `specs/template-visual-motifs.md` as the grammar for learning from reference examples. Add motifs to `visualContentPlan.templateMotifs` and render them through existing generators/helpers; do not register a new chart key until a real generator exists and passes QA.
+12. Do not invent statistics for visual impact. Every p-value, AUC, effect size, threshold count, or fitted parameter must come from the supplied data or a documented upstream result.
+13. Prefer vector export and generate source-data friendly artifacts for quantitative panels.
+14. If domain inference is weak, fall back to general biomedical rules instead of overfitting to a guessed specialty.
+15. If statistical assumptions are uncertain, downgrade to a conservative or descriptive choice and explain why.
+16. If rendered QA reports overlap, blank/tiny output, any remaining in-axes legend, too few visual enhancements, missing template/reference visual grammar motifs, missing in-plot explanatory labels, non-editable vector text, or missing formats, return to Phase 3 or Phase 2 before declaring completion.
+17. Use `specs/workflow-policies.md` for thresholds and budgets; do not add new magic numbers in phase logic without naming the policy.
 
 ## Input Processing
 
@@ -235,6 +278,7 @@ Phase 2 -> chartPlan = {
   panelBlueprint,
   crowdingPlan,
   visualContentPlan,
+  templateMotifs,
   palettePlan,
   delegationReports,
   journalOverrides,
