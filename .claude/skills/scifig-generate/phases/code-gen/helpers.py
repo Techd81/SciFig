@@ -4,6 +4,7 @@
 import re
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.patches import Ellipse
 
 
 VISUAL_CONTENT_DEFAULTS = {
@@ -19,6 +20,14 @@ VISUAL_CONTENT_DEFAULTS = {
     "minInPlotLabelsPerFigure": 1,
     "semanticCalloutMode": "data_derived",
     "useInsetAxes": True,
+    "referenceMotifsRequired": True,
+    "minReferenceMotifsPerFigure": 2,
+    "useMetricTables": True,
+    "useDensityHalos": True,
+    "usePerfectFitReference": True,
+    "useSampleShapeEncoding": True,
+    "useSignificanceStarLayer": True,
+    "useDualAxisErrorBars": True,
     "noInventedStats": True,
     "statProvenanceRequired": True,
     "outsideLayoutElements": True,
@@ -205,17 +214,93 @@ def default_visual_content_plan():
         **VISUAL_CONTENT_DEFAULTS,
         "appliedEnhancements": [],
         "familyByPanel": {},
+        "visualGrammarMotifs": [],
+        "visualGrammarMotifsApplied": [],
         "statProvenance": [],
         "metricBoxCount": 0,
+        "metricTableCount": 0,
         "insetCount": 0,
+        "referenceLineCount": 0,
+        "densityHaloCount": 0,
+        "sampleEncodingCount": 0,
+        "significanceStarLayerCount": 0,
+        "dualAxisEncodingCount": 0,
+        "referenceMotifCount": 0,
         "inPlotExplanatoryLabelCount": 0,
         "renderQaHooks": {
             "trackMetricBoxes": True,
+            "trackMetricTables": True,
             "trackInsets": True,
+            "trackReferenceLines": True,
+            "trackDensityHalos": True,
+            "trackSampleEncodings": True,
             "trackOutsideArtists": True,
             "trackInPlotLabels": True,
         },
     }
+
+
+def infer_reference_motifs(charts, dataProfile=None):
+    """Plan reusable evidence-layer motifs from chart families and semantic roles."""
+    dataProfile = dataProfile or {}
+    roles = dataProfile.get("semanticRoles", {}) if isinstance(dataProfile, dict) else {}
+    cols = [str(c).lower() for c in dataProfile.get("columnNames", [])] if isinstance(dataProfile, dict) else []
+    role_values = [str(v).lower() for v in roles.values()]
+    families = [infer_chart_family(chart) for chart in charts if chart]
+    tokens = " ".join(cols + role_values)
+    try:
+        n_obs = dataProfile.get("nObservations") or len(dataProfile.get("df"))
+    except TypeError:
+        n_obs = dataProfile.get("nObservations") or 0
+    motifs = []
+
+    def add(name):
+        if name not in motifs:
+            motifs.append(name)
+
+    if "matrix_heatmap" in families:
+        add("diverging_colorbar")
+        if n_obs <= 36:
+            add("cell_value_labels")
+        if any(token in tokens for token in ("pvalue", "p_value", "padj", "fdr", "qvalue")):
+            add("significance_star_layer")
+    if "scatter_embedding" in families:
+        add("trend_or_fit_reference")
+        if n_obs >= 6:
+            add("density_halo")
+        if any(token in tokens for token in ("actual", "observed", "measured", "experimental")) and any(
+            token in tokens for token in ("pred", "predict", "fitted", "estimate")
+        ):
+            add("perfect_fit_reference")
+            add("prediction_metric_table")
+        if any(token in tokens for token in ("sample", "source", "reference", "cohort", "batch")):
+            add("sample_shape_encoding")
+    if "clinical_diagnostic" in families:
+        if any(str(chart).lower() in ("roc", "pr_curve", "calibration") for chart in charts if chart):
+            add("diagnostic_reference_line")
+        add("diagnostic_metric_box")
+    if "genomics_enrichment" in families:
+        add("threshold_reference_lines")
+        if any(token in tokens for token in ("gene", "feature", "label", "id")):
+            add("top_feature_callouts")
+    if "distribution" in families:
+        add("sample_size_labels")
+        add("median_iqr_summary")
+    if "time_series" in families:
+        add("endpoint_peak_labels")
+        add("trajectory_delta_label")
+    if "engineering_spectra" in families:
+        add("peak_window_callout")
+        add("range_summary_box")
+    if "composition_flow" in families:
+        add("composition_summary")
+    if "psych_ecology" in families:
+        add("response_summary")
+    if any(token in tokens for token in ("rmse", "mae", "percent_error", "percentage_error", "error_pct")):
+        add("dual_axis_error_bars")
+    if not motifs:
+        add("descriptive_summary_box")
+    return motifs
 
 
 def build_visual_content_plan(primaryChart, secondaryCharts=None, dataProfile=None,
@@ -245,10 +330,20 @@ def build_visual_content_plan(primaryChart, secondaryCharts=None, dataProfile=No
 
     charts = [primaryChart] + list(secondaryCharts or [])
     plan["familyByChart"] = {chart: infer_chart_family(chart) for chart in charts if chart}
+    planned_motifs = infer_reference_motifs(charts, dataProfile=dataProfile)
+    existing_motifs = list(plan.get("visualGrammarMotifs", []))
+    for motif in planned_motifs:
+        if motif not in existing_motifs:
+            existing_motifs.append(motif)
+    plan["visualGrammarMotifs"] = existing_motifs
     panel_count = max(1, len(charts))
     plan["minTotalEnhancements"] = max(
         plan.get("minTotalEnhancements", 4),
         panel_count * plan.get("minEnhancementsPerPanel", 2),
+    )
+    plan["minReferenceMotifsPerFigure"] = min(
+        max(1, len(plan.get("visualGrammarMotifs", []))),
+        max(2, min(3, panel_count + 1)),
     )
     if plan.get("requireInPlotExplanatoryLabels", True):
         plan["minInPlotLabelsPerFigure"] = max(
@@ -257,8 +352,16 @@ def build_visual_content_plan(primaryChart, secondaryCharts=None, dataProfile=No
         )
     plan.setdefault("appliedEnhancements", [])
     plan.setdefault("familyByPanel", {})
+    plan.setdefault("visualGrammarMotifsApplied", [])
     plan.setdefault("metricBoxCount", 0)
+    plan.setdefault("metricTableCount", 0)
     plan.setdefault("insetCount", 0)
+    plan.setdefault("referenceLineCount", 0)
+    plan.setdefault("densityHaloCount", 0)
+    plan.setdefault("sampleEncodingCount", 0)
+    plan.setdefault("significanceStarLayerCount", 0)
+    plan.setdefault("dualAxisEncodingCount", 0)
+    plan.setdefault("referenceMotifCount", 0)
     plan.setdefault("inPlotExplanatoryLabelCount", 0)
     return plan
 
@@ -312,6 +415,51 @@ def _record_visual(plan, panel_id, family, enhancement):
 
 def _visual_count(plan, key):
     plan[key] = int(plan.get(key, 0)) + 1
+
+
+def _record_motif(plan, motif):
+    applied = plan.setdefault("visualGrammarMotifsApplied", [])
+    if motif not in applied:
+        applied.append(motif)
+        _visual_count(plan, "referenceMotifCount")
+
+
+def _resolve_numeric_column(dataProfile, df, *names):
+    col = _role(dataProfile, *names)
+    if df is not None and col in df:
+        return col
+    if df is None:
+        return None
+    tokens = [str(name).lower().replace("_", "") for name in names if name]
+    for candidate in getattr(df, "columns", []):
+        candidate_key = str(candidate).lower().replace("_", "").replace(" ", "")
+        if any(token and token in candidate_key for token in tokens):
+            return candidate
+    return None
+
+
+def _numeric_pair(df, x_col, y_col):
+    if df is None or x_col is None or y_col is None or x_col not in df or y_col not in df:
+        return np.array([]), np.array([])
+    pair = df[[x_col, y_col]].dropna()
+    try:
+        x = np.asarray(pair[x_col], dtype=float)
+        y = np.asarray(pair[y_col], dtype=float)
+    except (TypeError, ValueError):
+        return np.array([]), np.array([])
+    mask = np.isfinite(x) & np.isfinite(y)
+    return x[mask], y[mask]
+
+
+def _is_prediction_pair(x_col, y_col):
+    x_name = str(x_col or "").lower()
+    y_name = str(y_col or "").lower()
+    actual_tokens = ("actual", "observed", "measured", "experimental", "truth", "y_true")
+    predicted_tokens = ("pred", "predict", "fitted", "estimate", "y_pred")
+    return (
+        any(token in x_name for token in actual_tokens)
+        and any(token in y_name for token in predicted_tokens)
+    )
 
 
 def _add_inplot_label(ax, text, visualPlan, xy=None, loc="upper_left", color="#222222"):
@@ -419,6 +567,203 @@ def _add_metric_box(ax, lines, visualPlan):
     return artist
 
 
+def _add_metric_table(ax, rows, visualPlan, loc="lower_right"):
+    if not visualPlan.get("useMetricTables", True):
+        return None
+    clean = [(str(label), str(value)) for label, value in rows if str(label).strip() and str(value).strip()]
+    if not clean:
+        return None
+    boxes = {
+        "lower_right": [0.58, 0.05, 0.38, 0.20],
+        "lower_left": [0.04, 0.05, 0.38, 0.20],
+        "upper_right": [0.58, 0.74, 0.38, 0.20],
+    }
+    table = ax.table(
+        cellText=[[label, value] for label, value in clean[:4]],
+        cellLoc="center",
+        bbox=boxes.get(loc, boxes["lower_right"]),
+    )
+    table.auto_set_font_size(False)
+    table.set_fontsize(4.6)
+    table.set_zorder(10)
+    table.set_gid("scifig_metric_table")
+    for (row, col), cell in table.get_celld().items():
+        cell.set_linewidth(0.25)
+        cell.set_edgecolor("#B8B8B8")
+        cell.set_facecolor("#FFFFFF" if row % 2 else "#F7F7F7")
+        if col == 0:
+            cell.get_text().set_fontweight("bold")
+    _visual_count(visualPlan, "metricTableCount")
+    _record_motif(visualPlan, "prediction_metric_table")
+    return table
+
+
+def _r2_from_actual_pred(actual, predicted):
+    actual = np.asarray(actual, dtype=float)
+    predicted = np.asarray(predicted, dtype=float)
+    if len(actual) < 2:
+        return None
+    ss_res = float(np.nansum((predicted - actual) ** 2))
+    ss_tot = float(np.nansum((actual - np.nanmean(actual)) ** 2))
+    if ss_tot <= 0:
+        return None
+    return 1.0 - ss_res / ss_tot
+
+
+def _add_perfect_fit_line(ax, x, y, visualPlan):
+    if not visualPlan.get("usePerfectFitReference", True):
+        return None
+    if len(x) < 2 or len(y) < 2:
+        return None
+    lo = float(np.nanmin([np.nanmin(x), np.nanmin(y)]))
+    hi = float(np.nanmax([np.nanmax(x), np.nanmax(y)]))
+    if not np.isfinite(lo) or not np.isfinite(hi) or lo == hi:
+        return None
+    ax.plot([lo, hi], [lo, hi], color="#222222", lw=0.7, ls="--",
+            label="_nolegend_", zorder=4)
+    _visual_count(visualPlan, "referenceLineCount")
+    _record_motif(visualPlan, "perfect_fit_reference")
+    return True
+
+
+def _add_density_halos(ax, x, y, visualPlan, color="#4C78A8"):
+    if not visualPlan.get("useDensityHalos", True):
+        return None
+    if len(x) < 6 or len(y) < 6:
+        return None
+    values = np.column_stack([np.asarray(x, dtype=float), np.asarray(y, dtype=float)])
+    values = values[np.isfinite(values).all(axis=1)]
+    if len(values) < 6:
+        return None
+    cov = np.cov(values, rowvar=False)
+    if cov.shape != (2, 2) or not np.isfinite(cov).all():
+        return None
+    vals, vecs = np.linalg.eigh(cov)
+    vals = np.clip(vals, 1e-12, None)
+    order = vals.argsort()[::-1]
+    vals = vals[order]
+    vecs = vecs[:, order]
+    angle = np.degrees(np.arctan2(vecs[1, 0], vecs[0, 0]))
+    center = values.mean(axis=0)
+    for scale, alpha in ((2.4, 0.08), (1.5, 0.12)):
+        ellipse = Ellipse(
+            xy=center,
+            width=2 * scale * np.sqrt(vals[0]),
+            height=2 * scale * np.sqrt(vals[1]),
+            angle=angle,
+            facecolor=color,
+            edgecolor="none",
+            alpha=alpha,
+            zorder=1,
+        )
+        ellipse.set_gid("scifig_density_halo")
+        ax.add_patch(ellipse)
+    _visual_count(visualPlan, "densityHaloCount")
+    _record_motif(visualPlan, "density_halo")
+    return True
+
+
+def _add_sample_shape_encoding(ax, df, x_col, y_col, visualPlan, dataProfile=None):
+    if not visualPlan.get("useSampleShapeEncoding", True):
+        return None
+    sample_col = None
+    if df is None:
+        return None
+    roles = ("sample", "source", "reference", "ref", "cohort", "batch")
+    sample_col = _role(dataProfile or {}, *roles)
+    for candidate in getattr(df, "columns", []):
+        if sample_col is not None and sample_col in df:
+            break
+        key = str(candidate).lower().replace("_", "").replace(" ", "")
+        if any(token in key for token in roles):
+            sample_col = candidate
+            break
+    if sample_col is None or sample_col not in df or x_col not in df or y_col not in df:
+        return None
+    groups = list(df[sample_col].dropna().unique())
+    if len(groups) < 2 or len(groups) > 8:
+        return None
+    markers = ["o", "s", "^", "v", "D", "P", "X", "<"]
+    for idx, group in enumerate(groups[:8]):
+        subset = df[df[sample_col] == group]
+        x, y = _numeric_pair(subset, x_col, y_col)
+        if len(x) == 0:
+            continue
+        ax.scatter(
+            x,
+            y,
+            marker=markers[idx % len(markers)],
+            s=22,
+            facecolors="none",
+            edgecolors="#2B2B2B",
+            linewidths=0.45,
+            alpha=0.75,
+            label="_nolegend_",
+            zorder=6,
+        )
+    _visual_count(visualPlan, "sampleEncodingCount")
+    _record_motif(visualPlan, "sample_shape_encoding")
+    return True
+
+
+def _add_dual_axis_error_bars(ax, df, x_col, visualPlan):
+    if not visualPlan.get("useDualAxisErrorBars", True) or df is None:
+        return None
+    error_col = None
+    error_tokens = ("percenterror", "percentageerror", "errorpct", "rmse")
+    for candidate in getattr(df, "columns", []):
+        key = str(candidate).lower().replace("_", "").replace(" ", "")
+        if any(token in key for token in error_tokens):
+            error_col = candidate
+            break
+    if error_col is None or error_col not in df:
+        return None
+    try:
+        errors = np.asarray(df[error_col], dtype=float)
+    except (TypeError, ValueError):
+        return None
+    mask = np.isfinite(errors)
+    if not mask.any():
+        return None
+    if x_col is not None and x_col in df:
+        try:
+            xpos = np.asarray(df[x_col], dtype=float)
+        except (TypeError, ValueError):
+            xpos = np.arange(len(errors), dtype=float)
+    else:
+        xpos = np.arange(len(errors), dtype=float)
+    xpos = xpos[mask]
+    errors = errors[mask]
+    if len(errors) == 0:
+        return None
+    ax2 = ax.twinx()
+    width = 0.65
+    if len(xpos) > 1:
+        diffs = np.diff(np.sort(np.unique(xpos)))
+        if len(diffs):
+            width = max(float(np.nanmedian(diffs)) * 0.55, 0.08)
+    ax2.bar(
+        xpos,
+        errors,
+        width=width,
+        facecolor="none",
+        edgecolor="#8F91FF",
+        linewidth=0.55,
+        hatch="////",
+        alpha=0.55,
+        label="_nolegend_",
+        zorder=0,
+    )
+    ax2.set_ylabel(str(error_col)[:22], fontsize=5, color="#7376D6")
+    ax2.tick_params(axis="y", colors="#7376D6", labelsize=5, width=0.5, length=2)
+    ax2.spines["top"].set_visible(False)
+    ax2.spines["right"].set_linewidth(0.5)
+    ax2.set_gid("scifig_dual_axis_error")
+    _visual_count(visualPlan, "dualAxisEncodingCount")
+    _record_motif(visualPlan, "dual_axis_error_bars")
+    return True
+
+
 def _add_summary_inset(ax, values, visualPlan, color="#4C78A8"):
     if not visualPlan.get("useInsetAxes", True):
         return None
@@ -442,13 +787,19 @@ def _add_summary_inset(ax, values, visualPlan, color="#4C78A8"):
     return inset
 
 
-def _maybe_reference_zero(ax):
+def _maybe_reference_zero(ax, visualPlan=None):
     x0, x1 = ax.get_xlim()
     y0, y1 = ax.get_ylim()
+    drawn = False
     if x0 < 0 < x1:
         ax.axvline(0, color="#A0A0A0", lw=0.45, ls="--", zorder=0)
+        drawn = True
     if y0 < 0 < y1:
         ax.axhline(0, color="#A0A0A0", lw=0.45, ls="--", zorder=0)
+        drawn = True
+    if visualPlan is not None and drawn:
+        _visual_count(visualPlan, "referenceLineCount")
+        _record_motif(visualPlan, "trend_or_fit_reference")
 
 
 def _enhance_distribution(ax, dataProfile, visualPlan, palette, col_map):
@@ -478,6 +829,7 @@ def _enhance_distribution(ax, dataProfile, visualPlan, palette, col_map):
                        edgecolor="black", linewidth=0.45, zorder=8)
             ax.text(i, -0.12, f"n={len(subset)}", transform=ax.get_xaxis_transform(),
                     ha="center", va="top", fontsize=5, clip_on=False, color="#333333")
+        _record_motif(visualPlan, "sample_size_labels")
         if group_summaries:
             best = max(group_summaries, key=lambda item: item[2])
             baseline = group_summaries[0]
@@ -505,33 +857,66 @@ def _enhance_distribution(ax, dataProfile, visualPlan, palette, col_map):
         ax.axvline(np.nanmedian(values), color="black", lw=0.7, ls="--")
         _add_inplot_label(ax, f"median={np.nanmedian(values):.3g}", visualPlan, loc="upper_left")
         _add_metric_box(ax, [f"n={len(values)}", f"median={np.nanmedian(values):.3g}", f"IQR={np.nanpercentile(values, 75) - np.nanpercentile(values, 25):.3g}"], visualPlan)
+        _record_motif(visualPlan, "sample_size_labels")
+    _record_motif(visualPlan, "median_iqr_summary")
     _add_summary_inset(ax, values, visualPlan, color=palette.get("categorical", ["#4C78A8"])[0])
     return enhancements
 
 
 def _enhance_scatter(ax, dataProfile, visualPlan, palette, col_map):
     df = _df_from_profile(dataProfile)
-    x_col = _role(dataProfile, "x", "time", "score")
-    y_col = _role(dataProfile, "y", "value")
-    x = _numeric_values(df, x_col)
-    y = _numeric_values(df, y_col)
+    actual_col = _resolve_numeric_column(dataProfile, df, "actual", "observed", "measured", "experimental", "truth", "y_true")
+    predicted_col = _resolve_numeric_column(dataProfile, df, "predicted", "prediction", "pred", "fitted", "estimated", "estimate", "y_pred")
+    is_prediction = actual_col is not None and predicted_col is not None
+    if is_prediction:
+        x_col, y_col = actual_col, predicted_col
+    else:
+        x_col = _resolve_numeric_column(dataProfile, df, "x", "time", "score", "actual", "observed")
+        y_col = _resolve_numeric_column(dataProfile, df, "y", "value", "predicted", "prediction", "response")
+        is_prediction = _is_prediction_pair(x_col, y_col)
+    x, y = _numeric_pair(df, x_col, y_col)
     if len(x) == 0 or len(y) == 0 or len(x) != len(y):
-        _maybe_reference_zero(ax)
+        _maybe_reference_zero(ax, visualPlan)
         _add_metric_box(ax, ["exploratory view"], visualPlan)
         return ["reference_context"]
 
-    _maybe_reference_zero(ax)
+    _maybe_reference_zero(ax, visualPlan)
     enhancements = ["scatter_context"]
+    halo_color = palette.get("categorical", ["#4C78A8"])[0]
+
+    if is_prediction:
+        _add_perfect_fit_line(ax, x, y, visualPlan)
+        _add_density_halos(ax, x, y, visualPlan, color=halo_color)
+        sample_encoded = _add_sample_shape_encoding(ax, df, x_col, y_col, visualPlan, dataProfile=dataProfile)
+        rmse = float(np.sqrt(np.nanmean((y - x) ** 2)))
+        mae = float(np.nanmean(np.abs(y - x)))
+        r2 = _r2_from_actual_pred(x, y)
+        r2_text = f"{r2:.2f}" if r2 is not None else "n/a"
+        _add_metric_table(
+            ax,
+            [("R2", r2_text), ("RMSE", f"{rmse:.3g}"), ("MAE", f"{mae:.3g}"), ("n", str(len(x)))],
+            visualPlan,
+        )
+        _add_inplot_label(ax, f"perfect-fit diagnostic\nR2={r2_text}", visualPlan, loc="upper_left")
+        _add_metric_box(ax, [f"n={len(x)}", f"RMSE={rmse:.3g}", f"MAE={mae:.3g}"], visualPlan)
+        enhancements = ["perfect_fit_reference", "prediction_metric_table", "density_halo", "inplot_prediction_label"]
+        if sample_encoded:
+            enhancements.append("sample_shape_encoding")
+        return enhancements
+
+    _add_density_halos(ax, x, y, visualPlan, color=halo_color)
     if len(x) >= 3 and np.nanstd(x) > 0 and np.nanstd(y) > 0:
         slope, intercept = np.polyfit(x, y, 1)
         xs = np.linspace(np.nanmin(x), np.nanmax(x), 100)
         ax.plot(xs, slope * xs + intercept, color="black", lw=0.75,
                 alpha=0.65, label="_nolegend_", zorder=5)
+        _visual_count(visualPlan, "referenceLineCount")
+        _record_motif(visualPlan, "trend_or_fit_reference")
         r = np.corrcoef(x, y)[0, 1]
         direction = "positive" if slope >= 0 else "negative"
         _add_inplot_label(ax, f"{direction} trend\nr={r:.2f}", visualPlan, loc="upper_left")
         _add_metric_box(ax, [f"n={len(x)}", f"r={r:.2f}", f"slope={slope:.2g}"], visualPlan)
-        enhancements.extend(["trend_summary", "inplot_trend_label"])
+        enhancements.extend(["trend_summary", "inplot_trend_label", "density_halo"])
     label_col = _role(dataProfile, "feature_id", "label", "gene")
     if label_col and df is not None and label_col in df and len(y) > 0:
         budget = min(visualPlan.get("maxCalloutsSingle", 8), 5, len(y))
@@ -545,6 +930,34 @@ def _enhance_scatter(ax, dataProfile, visualPlan, palette, col_map):
     return enhancements
 
 
+def _add_matrix_significance_stars(ax, numeric, dataProfile, visualPlan):
+    if not visualPlan.get("useSignificanceStarLayer", True):
+        return None
+    roles = dataProfile.get("semanticRoles", {}) if isinstance(dataProfile, dict) else {}
+    role_text = " ".join(str(v).lower() for v in roles.values())
+    col_text = " ".join(str(col).lower() for col in getattr(numeric, "columns", []))
+    if not any(token in f"{role_text} {col_text}" for token in ("pvalue", "p_value", "padj", "fdr", "qvalue")):
+        return None
+    vals = numeric.to_numpy(dtype=float)
+    if vals.shape[0] > 12 or vals.shape[1] > 12:
+        return None
+    star_count = 0
+    for i in range(vals.shape[0]):
+        for j in range(vals.shape[1]):
+            value = vals[i, j]
+            if not np.isfinite(value) or value > 0.05:
+                continue
+            stars = "***" if value <= 0.001 else "**" if value <= 0.01 else "*"
+            ax.text(j + 0.5, i + 0.25, stars, ha="center", va="center",
+                    fontsize=4.2, color="#111111", fontweight="bold")
+            star_count += 1
+    if star_count:
+        _visual_count(visualPlan, "significanceStarLayerCount")
+        _record_motif(visualPlan, "significance_star_layer")
+        return True
+    return None
+
+
 def _enhance_matrix(ax, dataProfile, visualPlan, palette, col_map):
     df = _df_from_profile(dataProfile)
     numeric = None
@@ -556,12 +969,16 @@ def _enhance_matrix(ax, dataProfile, visualPlan, palette, col_map):
     if numeric is not None and numeric.size:
         vals = numeric.to_numpy(dtype=float)
         _add_metric_box(ax, [f"matrix={vals.shape[0]}x{vals.shape[1]}", f"range={np.nanmin(vals):.2g}..{np.nanmax(vals):.2g}"], visualPlan)
+        _record_motif(visualPlan, "diverging_colorbar")
         if vals.shape[0] <= 6 and vals.shape[1] <= 6:
             for i in range(vals.shape[0]):
                 for j in range(vals.shape[1]):
                     ax.text(j + 0.5, i + 0.5, f"{vals[i, j]:.2g}",
                             ha="center", va="center", fontsize=4.5, color="#111111")
+            _record_motif(visualPlan, "cell_value_labels")
+            _add_matrix_significance_stars(ax, numeric, dataProfile, visualPlan)
             return ["matrix_summary", "cell_value_labels"]
+        _add_matrix_significance_stars(ax, numeric, dataProfile, visualPlan)
         return ["matrix_summary"]
     _add_metric_box(ax, ["matrix view"], visualPlan)
     return ["matrix_summary"]
@@ -569,6 +986,10 @@ def _enhance_matrix(ax, dataProfile, visualPlan, palette, col_map):
 
 def _enhance_time_series(ax, dataProfile, visualPlan, palette, col_map):
     enhancements = []
+    df = _df_from_profile(dataProfile)
+    x_col = _resolve_numeric_column(dataProfile, df, "x", "time", "index", "point")
+    if _add_dual_axis_error_bars(ax, df, x_col, visualPlan):
+        enhancements.append("dual_axis_error_bars")
     for line in ax.lines[:visualPlan.get("maxInlineStats", 4)]:
         x = np.asarray(line.get_xdata(), dtype=float)
         y = np.asarray(line.get_ydata(), dtype=float)
@@ -583,6 +1004,7 @@ def _enhance_time_series(ax, dataProfile, visualPlan, palette, col_map):
         ax.scatter([x[peak_idx]], [y[peak_idx]], s=14, facecolor="white",
                    edgecolor=line.get_color(), linewidth=0.6, zorder=7)
         enhancements.append("endpoint_and_peak_labels")
+        _record_motif(visualPlan, "endpoint_peak_labels")
     if ax.lines:
         main_line = ax.lines[0]
         x0 = np.asarray(main_line.get_xdata(), dtype=float)
@@ -591,6 +1013,7 @@ def _enhance_time_series(ax, dataProfile, visualPlan, palette, col_map):
             change = y0[-1] - y0[0]
             _add_inplot_label(ax, f"endpoint delta={change:+.2g}", visualPlan, loc="upper_right")
             enhancements.append("endpoint_delta_label")
+            _record_motif(visualPlan, "trajectory_delta_label")
         _add_metric_box(ax, [f"series={len(ax.lines)}", "endpoints labeled"], visualPlan)
     return enhancements or ["time_context"]
 
@@ -619,8 +1042,10 @@ def _enhance_clinical(ax, dataProfile, visualPlan, palette, col_map, chart_type)
     scores = _numeric_values(df, score_col)
     labels = _numeric_values(df, label_col)
     lines = []
-    if chart_type in ("roc", "calibration") and ax.get_xlim()[0] <= 0 <= ax.get_xlim()[1]:
+    if chart_type in ("roc", "pr_curve", "calibration") and ax.get_xlim()[0] <= 0 <= ax.get_xlim()[1]:
         ax.plot([0, 1], [0, 1], color="#999999", lw=0.55, ls="--", label="_nolegend_")
+        _visual_count(visualPlan, "referenceLineCount")
+        _record_motif(visualPlan, "diagnostic_reference_line")
     if len(scores) == len(labels) and len(scores):
         auc = _auc_from_scores(labels, scores)
         if auc is not None:
@@ -634,6 +1059,7 @@ def _enhance_clinical(ax, dataProfile, visualPlan, palette, col_map, chart_type)
     if lines:
         _add_inplot_label(ax, "\n".join(lines[:2]), visualPlan, loc="upper_left")
     _add_metric_box(ax, lines or ["clinical summary"], visualPlan)
+    _record_motif(visualPlan, "diagnostic_metric_box")
     return ["clinical_metric_summary", "inplot_clinical_label"]
 
 
@@ -654,6 +1080,8 @@ def _enhance_genomics(ax, dataProfile, visualPlan, palette, col_map, chart_type)
     ax.axvline(-1, color="#888888", lw=0.5, ls="--")
     ax.axvline(1, color="#888888", lw=0.5, ls="--")
     ax.axhline(1.3, color="#888888", lw=0.5, ls="--")
+    _visual_count(visualPlan, "referenceLineCount")
+    _record_motif(visualPlan, "threshold_reference_lines")
     hits = int(np.sum((np.abs(x) >= 1) & (y >= 1.3)))
     _add_inplot_label(ax, f"hits={hits}\nthresholded", visualPlan, loc="upper_right")
     if label_col and df is not None and label_col in df:
@@ -662,6 +1090,7 @@ def _enhance_genomics(ax, dataProfile, visualPlan, palette, col_map, chart_type)
             ax.annotate(str(df.iloc[idx][label_col])[:18], (x[idx], y[idx]),
                         xytext=(3, 3), textcoords="offset points", fontsize=4.5,
                         arrowprops={"arrowstyle": "-", "lw": 0.25, "color": "#555555"})
+        _record_motif(visualPlan, "top_feature_callouts")
     _add_metric_box(ax, [f"features={len(x)}", f"hits={hits}", "|log2FC|>=1", "FDR/p>=line"], visualPlan)
     return ["threshold_lines", "top_feature_callouts", "hit_summary", "inplot_hit_label"]
 
@@ -681,6 +1110,8 @@ def _enhance_engineering(ax, dataProfile, visualPlan, palette, col_map):
                     arrowprops={"arrowstyle": "-", "lw": 0.3, "color": "#555555"})
         _add_inplot_label(ax, f"peak window\n{x[peak_idx]:.3g}, {y[peak_idx]:.3g}", visualPlan, loc="upper_left")
         _add_metric_box(ax, [f"n={len(y)}", f"peak={y[peak_idx]:.3g}", f"range={np.nanmin(y):.2g}..{np.nanmax(y):.2g}"], visualPlan)
+        _record_motif(visualPlan, "peak_window_callout")
+        _record_motif(visualPlan, "range_summary_box")
         return ["peak_annotation", "range_summary", "inplot_peak_label"]
     _add_metric_box(ax, ["engineering summary"], visualPlan)
     return ["engineering_context"]
@@ -699,6 +1130,7 @@ def _enhance_composition(ax, dataProfile, visualPlan, palette, col_map):
         lines.append(f"categories={df[group_col].nunique()}")
     _add_inplot_label(ax, "\n".join(lines[:2]) if lines else "composition", visualPlan, loc="upper_left")
     _add_metric_box(ax, lines or ["composition summary"], visualPlan)
+    _record_motif(visualPlan, "composition_summary")
     return ["composition_summary", "inplot_composition_label"]
 
 
@@ -713,6 +1145,7 @@ def _enhance_psych_ecology(ax, dataProfile, visualPlan, palette, col_map):
     else:
         _add_inplot_label(ax, "rank/proportion view", visualPlan, loc="upper_left")
         _add_metric_box(ax, ["rank/proportion view"], visualPlan)
+    _record_motif(visualPlan, "response_summary")
     return ["reference_band", "descriptive_summary", "inplot_response_label"]
 
 
@@ -727,6 +1160,7 @@ def _enhance_generic(ax, dataProfile, visualPlan, palette, col_map):
     _maybe_reference_zero(ax)
     _add_inplot_label(ax, f"n={n}" if n is not None else "descriptive view", visualPlan, loc="upper_left")
     _add_metric_box(ax, [f"n={n}" if n is not None else "descriptive view"], visualPlan)
+    _record_motif(visualPlan, "descriptive_summary_box")
     return ["descriptive_context", "inplot_context_label"]
 
 
@@ -786,7 +1220,17 @@ def apply_visual_content_pass(fig, axes, chartPlan, dataProfile, journalProfile,
         "appliedEnhancementCount": len(visualPlan.get("appliedEnhancements", [])),
         "inPlotExplanatoryLabelCount": visualPlan.get("inPlotExplanatoryLabelCount", 0),
         "metricBoxCount": visualPlan.get("metricBoxCount", 0),
+        "metricTableCount": visualPlan.get("metricTableCount", 0),
         "insetCount": visualPlan.get("insetCount", 0),
+        "referenceLineCount": visualPlan.get("referenceLineCount", 0),
+        "densityHaloCount": visualPlan.get("densityHaloCount", 0),
+        "sampleEncodingCount": visualPlan.get("sampleEncodingCount", 0),
+        "significanceStarLayerCount": visualPlan.get("significanceStarLayerCount", 0),
+        "dualAxisEncodingCount": visualPlan.get("dualAxisEncodingCount", 0),
+        "referenceMotifCount": visualPlan.get("referenceMotifCount", 0),
+        "minReferenceMotifsPerFigure": visualPlan.get("minReferenceMotifsPerFigure", 0),
+        "visualGrammarMotifs": visualPlan.get("visualGrammarMotifs", []),
+        "visualGrammarMotifsApplied": visualPlan.get("visualGrammarMotifsApplied", []),
         "minTotalEnhancements": visualPlan.get("minTotalEnhancements", 0),
         "minInPlotLabelsPerFigure": visualPlan.get("minInPlotLabelsPerFigure", 0),
         "families": families,

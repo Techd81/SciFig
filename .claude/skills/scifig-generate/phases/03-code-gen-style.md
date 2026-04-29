@@ -495,11 +495,11 @@ Each generator should:
 - Return its axis object when used inside multi-panel composition
 - Apply `apply_chart_polish(ax, chart_type)` after drawing data
 - Leave Nature/Cell dense overlays to `apply_visual_content_pass(...)` so all implemented charts share the same information-density contract
-- Do not rely on bare lines/points alone: `apply_visual_content_pass(...)` must add data-derived in-plot explanatory labels plus metric boxes, inset summaries, endpoint/peak labels, threshold labels, or effect/range summaries according to `visualContentPlan`
+- Do not rely on bare lines/points alone: `apply_visual_content_pass(...)` must add data-derived in-plot explanatory labels plus metric boxes/tables, inset summaries, endpoint/peak labels, threshold labels, perfect-fit/reference lines, density halos, sample-shape overlays, matrix labels, p-value star layers when p-values exist, dual-axis error bars when error columns exist, or effect/range summaries according to `visualContentPlan`
 
 ### Post-plot polish function (call after every chart generator)
 
-Generator functions draw the base chart and apply minimal polish only. The generated script then runs `apply_visual_content_pass(...)` before crowding management so content density is controlled centrally instead of being reimplemented chart-by-chart. The helper source in `phases/code-gen/helpers.py` is the execution source of truth for in-plot explanatory labels, enhancement counts, and residual axis-legend checks.
+Generator functions draw the base chart and apply minimal polish only. The generated script then runs `apply_visual_content_pass(...)` before crowding management so content density is controlled centrally instead of being reimplemented chart-by-chart. The helper source in `phases/code-gen/helpers.py` is the execution source of truth for in-plot explanatory labels, reference visual grammar motifs, metric tables, density halos, enhancement counts, and residual axis-legend checks.
 
 ```python
 def apply_chart_polish(ax, chart_type):
@@ -595,6 +595,14 @@ VISUAL_CONTENT_DEFAULTS = {
     "maxCalloutsSupport": 4,
     "maxInlineStats": 4,
     "useInsetAxes": True,
+    "referenceMotifsRequired": True,
+    "minReferenceMotifsPerFigure": 2,
+    "useMetricTables": True,
+    "useDensityHalos": True,
+    "usePerfectFitReference": True,
+    "useSampleShapeEncoding": True,
+    "useSignificanceStarLayer": True,
+    "useDualAxisErrorBars": True,
     "noInventedStats": True,
     "statProvenanceRequired": True,
     "outsideLayoutElements": True,
@@ -777,10 +785,23 @@ def default_visual_content_plan():
         **VISUAL_CONTENT_DEFAULTS,
         "appliedEnhancements": [],
         "familyByPanel": {},
+        "visualGrammarMotifs": [],
+        "visualGrammarMotifsApplied": [],
         "statProvenance": [],
+        "metricTableCount": 0,
+        "referenceLineCount": 0,
+        "densityHaloCount": 0,
+        "sampleEncodingCount": 0,
+        "significanceStarLayerCount": 0,
+        "dualAxisEncodingCount": 0,
+        "referenceMotifCount": 0,
         "renderQaHooks": {
             "trackMetricBoxes": True,
+            "trackMetricTables": True,
             "trackInsets": True,
+            "trackReferenceLines": True,
+            "trackDensityHalos": True,
+            "trackSampleEncodings": True,
             "trackOutsideArtists": True,
         },
     }
@@ -2131,6 +2152,8 @@ codeReview = {
     "forbiddenLegendScan": 'loc="best"' not in full_code_string and "loc='best'" not in full_code_string,
     "axisLegendGatePresent": "axisLegendRemainingCount" in full_code_string,
     "visualDensityGatePresent": "minTotalEnhancements" in full_code_string and "inPlotExplanatoryLabelCount" in full_code_string,
+    "referenceGrammarGatePresent": "minReferenceMotifsPerFigure" in full_code_string and "visualGrammarMotifsApplied" in full_code_string,
+    "predictionDiagnosticGatePresent": "metricTableCount" in full_code_string and "densityHaloCount" in full_code_string,
     "hasSourceDataHooks": "source_data" in full_code_string,
     "hasMetadataHooks": "metadata" in full_code_string,
     "panelBlueprintMatched": True,
@@ -2143,6 +2166,10 @@ if "axisLegendRemainingCount" not in full_code_string:
     codeReview["blockingFindings"].append("missing_axis_legend_remaining_gate")
 if "inPlotExplanatoryLabelCount" not in full_code_string or "minTotalEnhancements" not in full_code_string:
     codeReview["blockingFindings"].append("missing_visual_density_gate")
+if "minReferenceMotifsPerFigure" not in full_code_string or "visualGrammarMotifsApplied" not in full_code_string:
+    codeReview["blockingFindings"].append("missing_reference_visual_grammar_gate")
+if "metricTableCount" not in full_code_string or "densityHaloCount" not in full_code_string:
+    codeReview["blockingFindings"].append("missing_prediction_diagnostic_gate")
 if "savefig" not in full_code_string:
     codeReview["blockingFindings"].append("missing_savefig")
 
@@ -2172,8 +2199,8 @@ styledCode = {
 > 2. The active memory contains the full protocol, not sentinel-only content
 > 3. Generated code includes output directory creation, source-data hooks, and metadata writing
 > 4. Panel labels, legends, and colorbars are resolved once at figure scope where possible
-> 5. `codeReview.blockingFindings` is empty after syntax/import drift, missing generator coverage, forbidden `loc="best"`, source-data/metadata hooks, and panelBlueprint checks
-> 6. `full_code_string` embeds helper source from `phases/code-gen/helpers.py` and multi-panel source from `phases/code-gen/generators-multipanel.py`, keeps `crowdingPlan` and `visualContentPlan` attached to `chartPlan`, passes `ax` and `col_map` to generators, runs `apply_visual_content_pass(...)` before `apply_crowding_management(...)`, and writes `savefig` calls for all `workflowPreferences["exportFormats"]`, using `workflowPreferences["rasterDpi"]` for raster outputs
+> 5. `codeReview.blockingFindings` is empty after syntax/import drift, missing generator coverage, forbidden `loc="best"`, source-data/metadata hooks, reference visual grammar gates, and panelBlueprint checks
+> 6. `full_code_string` embeds helper source from `phases/code-gen/helpers.py` and multi-panel source from `phases/code-gen/generators-multipanel.py`, keeps `crowdingPlan` and `visualContentPlan` attached to `chartPlan`, passes `ax` and `col_map` to generators, runs `apply_visual_content_pass(...)` before `apply_crowding_management(...)`, tracks `visualGrammarMotifsApplied`, `metricTableCount`, `referenceLineCount`, and `densityHaloCount`, and writes `savefig` calls for all `workflowPreferences["exportFormats"]`, using `workflowPreferences["rasterDpi"]` for raster outputs
 
 
 > **Generator code**: Read [code-gen/generators-distribution.md](code-gen/generators-distribution.md) for distribution chart generators (violin_paired, violin_split, dot_strip, histogram, density, ecdf, joyplot, ridge, and 40+ additional chart types across genomics, engineering, ecology, and more).

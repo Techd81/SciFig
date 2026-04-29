@@ -532,6 +532,67 @@ def infer_visual_chart_family(chart_type):
     return "generic"
 
 
+def infer_reference_visual_motifs(charts, dataProfile):
+    roles = dataProfile.get("semanticRoles", {})
+    columns = [str(c).lower() for c in dataProfile.get("columnNames", [])]
+    role_values = [str(v).lower() for v in roles.values()]
+    families = [infer_visual_chart_family(chart) for chart in charts if chart]
+    tokens = " ".join(columns + role_values)
+    try:
+        n_obs = dataProfile.get("nObservations") or len(dataProfile.get("df"))
+    except TypeError:
+        n_obs = dataProfile.get("nObservations") or 0
+    motifs = []
+
+    def add(name):
+        if name not in motifs:
+            motifs.append(name)
+
+    if "matrix_heatmap" in families:
+        add("diverging_colorbar")
+        if n_obs <= 36:
+            add("cell_value_labels")
+        if any(token in tokens for token in ("pvalue", "p_value", "padj", "fdr", "qvalue")):
+            add("significance_star_layer")
+    if "scatter_embedding" in families:
+        add("trend_or_fit_reference")
+        if n_obs >= 6:
+            add("density_halo")
+        if any(token in tokens for token in ("actual", "observed", "measured", "experimental")) and any(
+            token in tokens for token in ("pred", "predict", "fitted", "estimate")
+        ):
+            add("perfect_fit_reference")
+            add("prediction_metric_table")
+        if any(token in tokens for token in ("sample", "source", "reference", "cohort", "batch")):
+            add("sample_shape_encoding")
+    if "distribution" in families:
+        add("sample_size_labels")
+        add("median_iqr_summary")
+    if "time_series" in families:
+        add("endpoint_peak_labels")
+        add("trajectory_delta_label")
+    if "engineering_spectra" in families:
+        add("peak_window_callout")
+        add("range_summary_box")
+    if "clinical_diagnostic" in families:
+        if any(str(chart).lower() in ("roc", "pr_curve", "calibration") for chart in charts if chart):
+            add("diagnostic_reference_line")
+        add("diagnostic_metric_box")
+    if "genomics_enrichment" in families:
+        add("threshold_reference_lines")
+        if any(token in tokens for token in ("gene", "feature", "label", "id")):
+            add("top_feature_callouts")
+    if "composition_flow" in families:
+        add("composition_summary")
+    if "psych_ecology" in families:
+        add("response_summary")
+    if any(token in tokens for token in ("rmse", "mae", "percent_error", "percentage_error", "error_pct")):
+        add("dual_axis_error_bars")
+    if not motifs:
+        add("descriptive_summary_box")
+    return motifs
+
+
 def build_visual_content_plan(primaryChart, secondaryCharts, dataProfile, workflowPreferences):
     scale_policy = globals().get("DATA_SCALE_POLICY", {
         "point_density_alpha_max": 1000,
@@ -551,6 +612,7 @@ def build_visual_content_plan(primaryChart, secondaryCharts, dataProfile, workfl
         point_annotation_mode = "group_summary"
     else:
         point_annotation_mode = "direct_when_legible"
+    reference_motifs = infer_reference_visual_motifs(charts, dataProfile)
 
     return {
         "mode": mode,
@@ -561,10 +623,20 @@ def build_visual_content_plan(primaryChart, secondaryCharts, dataProfile, workfl
         "maxInlineStats": 4,
         "minEnhancementsPerPanel": 2,
         "minTotalEnhancements": max(4, len(charts) * 2),
+        "referenceMotifsRequired": True,
+        "minReferenceMotifsPerFigure": min(max(1, len(reference_motifs)), max(2, min(3, len(charts) + 1))),
+        "visualGrammarMotifs": reference_motifs,
+        "visualGrammarMotifsApplied": [],
         "requireInPlotExplanatoryLabels": True,
         "minInPlotLabelsPerFigure": min(max(1, len(charts)), max_callouts),
         "semanticCalloutMode": "data_derived",
         "useInsetAxes": True,
+        "useMetricTables": True,
+        "useDensityHalos": True,
+        "usePerfectFitReference": True,
+        "useSampleShapeEncoding": True,
+        "useSignificanceStarLayer": True,
+        "useDualAxisErrorBars": True,
         "noInventedStats": True,
         "statProvenanceRequired": True,
         "pointAnnotationMode": point_annotation_mode,
@@ -572,7 +644,14 @@ def build_visual_content_plan(primaryChart, secondaryCharts, dataProfile, workfl
         "appliedEnhancements": [],
         "familyByPanel": {},
         "metricBoxCount": 0,
+        "metricTableCount": 0,
         "insetCount": 0,
+        "referenceLineCount": 0,
+        "densityHaloCount": 0,
+        "sampleEncodingCount": 0,
+        "significanceStarLayerCount": 0,
+        "dualAxisEncodingCount": 0,
+        "referenceMotifCount": 0,
         "inPlotExplanatoryLabelCount": 0,
         "outsideLayoutElements": True,
         "statProvenance": [],
@@ -580,6 +659,7 @@ def build_visual_content_plan(primaryChart, secondaryCharts, dataProfile, workfl
             "do_not_add_new_chart_types",
             "statistics_must_be_data_derived",
             "nature_cell_information_density",
+            "reference_visual_grammar_required",
             "minimum_inplot_explanatory_labels_required",
             "minimum_visual_enhancement_count_required"
         ]
@@ -674,7 +754,7 @@ Additionally, these advisory agents run after their respective plan steps:
 
 - `scientific-color-harmony`: after `palettePlan` is built, evaluates perceptual harmony, color-wheel relationships, and domain aesthetics. Writes to `chartPlan.delegationReports.color_harmony`.
 - `layout-aesthetics`: after `panelBlueprint` is built, evaluates whitespace balance, visual weight distribution, panel proportions, and grid harmony. Writes to `chartPlan.delegationReports.aesthetics`.
-- `content-richness`: after `visualContentPlan` is built, evaluates annotation density, label informativeness, marker diversity, and directional elements. Writes to `chartPlan.delegationReports.content_richness`.
+- `content-richness`: after `visualContentPlan` is built, evaluates annotation density, label informativeness, reference visual grammar motifs, marker diversity, and directional elements. Writes to `chartPlan.delegationReports.content_richness`.
 
 These three advisory agents are non-blocking — findings are logged but do not block Phase 3 entry.
 
@@ -706,7 +786,9 @@ richness = Agent(
     subagent_type="general-purpose",
     prompt=f"Evaluate the content richness of this figure's visual content plan. "
            f"Plan: {visualContentPlan}. Chart types: {[p['chart'] for p in panels]}. "
-           f"Assess: annotation density, label informativeness, marker diversity, directional elements. "
+           f"Assess: annotation density, label informativeness, reference visual grammar motifs "
+           f"(metric tables, perfect-fit lines, density halos, significance stars when p-values exist, "
+           f"dual-axis error bars when error columns exist), marker diversity, directional elements. "
            f"Return JSON: {{\"richness_score\": 0-100, \"findings\": [...], \"suggestions\": [...]}}"
 )
 chartPlan["delegationReports"]["content_richness"] = richness

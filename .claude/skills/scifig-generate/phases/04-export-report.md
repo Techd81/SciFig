@@ -108,6 +108,16 @@ render_qa = {
     "minVisualEnhancementCount": chartPlan.get("visualContentPlan", {}).get("minTotalEnhancements", 0),
     "inPlotExplanatoryLabelCount": chartPlan.get("visualContentPlan", {}).get("inPlotExplanatoryLabelCount", 0),
     "minInPlotExplanatoryLabels": chartPlan.get("visualContentPlan", {}).get("minInPlotLabelsPerFigure", 0),
+    "referenceMotifCount": chartPlan.get("visualContentPlan", {}).get("referenceMotifCount", 0),
+    "minReferenceMotifCount": chartPlan.get("visualContentPlan", {}).get("minReferenceMotifsPerFigure", 0),
+    "visualGrammarMotifs": chartPlan.get("visualContentPlan", {}).get("visualGrammarMotifs", []),
+    "visualGrammarMotifsApplied": chartPlan.get("visualContentPlan", {}).get("visualGrammarMotifsApplied", []),
+    "metricTableCount": chartPlan.get("visualContentPlan", {}).get("metricTableCount", 0),
+    "referenceLineCount": chartPlan.get("visualContentPlan", {}).get("referenceLineCount", 0),
+    "densityHaloCount": chartPlan.get("visualContentPlan", {}).get("densityHaloCount", 0),
+    "sampleEncodingCount": chartPlan.get("visualContentPlan", {}).get("sampleEncodingCount", 0),
+    "significanceStarLayerCount": chartPlan.get("visualContentPlan", {}).get("significanceStarLayerCount", 0),
+    "dualAxisEncodingCount": chartPlan.get("visualContentPlan", {}).get("dualAxisEncodingCount", 0),
     "paletteContrastCheck": chartPlan.get("palettePlan", {}).get("contrastAuditRequired", True),
     "editableTextCheck": "required_for_svg_pdf",
     "overlapFailures": [],
@@ -134,6 +144,10 @@ if render_qa["visualEnhancementCount"] < render_qa["minVisualEnhancementCount"]:
 
 if render_qa["inPlotExplanatoryLabelCount"] < render_qa["minInPlotExplanatoryLabels"]:
     render_qa["contentDensityFailures"].append("inplot_explanatory_labels_below_minimum")
+
+if chartPlan.get("visualContentPlan", {}).get("referenceMotifsRequired", True):
+    if render_qa["referenceMotifCount"] < render_qa["minReferenceMotifCount"]:
+        render_qa["contentDensityFailures"].append("reference_visual_motif_count_below_minimum")
 
 if chartPlan.get("visualContentPlan", {}).get("statProvenanceRequired", True):
     for enhancement in chartPlan.get("visualContentPlan", {}).get("appliedEnhancements", []):
@@ -177,6 +191,7 @@ Hard failures:
 - legend, colorbar, metric boxes, panel labels, or direct labels overlap plotted data
 - any axis-level legend remains after crowding management
 - visual content is under-dense: too few data-derived enhancements or no in-plot explanatory labels
+- required reference visual grammar is missing: too few data-supported motif layers such as metric tables, perfect-fit/reference lines, density halos, matrix labels, p-value stars, sample-shape overlays, or dual-axis error bars
 - output artifact is missing, blank, or implausibly small
 - requested vector text is not editable in SVG/PDF
 - `legendOutsidePlotArea` is false

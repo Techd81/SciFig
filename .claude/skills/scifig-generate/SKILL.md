@@ -43,9 +43,10 @@ End-to-end workflow for turning real experimental data into submission-ready sci
 3. **Narrative multi-panel design**: Treat multi-panel figures as a story with hero, support, validation, and mechanism panels rather than a loose grid of unrelated plots.
 4. **Palette governance**: Prefer restrained, colorblind-safe palettes; keep semantic mappings consistent across panels; avoid rainbow and uncontrolled red-green contrasts.
 5. **Statistical honesty**: No inferential claims without replicate or cohort meaning. When data only support descriptive visualization, say so.
-6. **Policy-driven defaults**: Thresholds for scale, crowding, visual density, render retries, and export QA come from shared workflow policies rather than ad-hoc literals.
-7. **Agent-assisted quality gates**: Use read-only Agents for complex schema review, chart/stat planning, layout/palette audit, generated-code review, and rendered QA.
-8. **Reproducibility-first**: Every figure should be exportable as code plus metadata, source-data manifests, render-QA evidence, and methods-ready statistical descriptions.
+6. **Reference visual grammar**: Add data-supported evidence layers that make figures look like dense top-journal panels: metric tables, perfect-fit/reference lines, density halos, sample-shape overlays, matrix cell labels, p-value stars only when supplied, and dual-axis error bars only when error columns exist.
+7. **Policy-driven defaults**: Thresholds for scale, crowding, visual density, render retries, and export QA come from shared workflow policies rather than ad-hoc literals.
+8. **Agent-assisted quality gates**: Use read-only Agents for complex schema review, chart/stat planning, layout/palette audit, generated-code review, and rendered QA.
+9. **Reproducibility-first**: Every figure should be exportable as code plus metadata, source-data manifests, render-QA evidence, and methods-ready statistical descriptions.
 
 ## Interactive Preference Collection
 
@@ -184,12 +185,12 @@ Blocking agent findings must route back to the owning phase before advancing. Ne
 7. If legend space is tight, adjust columns, shorten labels, reduce spacing, increase margins, or reflow panels before allowing any legend to overlap curves, bars, points, error bars, confidence bands, grids, or heatmap cells.
 8. Use shared legends or shared colorbars when panels encode the same semantics.
 9. Multi-panel figures must have an explicit panel blueprint before code generation.
-10. For implemented single-panel charts, increase Nature/Cell-style information density through data-derived summaries, in-plot explanatory labels, reference lines, callouts, insets, sample-size labels, and effect-size context before adding new chart types.
+10. For implemented single-panel charts, increase Nature/Cell-style information density through data-derived summaries, in-plot explanatory labels, reference lines, callouts, insets, sample-size labels, metric tables, prediction diagnostics, density halos, matrix labels, and effect-size context before adding new chart types.
 11. Do not invent statistics for visual impact. Every p-value, AUC, effect size, threshold count, or fitted parameter must come from the supplied data or a documented upstream result.
 12. Prefer vector export and generate source-data friendly artifacts for quantitative panels.
 13. If domain inference is weak, fall back to general biomedical rules instead of overfitting to a guessed specialty.
 14. If statistical assumptions are uncertain, downgrade to a conservative or descriptive choice and explain why.
-15. If rendered QA reports overlap, blank/tiny output, any remaining in-axes legend, too few visual enhancements, missing in-plot explanatory labels, non-editable vector text, or missing formats, return to Phase 3 or Phase 2 before declaring completion.
+15. If rendered QA reports overlap, blank/tiny output, any remaining in-axes legend, too few visual enhancements, missing reference visual grammar motifs, missing in-plot explanatory labels, non-editable vector text, or missing formats, return to Phase 3 or Phase 2 before declaring completion.
 16. Use `specs/workflow-policies.md` for thresholds and budgets; do not add new magic numbers in phase logic without naming the policy.
 
 ## Input Processing
