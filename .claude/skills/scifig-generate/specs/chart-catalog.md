@@ -2,7 +2,7 @@
 
 Expanded chart taxonomy for `scifig-generate`. Use this as the lookup table during Phase 2.
 
-**Status**: ✅ = implemented (120); every registered chart has a dedicated `gen_` implementation.
+**Status**: ✅ = implemented (121); every registered chart has a dedicated `gen_` implementation.
 
 ## Core Quantitative Charts
 
@@ -47,6 +47,7 @@ Expanded chart taxonomy for `scifig-generate`. Use this as the lookup table duri
 | `pr_curve` | ✅ | score + binary label (imbalanced) | Precision-recall assessment |
 | `calibration` | ✅ | predicted risk + observed outcome | Calibration of risk models |
 | `classifier_validation_board` | ✅ | score/probability + binary label, optional threshold or true/predicted classes | ROC + PR + calibration + threshold/confusion storyboard |
+| `rf_classifier_report_board` | ✅ | Random Forest/RF + score/label + feature importance/SHAP/gain | RF classifier validation plus feature-importance report board |
 | `training_curve` | ✅ | epoch/step + loss/accuracy/validation metrics | Neural-network training dynamics |
 | `model_architecture` | ✅ | layer/module/source-target architecture tables | Neural-network or ML pipeline topology |
 | `model_architecture_board` | ✅ | architecture topology plus latency/FLOPs/memory/edge metrics | Architecture plus metric storyboard with support axes |

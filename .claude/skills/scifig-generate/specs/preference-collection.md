@@ -273,6 +273,15 @@ _TEMPLATE_CHART_BUNDLE_SEEDS = {
             "zh": ("随机森林模型报告套餐（推荐）", "当数据含 model/algorithm、训练测试指标、预测-真实值或残差字段时，直接复刻 RF 案例：指标横向柱、带边缘分布的 1:1 预测散点、残差面板。"),
         },
         {
+            "key": "rf_classifier_validation_report",
+            "charts": ["rf_classifier_report_board", "classifier_validation_board", "lollipop_horizontal", "dotplot"],
+            "families": ["ml_model_diagnostics", "shap_composite"],
+            "techniqueRefs": ["template-mining/07-techniques/ml-model-diagnostics.md", "template-mining/07-techniques/shap-composite.md"],
+            "anchors": ["鎷掔粷榛樿閰嶈壊锛歅ython 缁樺埗澶氭ā鍨嬫€ц兘瀵规瘮鍥剧殑杩涢樁瀹炴垬_1777451272.md", "鏈熷垔澶嶇幇锛氶殢鏈烘．鏋?RF)妯″瀷椹卞姩鐨凟FI鐗瑰緛閲嶈搴︽潯褰㈠浘涓嶴HAP鍦嗙幆鍥惧彲瑙嗗寲_1777456510.md"],
+            "en": ("RF classifier validation + importance board", "Use when RF/Random Forest classifier probability and label fields appear with feature importance, SHAP, gain, or permutation fields; render validation and explanation together."),
+            "zh": ("RF 分类验证 + 重要性板", "当 RF/Random Forest 分类概率、标签和特征重要性/SHAP/gain/permutation 字段同时出现时，同图展示验证与解释。"),
+        },
+        {
             "key": "neural_architecture_topology",
             "charts": ["model_architecture_board", "model_architecture", "parallel_coordinates"],
             "families": ["ml_model_diagnostics", "time_series_pi", "shap_composite"],

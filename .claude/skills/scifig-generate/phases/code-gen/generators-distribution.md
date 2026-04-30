@@ -4226,7 +4226,8 @@ def gen_classifier_validation_board(df, dataProfile, chartPlan, rcParams, palett
         fig, ax = plt.subplots(figsize=(183 / 25.4, 128 / 25.4), constrained_layout=False)
     fig = ax.figure
     ax.set_axis_off()
-    ax.set_title("Classifier validation board", loc="left", fontsize=8.2, fontweight="bold", pad=7)
+    if not chartPlan.get("suppressBoardTitle"):
+        ax.set_title("Classifier validation board", loc="left", fontsize=8.2, fontweight="bold", pad=7)
 
     visual_plan = chartPlan.get("visualContentPlan", {}) if isinstance(chartPlan, dict) else {}
     if callable(globals().get("_record_template_motif")):
@@ -4376,7 +4377,158 @@ def gen_classifier_validation_board(df, dataProfile, chartPlan, rcParams, palett
                      bbox=dict(boxstyle="round,pad=0.24", facecolor="white", edgecolor=gray, linewidth=0.45, alpha=0.95))
     _polish_subaxis(axes["thr"], "D. Threshold + confusion sidecar")
 
-    fig.subplots_adjust(left=0.05, right=0.98, top=0.93, bottom=0.09)
+    if standalone:
+        fig.subplots_adjust(left=0.05, right=0.98, top=0.93, bottom=0.09)
+    return ax
+
+
+def gen_rf_classifier_report_board(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=None):
+    """Random-forest classifier report: validation board plus feature-importance lane."""
+    standalone = ax is None
+    plt.rcParams.update(rcParams)
+    roles = dataProfile.get("semanticRoles", {})
+    columns_lower = {str(c).lower(): c for c in df.columns}
+
+    def _role_or_col(*names, contains=()):
+        for name in names:
+            col = roles.get(name)
+            if col in df.columns:
+                return col
+        for name in names:
+            col = columns_lower.get(str(name).lower())
+            if col in df.columns:
+                return col
+        for col in df.columns:
+            lowered = str(col).lower()
+            if any(token in lowered for token in contains):
+                return col
+        return None
+
+    score_col = _role_or_col("score", "probability", "proba", "prediction_score", "y_score")
+    label_col = _role_or_col("label", "true_label", "actual_label", "y_true", "event", "class")
+    feature_col = _role_or_col("feature_id", "feature", "feature_name", "variable", "term", contains=("feature", "variable"))
+    importance_col = _role_or_col(
+        "importance", "feature_importance", "mean_abs_shap", "gain", "permutation", "shap_value", "value",
+        contains=("importance", "mean_abs_shap", "gain", "permutation", "shap")
+    )
+    model_col = _role_or_col("model", "algorithm", "estimator", contains=("model", "algorithm", "estimator"))
+    if score_col is None or label_col is None:
+        raise ValueError("rf_classifier_report_board requires score/probability and binary label columns")
+
+    if standalone:
+        fig, ax = plt.subplots(figsize=(183 / 25.4, 128 / 25.4), constrained_layout=False)
+    fig = ax.figure
+    ax.set_axis_off()
+    ax.set_title("Random-forest classifier report", loc="left", fontsize=8.4, fontweight="bold", pad=7)
+
+    visual_plan = chartPlan.get("visualContentPlan", {}) if isinstance(chartPlan, dict) else {}
+    if callable(globals().get("_record_template_motif")):
+        _record_template_motif(visual_plan, "rf_classifier_report_board")
+        _record_template_motif(visual_plan, "classifier_validation_board")
+        _record_template_motif(visual_plan, "explainability_importance_stack")
+        _record_template_motif(visual_plan, "classification_error_matrix")
+        _record_template_motif(visual_plan, "metric_table_in_panel")
+    if callable(globals().get("_visual_count")):
+        _visual_count(visual_plan, "metricBoxCount")
+        _visual_count(visual_plan, "panelLabelCount")
+
+    validation_ax = ax.inset_axes([0.025, 0.060, 0.645, 0.855])
+    importance_ax = ax.inset_axes([0.725, 0.325, 0.245, 0.535])
+    summary_ax = ax.inset_axes([0.725, 0.080, 0.245, 0.155])
+
+    validation_plan = dict(chartPlan or {})
+    validation_plan["primaryChart"] = "classifier_validation_board"
+    validation_plan["suppressBoardTitle"] = True
+    validation_plan["templateCasePlan"] = {"bundleKey": "classifier_validation_board"}
+    gen_classifier_validation_board(df, dataProfile, validation_plan, rcParams, palette, col_map=col_map, ax=validation_ax)
+
+    colors = palette.get("categorical", ["#1F4E79", "#D55E00", "#009E73", "#7A6C8F"])
+    if feature_col and importance_col and feature_col in df.columns and importance_col in df.columns:
+        feature_df = df[[feature_col, importance_col]].dropna().copy()
+        feature_df[importance_col] = pd.to_numeric(feature_df[importance_col], errors="coerce")
+        feature_df = feature_df.dropna(subset=[importance_col])
+        if not feature_df.empty:
+            feature_df = (
+                feature_df.groupby(feature_col, as_index=False)[importance_col]
+                .mean()
+                .assign(_abs=lambda frame: frame[importance_col].abs())
+                .nlargest(min(12, feature_df[feature_col].nunique()), "_abs")
+                .sort_values("_abs", ascending=True)
+            )
+    else:
+        feature_df = pd.DataFrame()
+
+    importance_ax.set_title("E. RF feature importance", loc="left", fontsize=6.8, fontweight="bold", pad=3)
+    if not feature_df.empty:
+        values = feature_df[importance_col].astype(float).to_numpy()
+        labels = [str(value).replace("_", " ")[:24] for value in feature_df[feature_col]]
+        denom = max(float(np.nanmax(np.abs(values))), 1e-12)
+        scaled = np.abs(values) / denom
+        y = np.arange(len(labels))
+        bar_colors = [colors[min(len(colors) - 1, int(frac * (len(colors) - 1)))] for frac in scaled]
+        importance_ax.barh(y, scaled, color=bar_colors, edgecolor="white", linewidth=0.35, height=0.68)
+        importance_ax.set_yticks(y)
+        importance_ax.set_yticklabels(labels, fontsize=4.9)
+        importance_ax.set_xlim(0, 1.10)
+        importance_ax.set_xlabel("Relative importance", fontsize=5.4)
+        importance_ax.tick_params(axis="x", labelsize=4.8, length=2, width=0.35)
+        importance_ax.tick_params(axis="y", length=0, pad=1.5)
+        for yi, value, frac in zip(y, values, scaled):
+            importance_ax.text(min(frac + 0.025, 1.03), yi, f"{value:.2g}", va="center", ha="left", fontsize=4.6)
+    else:
+        importance_ax.text(0.5, 0.55, "Feature importance\nnot supplied", ha="center", va="center",
+                           fontsize=5.6, color="#555555", transform=importance_ax.transAxes)
+        importance_ax.set_xticks([])
+        importance_ax.set_yticks([])
+    for side in ("top", "right"):
+        importance_ax.spines[side].set_visible(False)
+    for side in ("left", "bottom"):
+        importance_ax.spines[side].set_linewidth(0.45)
+
+    summary_ax.set_axis_off()
+    score = pd.to_numeric(df[score_col], errors="coerce")
+    raw_label = df[label_col]
+    if pd.api.types.is_numeric_dtype(raw_label):
+        label = pd.to_numeric(raw_label, errors="coerce")
+        unique_labels = sorted([v for v in label.dropna().unique().tolist()], key=lambda value: str(value))
+        positive_label = unique_labels[-1] if unique_labels else 1
+        y_true = (label == positive_label).astype(int)
+    else:
+        unique_labels = sorted(raw_label.dropna().astype(str).unique().tolist())
+        positive_label = unique_labels[-1] if unique_labels else "positive"
+        y_true = raw_label.astype(str).eq(str(positive_label)).astype(int)
+    valid = score.notna() & y_true.notna()
+    score = score[valid].clip(0, 1).to_numpy()
+    y_true = y_true[valid].to_numpy()
+    thresholds = np.linspace(0.05, 0.95, 19)
+    f1_values = []
+    for threshold in thresholds:
+        pred = score >= threshold
+        tp = float(np.sum((pred == 1) & (y_true == 1)))
+        fp = float(np.sum((pred == 1) & (y_true == 0)))
+        fn = float(np.sum((pred == 0) & (y_true == 1)))
+        precision_t = tp / max(tp + fp, 1.0)
+        recall_t = tp / max(tp + fn, 1.0)
+        f1_values.append(2 * precision_t * recall_t / max(precision_t + recall_t, 1e-12))
+    best_idx = int(np.nanargmax(f1_values)) if f1_values else 0
+    model_name = "Random Forest"
+    if model_col and model_col in df.columns:
+        model_values = [str(value) for value in df[model_col].dropna().unique().tolist()]
+        if model_values:
+            model_name = model_values[0][:22]
+    summary_lines = [
+        model_name,
+        f"n={len(score)}  pos={int(np.sum(y_true == 1))}",
+        f"best F1={float(f1_values[best_idx]):.3f}",
+        f"thr={float(thresholds[best_idx]):.2f}",
+        f"features={len(feature_df) if not feature_df.empty else 0}",
+    ]
+    summary_ax.text(0.02, 0.98, "\n".join(summary_lines), transform=summary_ax.transAxes,
+                    ha="left", va="top", fontsize=5.4,
+                    bbox=dict(boxstyle="round,pad=0.28", facecolor="white", edgecolor="#333333", linewidth=0.45, alpha=0.96))
+
+    if standalone:
+        fig.subplots_adjust(left=0.035, right=0.985, top=0.92, bottom=0.08)
     return ax
 
 

@@ -66,7 +66,7 @@ TEMPLATE_MATCH_POLICY = {
         "model", "algorithm", "estimator", "random forest", "rf", "rfr",
         "xgboost", "lightgbm", "gbdt", "svm", "knn", "probability", "proba", "threshold", "train", "test",
         "validation", "cv", "auc", "accuracy", "f1", "precision", "recall",
-        "r2", "rmse", "mae", "residual", "shap", "feature_importance",
+        "r2", "rmse", "mae", "residual", "shap", "feature_importance", "rf_classifier_report_board",
         "confusion", "confusion_matrix", "classification_error",
         "true_label", "actual_label", "predicted_label", "prediction_label", "y_pred",
         "epoch", "learning_curve", "training_curve", "training_history",
@@ -79,6 +79,7 @@ TEMPLATE_MATCH_POLICY = {
     ],
     "preferred_ml_bundle_order": [
         "rf_model_performance_report",
+        "rf_classifier_validation_report",
         "neural_architecture_metric_storyboard",
         "neural_architecture_topology",
         "neural_training_dynamics",
@@ -91,7 +92,7 @@ TEMPLATE_MATCH_POLICY = {
 }
 ```
 
-If a user-selected or inferred domain contains AI/ML/computer-science signals, Phase 2 must route to `computer_ai_ml` before generic biomedical or engineering defaults. If layer/module/component or source-target topology fields are present with latency, FLOPs, memory, throughput, cost, edge_weight, or parameter metrics, prefer `model_architecture_board` and the `neural_architecture_metric_storyboard` bundle over a plain topology diagram. If topology metrics are absent, the neural architecture topology bundle is still preferred over generic flow diagrams. If probability/score plus label or threshold fields exist, prefer `classifier_validation_board` over separate ROC/PR/calibration singles. If Random Forest/RF/RFR is present and the schema supports model metrics, actual/predicted, residuals, or feature importance, the RF anchor cases are preferred over generic prediction diagnostics.
+If a user-selected or inferred domain contains AI/ML/computer-science signals, Phase 2 must route to `computer_ai_ml` before generic biomedical or engineering defaults. If layer/module/component or source-target topology fields are present with latency, FLOPs, memory, throughput, cost, edge_weight, or parameter metrics, prefer `model_architecture_board` and the `neural_architecture_metric_storyboard` bundle over a plain topology diagram. If RF/Random Forest data contain probability/score, label, and feature-importance/SHAP/gain fields, prefer `rf_classifier_report_board`. If probability/score plus label or threshold fields exist without explainability fields, prefer `classifier_validation_board` over separate ROC/PR/calibration singles. If Random Forest/RF/RFR is present and the schema supports model metrics, actual/predicted, residuals, or feature importance, the RF anchor cases are preferred over generic prediction diagnostics.
 
 ## Autonomous Distillation Policy
 

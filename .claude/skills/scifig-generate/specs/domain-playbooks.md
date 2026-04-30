@@ -49,12 +49,13 @@ Domain playbooks bias charting, statistics, panel stories, and color semantics.
 - Hero: `grouped_bar` model benchmark when model and train/test metric columns are present
 - Hero: `model_architecture_board` when source-target or module architecture fields also include latency, FLOPs, memory, throughput, cost, edge_weight, or parameter metrics
 - Hero: `model_architecture` when layer/module/component or source-target architecture fields are present without enough metric columns for a board
+- Hero: `rf_classifier_report_board` when RF/Random Forest data include score/probability, label, and feature importance / SHAP / gain fields
 - Hero: `classifier_validation_board` when score/probability plus label or threshold fields are present
 - Hero: `training_curve` when epoch/step plus loss, validation loss, accuracy, or learning-rate columns are present
 - Support: `scatter_regression` predicted-vs-actual parity panel
 - Support: `residual_vs_fitted` or `line` for residuals, cross-validation, or feature-count curves
 - Explainability: `lollipop_horizontal`, `dotplot`, or `heatmap_annotated` for importance / SHAP fields
-- Classifier errors: `classifier_validation_board` first, then `confusion_matrix` when only true/predicted labels are present
+- Classifier errors: `rf_classifier_report_board` first when RF feature importance is also available; otherwise `classifier_validation_board`, then `confusion_matrix` when only true/predicted labels are present
 - Rule: if RF/Random Forest/RFR appears and schema is compatible, use the RF template anchors before generic prediction charts
 
 ### Pharmacology

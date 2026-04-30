@@ -300,7 +300,7 @@ def gen_requirements(chartPlan):
     secondary = chartPlan["secondaryCharts"]
     charts = [primary] + secondary
 
-    if any(c in charts for c in ("pca", "roc", "pr_curve", "calibration")):
+    if any(c in charts for c in ("pca", "rf_classifier_report_board", "classifier_validation_board", "roc", "pr_curve", "calibration")):
         requirements.append("scikit-learn>=1.3")
     if any(c in charts for c in ("km", "forest")):
         requirements.append("lifelines>=0.27")

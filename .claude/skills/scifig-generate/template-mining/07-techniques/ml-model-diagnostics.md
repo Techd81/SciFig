@@ -81,9 +81,19 @@ When columns include `score`, `probability`, `label`, `true_label`, `predicted_l
 - Use calibration bin marker size for sample count so imbalanced bins remain visible.
 - Executable fallback: `classifier_validation_board` creates a single self-contained four-panel board with ROC AUC, AP/F1, ECE, best threshold, and TP/FP/FN/TN sidecar. `roc` and `pr_curve` still detect `classifier_validation_board`, mark the Youden / best-F1 threshold with red points plus dashed guides, and move standalone legends to bottom center. `calibration` computes ECE, scales bin markers by sample count, shades the +/-0.05 calibration band, marks the worst bin, and reports ECE / bins / n in a compact metric box. `confusion_matrix` uses true/predicted labels or thresholded score data, annotates count plus row percentage per cell, outlines the diagonal, and reports accuracy / balanced accuracy / largest off-diagonal error.
 
+## RF Classifier Validation + Importance Board
+
+When RF/Random Forest classifier probability and label columns appear together with feature importance, SHAP, gain, or permutation columns, prefer `rf_classifier_report_board` before separate validation or feature-importance charts:
+
+- Keep the classifier validation board as the visual hero, then add a ranked RF feature-importance lane.
+- Use the feature importance values supplied by the data; do not fabricate importances from labels alone.
+- Add a compact model summary with n, positive count, best threshold, best F1, and number of ranked features.
+- Executable fallback: `rf_classifier_report_board` embeds `classifier_validation_board`, draws a top-12 relative importance lane, and records both classifier-validation and explainability motifs for render QA.
+
 ## Routing Rules
 
 - Prefer `rf_model_performance_report` when both model benchmark metrics and actual/predicted or residual fields exist.
+- Prefer `rf_classifier_validation_report` / `rf_classifier_report_board` when RF classifier score+label data also include feature importance or SHAP-style explanation fields.
 - Prefer `neural_architecture_metric_storyboard` / `model_architecture_board` when architecture fields include latency/FLOPs/memory/throughput/cost/edge metrics.
 - Prefer `neural_architecture_topology` when layer/module/component or source-target architecture fields exist without metric columns.
 - Prefer `neural_training_dynamics` when epoch/step training histories include loss, validation loss, accuracy, or learning-rate fields.

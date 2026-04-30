@@ -74,6 +74,20 @@ Reusable layout blueprints for multi-panel scientific figures.
 - Prefer `classifier_validation_board` as one self-contained single-chart generator when the user asks for one figure.
 - Use separate `roc`, `pr_curve`, `calibration`, and `confusion_matrix` panels only when the requested output is explicitly multi-panel.
 
+## Recipe 4c: RF Classifier Report Board
+
+**When to use**
+- RF/Random Forest probability + label fields together with feature importance, SHAP, gain, or permutation columns
+
+**Layout**
+- Left = embedded classifier validation board
+- Right upper = ranked top feature-importance lane
+- Right lower = compact RF model / threshold summary
+
+**Rules**
+- Prefer `rf_classifier_report_board` over separate validation and feature-importance figures when the user asks for one AI/ML manuscript figure.
+- If feature importance is absent, fall back to `classifier_validation_board` rather than inventing feature rankings.
+
 ## Density & Spacing Rules
 
 - `hspace=0.45` for 2-row layouts, `wspace=0.35` for 2-column layouts
