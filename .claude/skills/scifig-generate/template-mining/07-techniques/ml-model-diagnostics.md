@@ -29,6 +29,7 @@ When columns include `n_features`, `top_k`, `feature_count`, `ablation`, `AUC`, 
 - Sort legend order by final score.
 - Mark the elbow/decision point with vertical and horizontal dashed references.
 - Highlight RF when present, but keep other model trajectories visible for benchmark credibility.
+- Executable fallback: `line` detects `n_features` / `top_k` / `feature_count` / `ablation` tables, sorts model trajectories by final score, gives RF the strongest stroke, and marks the decision elbow with dashed guides plus an in-panel callout.
 
 ## RF Feature Importance + SHAP
 

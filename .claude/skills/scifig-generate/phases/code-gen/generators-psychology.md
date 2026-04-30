@@ -501,6 +501,8 @@ def gen_violin_grouped(df, dataProfile, chartPlan, rcParams, palette, col_map=No
 def gen_line(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=None):
     """Simple line chart for ordered time, dose, or index trends."""
     standalone = ax is None
+    import numpy as np
+    import pandas as pd
     plt.rcParams.update(rcParams)
     roles = dataProfile.get("semanticRoles", {})
     x_col = roles.get("x") or roles.get("time") or roles.get("dose") or roles.get("condition")
@@ -538,6 +540,7 @@ def gen_line(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=Non
         lower_is_better = any(token in score_name for token in ("rmse", "mae", "mse", "error", "loss"))
         color_map = _extract_colors(palette, df[group_col].dropna().unique()) if group_col and group_col in df.columns else {}
         groups = [(None, df)] if not group_col or group_col not in df.columns else list(df.groupby(group_col))
+        marker_cycle = ["o", "s", "^", "D", "v", "P", "X", "*"]
 
         def _final_score(item):
             _, grp = item
@@ -545,50 +548,95 @@ def gen_line(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=Non
             vals = pd.to_numeric(ordered[y_col], errors="coerce").dropna()
             return vals.iloc[-1] if len(vals) else np.nan
 
+        def _decision_point(grp):
+            ordered = grp.sort_values(x_col).copy()
+            ordered[x_col] = pd.to_numeric(ordered[x_col], errors="coerce")
+            ordered[y_col] = pd.to_numeric(ordered[y_col], errors="coerce")
+            ordered = ordered.dropna(subset=[x_col, y_col])
+            if len(ordered) < 3:
+                return ordered.iloc[-1] if len(ordered) else None
+            y_vals = ordered[y_col].to_numpy(dtype=float)
+            if lower_is_better:
+                gains = y_vals[:-1] - y_vals[1:]
+                total_gain = y_vals[0] - np.nanmin(y_vals)
+                if total_gain > 0:
+                    target = y_vals[0] - total_gain * 0.95
+                    matches = np.where(y_vals <= target)[0]
+                    if len(matches):
+                        return ordered.iloc[int(matches[0])]
+            else:
+                gains = y_vals[1:] - y_vals[:-1]
+                total_gain = np.nanmax(y_vals) - y_vals[0]
+                if total_gain > 0:
+                    target = y_vals[0] + total_gain * 0.95
+                    matches = np.where(y_vals >= target)[0]
+                    if len(matches):
+                        return ordered.iloc[int(matches[0])]
+            if len(gains) == 0:
+                return ordered.iloc[-1]
+            positive = gains[gains > 0]
+            threshold = max(float(np.nanmax(positive)) * 0.18, 1e-12) if len(positive) else 1e-12
+            elbow_offset = next((idx + 1 for idx, gain in enumerate(gains) if gain <= threshold), int(np.nanargmax(y_vals) if not lower_is_better else np.nanargmin(y_vals)))
+            elbow_offset = min(max(elbow_offset, 0), len(ordered) - 1)
+            return ordered.iloc[elbow_offset]
+
         groups = sorted(groups, key=_final_score, reverse=not lower_is_better)
+        decision_source = None
         for i, (name, grp) in enumerate(groups):
             ordered = grp.sort_values(x_col)
             label = "feature path" if name is None else str(name)
             is_rf = any(token in label.lower() for token in ("random forest", "rf", "rfr"))
+            if decision_source is None or is_rf:
+                decision_source = (label, ordered)
             ax.plot(
                 ordered[x_col], ordered[y_col],
-                marker="o" if is_rf else "s",
+                marker="o" if is_rf else marker_cycle[i % len(marker_cycle)],
                 markersize=4 if is_rf else 3,
-                lw=1.7 if is_rf else 0.9,
+                lw=1.9 if is_rf else 0.9,
                 alpha=1.0 if is_rf else 0.74,
                 color=color_map.get(name, fallback[i % len(fallback)]),
                 label=label,
                 zorder=4 if is_rf else 2,
+                markeredgecolor="#111111" if is_rf else "white",
+                markeredgewidth=0.45,
             )
-        metric_values = pd.to_numeric(df[y_col], errors="coerce")
-        if metric_values.notna().any():
-            best_idx = metric_values.idxmin() if lower_is_better else metric_values.idxmax()
-            best_x = df.loc[best_idx, x_col]
-            best_y = df.loc[best_idx, y_col]
-            ax.axvline(best_x, color="#444444", lw=0.65, ls="--", alpha=0.65, zorder=1)
-            ax.axhline(best_y, color="#444444", lw=0.65, ls="--", alpha=0.45, zorder=1)
-            ax.scatter([best_x], [best_y], s=34, color="#B00000", edgecolor="white", linewidth=0.5, zorder=5)
+        if decision_source is not None:
+            decision_label, decision_grp = decision_source
+            decision_row = _decision_point(decision_grp)
+        else:
+            decision_label, decision_row = "feature path", _decision_point(df)
+        if decision_row is not None:
+            best_x = decision_row[x_col]
+            best_y = decision_row[y_col]
+            ax.axvline(best_x, color="#444444", lw=0.75, ls="--", alpha=0.72, zorder=1)
+            ax.axhline(best_y, color="#444444", lw=0.65, ls="--", alpha=0.48, zorder=1)
+            ax.scatter([best_x], [best_y], s=42, color="#B00000", edgecolor="white", linewidth=0.55, zorder=5)
+            callout_x = 0.98 if standalone else 0.04
+            callout_ha = "right" if standalone else "left"
             ax.text(
-                best_x, best_y, f"best {x_col}={best_x}\n{y_col}={best_y:.3g}",
-                ha="left", va="bottom", fontsize=5.2, color="#111111",
+                callout_x, 0.06, f"best {x_col}={best_x:g}\n{decision_label[:14]} {best_y:.3g}",
+                transform=ax.transAxes, ha=callout_ha, va="bottom", fontsize=5.2, color="#111111",
                 bbox=dict(boxstyle="round,pad=0.22", facecolor="white", edgecolor="#333333", linewidth=0.45, alpha=0.92),
                 zorder=6,
             )
+        ax.xaxis.grid(True, linestyle="--", linewidth=0.3, alpha=0.25, zorder=0)
+        ax.yaxis.grid(True, linestyle="--", linewidth=0.3, alpha=0.25, zorder=0)
         ax.set_xlabel(_display_col(x_col, col_map))
-        ax.set_ylabel(_display_col(y_col, col_map))
+        ax.set_ylabel(_display_col(y_col, col_map) if standalone else "")
         handles, labels = ax.get_legend_handles_labels()
         if labels:
             ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.24), ncol=min(4, len(labels)),
                       frameon=False, fontsize=5)
-            if standalone:
-                try:
-                    if hasattr(ax.figure, "set_layout_engine"):
-                        ax.figure.set_layout_engine(None)
-                    else:
-                        ax.figure.set_constrained_layout(False)
-                except Exception:
-                    pass
-                ax.figure.subplots_adjust(bottom=max(ax.figure.subplotpars.bottom, 0.28))
+        if ax.figure is not None:
+            try:
+                if hasattr(ax.figure, "set_layout_engine"):
+                    ax.figure.set_layout_engine(None)
+                else:
+                    ax.figure.set_constrained_layout(False)
+            except Exception:
+                pass
+            sp = ax.figure.subplotpars
+            ax.figure.subplots_adjust(left=max(sp.left, 0.16), bottom=max(sp.bottom, 0.26), right=min(sp.right, 0.94))
     elif x_col is None:
         x_vals = np.arange(len(df))
         if group_col and group_col in df.columns:
