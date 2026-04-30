@@ -58,6 +58,22 @@ Reusable layout blueprints for multi-panel scientific figures.
 - C = `roc` or `pr_curve`
 - D = `calibration`
 
+## Recipe 4b: Classifier Validation Board
+
+**When to use**
+- Score/probability plus binary label, threshold tuning, AUC/F1/precision/recall, or classifier validation fields
+
+**Layout**
+- `2 x 2`
+- A = ROC discrimination
+- B = precision-recall
+- C = calibration bins
+- D = threshold sweep with compact confusion sidecar
+
+**Rules**
+- Prefer `classifier_validation_board` as one self-contained single-chart generator when the user asks for one figure.
+- Use separate `roc`, `pr_curve`, `calibration`, and `confusion_matrix` panels only when the requested output is explicitly multi-panel.
+
 ## Density & Spacing Rules
 
 - `hspace=0.45` for 2-row layouts, `wspace=0.35` for 2-column layouts

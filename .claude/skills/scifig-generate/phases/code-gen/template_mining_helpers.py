@@ -510,7 +510,7 @@ def build_grid(recipe: str, *, fig: Figure | None = None,
         axs = fig.subplots(1, 3, sharey=True)
         return fig, list(axs)
 
-    if recipe in ("R4b_rf_ml_diagnostic_triptych", "ml_model_performance_triptych", "architecture_metric_storyboard"):
+    if recipe in ("R4b_rf_ml_diagnostic_triptych", "ml_model_performance_triptych", "architecture_metric_storyboard", "classifier_validation_board"):
         fig = fig or plt.figure(figsize=figsize or (14, 10.6))
         gs = GridSpec(
             2,

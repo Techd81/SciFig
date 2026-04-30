@@ -4177,6 +4177,209 @@ def gen_confusion_matrix(df, dataProfile, chartPlan, rcParams, palette, col_map=
     return ax
 
 
+def gen_classifier_validation_board(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=None):
+    """Four-panel classifier board: ROC, PR, calibration, and threshold/confusion sidecar."""
+    standalone = ax is None
+    plt.rcParams.update(rcParams)
+    roles = dataProfile.get("semanticRoles", {})
+    columns_lower = {str(c).lower(): c for c in df.columns}
+
+    def _role_or_col(*names):
+        for name in names:
+            col = roles.get(name)
+            if col in df.columns:
+                return col
+        for name in names:
+            col = columns_lower.get(str(name).lower())
+            if col in df.columns:
+                return col
+        return None
+
+    score_col = _role_or_col("score", "probability", "proba", "prediction_score", "y_score", "value")
+    label_col = _role_or_col("label", "true_label", "actual_label", "y_true", "event", "class")
+    if score_col is None or label_col is None:
+        raise ValueError("classifier_validation_board requires score/probability and binary label columns")
+
+    work = df[[score_col, label_col]].dropna().copy()
+    if work.empty:
+        raise ValueError("classifier_validation_board requires non-empty score/label pairs")
+    score = pd.to_numeric(work[score_col], errors="coerce").astype(float).clip(0, 1)
+    raw_label = work[label_col]
+    if pd.api.types.is_numeric_dtype(raw_label):
+        label = pd.to_numeric(raw_label, errors="coerce")
+        unique_labels = sorted([v for v in label.dropna().unique().tolist()], key=lambda value: str(value))
+        positive_label = unique_labels[-1] if unique_labels else 1
+        y_true = (label == positive_label).astype(int).to_numpy()
+        label_valid = label.notna().to_numpy()
+    else:
+        unique_labels = sorted(raw_label.dropna().astype(str).unique().tolist())
+        positive_label = unique_labels[-1] if unique_labels else "positive"
+        y_true = raw_label.astype(str).eq(str(positive_label)).astype(int).to_numpy()
+        label_valid = raw_label.notna().to_numpy()
+    valid = np.isfinite(score.to_numpy()) & label_valid
+    score = score.to_numpy()[valid]
+    y_true = y_true[valid]
+    if len(score) == 0 or len(np.unique(y_true)) < 2:
+        raise ValueError("classifier_validation_board requires both positive and negative labels")
+
+    if standalone:
+        fig, ax = plt.subplots(figsize=(183 / 25.4, 128 / 25.4), constrained_layout=False)
+    fig = ax.figure
+    ax.set_axis_off()
+    ax.set_title("Classifier validation board", loc="left", fontsize=8.2, fontweight="bold", pad=7)
+
+    visual_plan = chartPlan.get("visualContentPlan", {}) if isinstance(chartPlan, dict) else {}
+    if callable(globals().get("_record_template_motif")):
+        _record_template_motif(visual_plan, "classifier_validation_board")
+        _record_template_motif(visual_plan, "classification_error_matrix")
+        _record_template_motif(visual_plan, "metric_table_in_panel")
+    if callable(globals().get("_visual_count")):
+        _visual_count(visual_plan, "referenceLineCount")
+        _visual_count(visual_plan, "metricBoxCount")
+
+    axes = {
+        "roc": ax.inset_axes([0.055, 0.565, 0.405, 0.345]),
+        "pr": ax.inset_axes([0.555, 0.565, 0.390, 0.345]),
+        "cal": ax.inset_axes([0.055, 0.090, 0.405, 0.350]),
+        "thr": ax.inset_axes([0.555, 0.090, 0.390, 0.350]),
+    }
+    blue = "#1F4E79"
+    orange = "#D55E00"
+    red = "#B00000"
+    gray = "#777777"
+    pale = "#F6CFA3"
+
+    def _polish_subaxis(sub_ax, title):
+        sub_ax.set_title(title, loc="left", fontsize=6.8, fontweight="bold", pad=3)
+        sub_ax.tick_params(labelsize=5.2, length=2.0, width=0.35, pad=1.5)
+        for side in ("top", "right"):
+            sub_ax.spines[side].set_visible(False)
+        for side in ("left", "bottom"):
+            sub_ax.spines[side].set_linewidth(0.45)
+            sub_ax.spines[side].set_color("#222222")
+        sub_ax.grid(False)
+
+    try:
+        from sklearn.metrics import (
+            average_precision_score,
+            precision_recall_curve,
+            roc_auc_score,
+            roc_curve,
+        )
+        fpr, tpr, roc_thresholds = roc_curve(y_true, score)
+        roc_auc = roc_auc_score(y_true, score)
+        precision, recall, pr_thresholds = precision_recall_curve(y_true, score)
+        ap = average_precision_score(y_true, score)
+    except Exception:
+        order = np.argsort(-score)
+        y_sorted = y_true[order]
+        tp = np.cumsum(y_sorted == 1)
+        fp = np.cumsum(y_sorted == 0)
+        pos = max(float((y_true == 1).sum()), 1.0)
+        neg = max(float((y_true == 0).sum()), 1.0)
+        tpr = np.r_[0, tp / pos, 1]
+        fpr = np.r_[0, fp / neg, 1]
+        recall = tp / pos
+        precision = tp / np.maximum(tp + fp, 1)
+        precision = np.r_[1, precision]
+        recall = np.r_[0, recall]
+        roc_thresholds = np.r_[1.0, score[order], 0.0]
+        pr_thresholds = score[order]
+        roc_auc = float(np.trapz(tpr, fpr))
+        ap = float(np.trapz(precision, recall))
+
+    youden = tpr - fpr
+    best_roc_idx = int(np.nanargmax(youden))
+    best_roc_threshold = float(roc_thresholds[min(best_roc_idx, len(roc_thresholds) - 1)])
+    axes["roc"].plot(fpr, tpr, color=blue, lw=1.15)
+    axes["roc"].fill_between(fpr, 0, tpr, color=blue, alpha=0.12, linewidth=0)
+    axes["roc"].plot([0, 1], [0, 1], color="#999999", lw=0.55, ls="--")
+    axes["roc"].scatter([fpr[best_roc_idx]], [tpr[best_roc_idx]], s=24, color=red, edgecolor="white", linewidth=0.35, zorder=5)
+    axes["roc"].set(xlim=(0, 1), ylim=(0, 1), xlabel="FPR", ylabel="TPR")
+    axes["roc"].text(0.05, 0.18, f"AUC={roc_auc:.3f}\nthr={best_roc_threshold:.2f}\nn={len(y_true)}",
+                     transform=axes["roc"].transAxes, fontsize=5.0, ha="left", va="bottom",
+                     bbox=dict(boxstyle="round,pad=0.22", facecolor="white", edgecolor="#333333", linewidth=0.4, alpha=0.94))
+    _polish_subaxis(axes["roc"], "A. ROC discrimination")
+
+    f1_curve = 2 * precision[:-1] * recall[:-1] / np.maximum(precision[:-1] + recall[:-1], 1e-12)
+    best_pr_idx = int(np.nanargmax(f1_curve)) if len(f1_curve) else 0
+    best_pr_threshold = float(pr_thresholds[min(best_pr_idx, len(pr_thresholds) - 1)]) if len(pr_thresholds) else 0.5
+    axes["pr"].plot(recall, precision, color=blue, lw=1.15)
+    axes["pr"].fill_between(recall, precision, color=blue, alpha=0.12, linewidth=0)
+    axes["pr"].axhline(y=float(y_true.mean()), color="#999999", lw=0.55, ls="--")
+    if len(f1_curve):
+        axes["pr"].scatter([recall[best_pr_idx]], [precision[best_pr_idx]], s=24, color=red,
+                           edgecolor="white", linewidth=0.35, zorder=5)
+    axes["pr"].set(xlim=(0, 1), ylim=(0, 1), xlabel="Recall", ylabel="Precision")
+    axes["pr"].text(0.05, 0.18, f"AP={ap:.3f}\nF1={np.nanmax(f1_curve):.3f}\nthr={best_pr_threshold:.2f}",
+                    transform=axes["pr"].transAxes, fontsize=5.0, ha="left", va="bottom",
+                    bbox=dict(boxstyle="round,pad=0.22", facecolor="white", edgecolor="#333333", linewidth=0.4, alpha=0.94))
+    _polish_subaxis(axes["pr"], "B. Precision-recall")
+
+    bins = np.linspace(0, 1, 11)
+    centers = (bins[:-1] + bins[1:]) / 2
+    observed = []
+    counts = []
+    for lo, hi in zip(bins[:-1], bins[1:]):
+        mask = (score >= lo) & (score <= hi if np.isclose(hi, 1.0) else score < hi)
+        counts.append(int(mask.sum()))
+        observed.append(float(y_true[mask].mean()) if mask.sum() else np.nan)
+    observed = np.asarray(observed, dtype=float)
+    counts = np.asarray(counts, dtype=float)
+    valid_bins = np.isfinite(observed) & (counts > 0)
+    sizes = 18 + (counts / max(float(np.nanmax(counts)), 1.0)) * 58
+    axes["cal"].fill_between(np.linspace(0, 1, 60), np.clip(np.linspace(0, 1, 60) - 0.05, 0, 1),
+                             np.clip(np.linspace(0, 1, 60) + 0.05, 0, 1), color=pale, alpha=0.18, linewidth=0)
+    axes["cal"].plot([0, 1], [0, 1], color="#999999", lw=0.55, ls="--")
+    axes["cal"].plot(centers[valid_bins], observed[valid_bins], color=blue, lw=1.0)
+    axes["cal"].scatter(centers[valid_bins], observed[valid_bins], s=sizes[valid_bins], color=blue,
+                        edgecolor="white", linewidth=0.35, zorder=5)
+    ece = float(np.nansum((counts[valid_bins] / max(counts.sum(), 1.0)) * np.abs(observed[valid_bins] - centers[valid_bins]))) if valid_bins.any() else np.nan
+    if valid_bins.any():
+        worst_idx = int(np.nanargmax(np.where(valid_bins, np.abs(observed - centers), np.nan)))
+        axes["cal"].scatter([centers[worst_idx]], [observed[worst_idx]], s=sizes[worst_idx] + 14,
+                            color=red, edgecolor="white", linewidth=0.35, zorder=6)
+    axes["cal"].set(xlim=(0, 1), ylim=(0, 1), xlabel="Predicted", ylabel="Observed")
+    axes["cal"].text(0.05, 0.86, f"ECE={ece:.3f}\nbins={int(valid_bins.sum())}",
+                     transform=axes["cal"].transAxes, fontsize=5.0, ha="left", va="top",
+                     bbox=dict(boxstyle="round,pad=0.22", facecolor="white", edgecolor="#333333", linewidth=0.4, alpha=0.94))
+    _polish_subaxis(axes["cal"], "C. Probability calibration")
+
+    thresholds = np.linspace(0.05, 0.95, 19)
+    metrics = []
+    for threshold in thresholds:
+        pred = score >= threshold
+        tp = float(np.sum((pred == 1) & (y_true == 1)))
+        fp = float(np.sum((pred == 1) & (y_true == 0)))
+        tn = float(np.sum((pred == 0) & (y_true == 0)))
+        fn = float(np.sum((pred == 0) & (y_true == 1)))
+        precision_t = tp / max(tp + fp, 1.0)
+        recall_t = tp / max(tp + fn, 1.0)
+        f1_t = 2 * precision_t * recall_t / max(precision_t + recall_t, 1e-12)
+        specificity_t = tn / max(tn + fp, 1.0)
+        balanced_t = (recall_t + specificity_t) / 2
+        metrics.append((threshold, f1_t, balanced_t, tp, fp, tn, fn))
+    metrics_arr = np.asarray(metrics, dtype=float)
+    best_idx = int(np.nanargmax(metrics_arr[:, 1]))
+    best_threshold, best_f1, best_balanced, tp, fp, tn, fn = metrics_arr[best_idx]
+    axes["thr"].plot(metrics_arr[:, 0], metrics_arr[:, 1], color=blue, lw=1.15, marker="o", ms=2.4)
+    axes["thr"].plot(metrics_arr[:, 0], metrics_arr[:, 2], color=orange, lw=1.0, marker="s", ms=2.2)
+    axes["thr"].axvline(best_threshold, color=red, lw=0.65, ls="--")
+    axes["thr"].set(xlim=(0, 1), ylim=(0, 1), xlabel="Threshold", ylabel="Score")
+    axes["thr"].text(0.08, 0.14, "F1", transform=axes["thr"].transAxes,
+                     color=blue, fontsize=4.9, fontweight="bold")
+    axes["thr"].text(0.08, 0.22, "Balanced", transform=axes["thr"].transAxes,
+                     color=orange, fontsize=4.9, fontweight="bold")
+    sidecar = f"thr={best_threshold:.2f}\nF1={best_f1:.3f}\nTP {int(tp)} | FP {int(fp)}\nFN {int(fn)} | TN {int(tn)}"
+    axes["thr"].text(0.98, 0.08, sidecar, transform=axes["thr"].transAxes, fontsize=4.9,
+                     ha="right", va="bottom",
+                     bbox=dict(boxstyle="round,pad=0.24", facecolor="white", edgecolor=gray, linewidth=0.45, alpha=0.95))
+    _polish_subaxis(axes["thr"], "D. Threshold + confusion sidecar")
+
+    fig.subplots_adjust(left=0.05, right=0.98, top=0.93, bottom=0.09)
+    return ax
+
+
 def gen_heatmap_triangular(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=None):
     """Lower or upper triangular heatmap.
 

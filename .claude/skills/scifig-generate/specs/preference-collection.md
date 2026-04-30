@@ -319,8 +319,8 @@ _TEMPLATE_CHART_BUNDLE_SEEDS = {
         },
         {
             "key": "classifier_validation_board",
-            "charts": ["roc", "pr_curve", "calibration", "confusion_matrix", "forest"],
-            "families": ["ml_model_diagnostics", "forest"],
+            "charts": ["classifier_validation_board", "roc", "pr_curve", "calibration", "confusion_matrix"],
+            "families": ["ml_model_diagnostics"],
             "techniqueRefs": ["template-mining/07-techniques/ml-model-diagnostics.md"],
             "anchors": ["拒绝默认配色：Python 绘制多模型性能对比图的进阶实战_1777451272.md"],
             "en": ("Classifier validation board", "Use for classifier probability, labels, true/predicted classes, ROC-AUC, F1, precision/recall, calibration, confusion matrix, or threshold tuning datasets."),

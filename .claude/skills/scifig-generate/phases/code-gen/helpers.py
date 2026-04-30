@@ -199,7 +199,7 @@ def infer_chart_family(chart_type):
             "slope_chart", "bump_chart",
         },
         "clinical_diagnostic": {
-            "roc", "pr_curve", "calibration", "km", "forest", "waterfall",
+            "classifier_validation_board", "roc", "pr_curve", "calibration", "km", "forest", "waterfall",
             "swimmer_plot", "risk_ratio_plot", "caterpillar_plot",
             "tornado_chart", "nomogram", "decision_curve",
         },
@@ -309,7 +309,7 @@ def infer_reference_motifs(charts, dataProfile=None):
         if any(token in tokens for token in ("sample", "source", "reference", "cohort", "batch")):
             add("sample_shape_encoding")
     if "clinical_diagnostic" in families:
-        if any(str(chart).lower() in ("roc", "pr_curve", "calibration") for chart in charts if chart):
+        if any(str(chart).lower() in ("classifier_validation_board", "roc", "pr_curve", "calibration") for chart in charts if chart):
             add("diagnostic_reference_line")
         add("diagnostic_metric_box")
     if "genomics_enrichment" in families:
@@ -376,6 +376,19 @@ def infer_template_motifs(charts, dataProfile=None):
         if "model_architecture_board" in chart_keys or any(token in tokens for token in ("latency", "flops", "memory", "throughput", "cost", "edge_weight", "params", "parameters")):
             add("architecture_metric_dashboard")
             add("architecture_metric_storyboard")
+    if (
+        "classifier_validation_board" in chart_keys
+        or "classifier_validation" in patterns
+        or "threshold_tuning" in patterns
+        or "probability_calibration" in patterns
+        or (
+            {"roc", "pr_curve", "calibration", "confusion_matrix"} & chart_keys
+            and ("score" in roles or "label" in roles or any(token in tokens for token in ("probability", "threshold", "auc", "f1", "precision", "recall")))
+        )
+    ):
+        add("classifier_validation_board")
+        add("classification_error_matrix")
+        add("metric_table_in_panel")
     if (
         "confusion_matrix" in chart_keys
         or "confusion_matrix" in patterns
@@ -1500,6 +1513,10 @@ def _auc_from_scores(labels, scores):
 
 
 def _enhance_clinical(ax, dataProfile, visualPlan, palette, col_map, chart_type):
+    if chart_type == "classifier_validation_board":
+        _record_template_motif(visualPlan, "classifier_validation_board")
+        _record_template_motif(visualPlan, "classification_error_matrix")
+        return ["classifier_validation_board_native"]
     df = _df_from_profile(dataProfile)
     score_col = _role(dataProfile, "score", "x")
     label_col = _role(dataProfile, "label", "event")

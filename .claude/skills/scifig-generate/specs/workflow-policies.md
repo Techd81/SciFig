@@ -64,7 +64,7 @@ TEMPLATE_MATCH_POLICY = {
     "clone_known_family_first": True,
     "computer_ai_ml_strong_signals": [
         "model", "algorithm", "estimator", "random forest", "rf", "rfr",
-        "xgboost", "lightgbm", "gbdt", "svm", "knn", "train", "test",
+        "xgboost", "lightgbm", "gbdt", "svm", "knn", "probability", "proba", "threshold", "train", "test",
         "validation", "cv", "auc", "accuracy", "f1", "precision", "recall",
         "r2", "rmse", "mae", "residual", "shap", "feature_importance",
         "confusion", "confusion_matrix", "classification_error",
@@ -91,7 +91,7 @@ TEMPLATE_MATCH_POLICY = {
 }
 ```
 
-If a user-selected or inferred domain contains AI/ML/computer-science signals, Phase 2 must route to `computer_ai_ml` before generic biomedical or engineering defaults. If layer/module/component or source-target topology fields are present with latency, FLOPs, memory, throughput, cost, edge_weight, or parameter metrics, prefer `model_architecture_board` and the `neural_architecture_metric_storyboard` bundle over a plain topology diagram. If topology metrics are absent, the neural architecture topology bundle is still preferred over generic flow diagrams. If Random Forest/RF/RFR is present and the schema supports model metrics, actual/predicted, residuals, or feature importance, the RF anchor cases are preferred over generic prediction diagnostics.
+If a user-selected or inferred domain contains AI/ML/computer-science signals, Phase 2 must route to `computer_ai_ml` before generic biomedical or engineering defaults. If layer/module/component or source-target topology fields are present with latency, FLOPs, memory, throughput, cost, edge_weight, or parameter metrics, prefer `model_architecture_board` and the `neural_architecture_metric_storyboard` bundle over a plain topology diagram. If topology metrics are absent, the neural architecture topology bundle is still preferred over generic flow diagrams. If probability/score plus label or threshold fields exist, prefer `classifier_validation_board` over separate ROC/PR/calibration singles. If Random Forest/RF/RFR is present and the schema supports model metrics, actual/predicted, residuals, or feature importance, the RF anchor cases are preferred over generic prediction diagnostics.
 
 ## Autonomous Distillation Policy
 

@@ -27,6 +27,7 @@ CHART_GENERATORS = {
     "enrichment_dotplot": "gen_enrichment_dotplot",
     "oncoprint": "gen_oncoprint",
     "lollipop_mutation": "gen_lollipop_mutation",
+    "classifier_validation_board": "gen_classifier_validation_board",
     "roc": "gen_roc",
     "pr_curve": "gen_pr_curve",
     "calibration": "gen_calibration",

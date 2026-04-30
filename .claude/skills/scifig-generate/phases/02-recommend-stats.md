@@ -90,7 +90,7 @@ def recommend_chart_bundle(dataProfile, workflowPreferences):
     IMPLEMENTED_CHARTS = {
         # Mirrors phases/code-gen/registry.py; every registered key has a gen_ implementation.
         "violin_strip", "box_strip", "raincloud", "beeswarm", "paired_lines",
-        "dumbbell", "line", "training_curve", "model_architecture", "model_architecture_board", "line_ci", "spaghetti", "heatmap_cluster",
+        "dumbbell", "line", "training_curve", "model_architecture", "model_architecture_board", "classifier_validation_board", "line_ci", "spaghetti", "heatmap_cluster",
         "heatmap_pure", "volcano", "ma_plot", "pca", "umap",
         "tsne", "enrichment_dotplot", "oncoprint", "lollipop_mutation", "roc",
         "pr_curve", "calibration", "km", "forest", "waterfall",
@@ -247,11 +247,7 @@ def recommend_chart_bundle(dataProfile, workflowPreferences):
     if has_feature_selection_curve:
         return "line", ["grouped_bar", "lollipop_horizontal"]
     if has_classifier_validation_board and "score" in roles and "label" in roles:
-        label_col = dataProfile["df"][roles["label"]]
-        pos_rate = label_col.mean() if pd.api.types.is_numeric_dtype(label_col) else 0.5
-        primary = "pr_curve" if n_obs > 0 and pos_rate < DATA_SCALE_POLICY["rare_positive_rate"] else "roc"
-        secondary = ["roc" if primary == "pr_curve" else "pr_curve", "calibration", "confusion_matrix", "forest"]
-        return primary, secondary
+        return "classifier_validation_board", ["roc", "pr_curve", "calibration", "confusion_matrix"]
     if has_confusion_matrix_labels:
         return "confusion_matrix", ["grouped_bar", "heatmap_annotated"]
     if has_model_performance and has_prediction_fit:
@@ -330,7 +326,7 @@ def select_statistical_plan(dataProfile, primaryChart, workflowPreferences):
     if primaryChart in ("volcano", "ma_plot", "heatmap+cluster", "heatmap_pure", "umap", "tsne", "pca", "spatial_feature", "training_curve", "model_architecture", "model_architecture_board"):
         return {"method": "none", "correction": None, "notes": ["exploratory_primary_chart"]}
 
-    if primaryChart in ("roc", "pr_curve", "calibration"):
+    if primaryChart in ("classifier_validation_board", "roc", "pr_curve", "calibration"):
         return {"method": "auc_ci", "correction": None, "notes": ["bootstrap_ci_if_available"]}
 
     if primaryChart == "km":
@@ -367,12 +363,12 @@ def configure_annotations(dataProfile, primaryChart, statPlan):
         "showSignificance": statPlan["method"] not in ("none", "effect_estimate_only"),
         "significanceDisplay": "exact_p",
         "showN": True,
-        "showCI": primaryChart in ("line_ci", "forest", "roc", "pr_curve", "calibration"),
+        "showCI": primaryChart in ("line_ci", "forest", "classifier_validation_board", "roc", "pr_curve", "calibration"),
         "showAtRiskTable": primaryChart == "km",
         "showThresholdLines": primaryChart in ("volcano", "manhattan", "qq", "dose_response")
     }
 
-    if not dataProfile["replicateInfo"]["has_bio_rep"] and "subject_id" not in dataProfile["semanticRoles"] and primaryChart not in ("km", "roc", "pr_curve", "forest"):
+    if not dataProfile["replicateInfo"]["has_bio_rep"] and "subject_id" not in dataProfile["semanticRoles"] and primaryChart not in ("km", "classifier_validation_board", "roc", "pr_curve", "forest"):
         annotations["showSignificance"] = False
 
     if dataProfile["nObservations"] > 500:
@@ -443,6 +439,18 @@ def infer_template_layout_intents(dataProfile, primaryChart, secondaryCharts):
     ):
         add("ml_model_performance_triptych")
     if (
+        "classifier_validation_board" in charts
+        or "classifier_validation" in patterns
+        or "threshold_tuning" in patterns
+        or "probability_calibration" in patterns
+        or (
+            any(chart in ("roc", "pr_curve", "calibration", "confusion_matrix") for chart in charts)
+            and ("score" in roles or any(token in profile_tokens for token in ("probability", "proba", "threshold")))
+            and ("label" in roles or any(token in profile_tokens for token in ("true_label", "actual_label", "y_true")))
+        )
+    ):
+        add("classifier_validation_board")
+    if (
         "model_architecture_board" in charts
         or "model_architecture_board" in patterns
         or (
@@ -474,6 +482,8 @@ def build_panel_blueprint(primaryChart, secondaryCharts, dataProfile, workflowPr
     story = workflowPreferences.get("storyMode", "comparison_pair")
     template_layout_intents = infer_template_layout_intents(dataProfile, primaryChart, secondaryCharts)
     if (story == "auto" or story_was_default) and "architecture_metric_storyboard" in template_layout_intents and primaryChart == "model_architecture_board":
+        story = "single"
+    elif (story == "auto" or story_was_default) and "classifier_validation_board" in template_layout_intents and primaryChart == "classifier_validation_board":
         story = "single"
     elif (story == "auto" or story_was_default) and "architecture_metric_storyboard" in template_layout_intents:
         story = "architecture_metric_storyboard"
@@ -723,7 +733,7 @@ def infer_visual_chart_family(chart_type):
             "slope_chart", "bump_chart",
         },
         "clinical_diagnostic": {
-            "roc", "pr_curve", "calibration", "km", "forest", "waterfall",
+            "classifier_validation_board", "roc", "pr_curve", "calibration", "km", "forest", "waterfall",
             "swimmer_plot", "risk_ratio_plot", "caterpillar_plot",
             "tornado_chart", "nomogram", "decision_curve",
         },
@@ -799,7 +809,7 @@ def infer_reference_visual_motifs(charts, dataProfile):
         add("peak_window_callout")
         add("range_summary_box")
     if "clinical_diagnostic" in families:
-        if any(str(chart).lower() in ("roc", "pr_curve", "calibration") for chart in charts if chart):
+        if any(str(chart).lower() in ("classifier_validation_board", "roc", "pr_curve", "calibration") for chart in charts if chart):
             add("diagnostic_reference_line")
         add("diagnostic_metric_box")
     if "genomics_enrichment" in families:
@@ -837,6 +847,19 @@ def infer_template_visual_motifs(charts, dataProfile):
         add("joint_marginal_grid", "numeric_actual_predicted_pair")
         add("density_encoded_scatter", "numeric_xy_pair")
         add("metric_table_in_panel", "metrics_computed_from_actual_predicted")
+    if (
+        "classifier_validation_board" in chart_keys
+        or "classifier_validation" in patterns
+        or "threshold_tuning" in patterns
+        or "probability_calibration" in patterns
+        or (
+            {"roc", "pr_curve", "calibration", "confusion_matrix"} & chart_keys
+            and ("score" in roles or "label" in roles or any(token in tokens for token in ("probability", "threshold", "auc", "f1", "precision", "recall")))
+        )
+    ):
+        add("classifier_validation_board", "score_probability_label_or_threshold_columns")
+        add("classification_error_matrix", "threshold_sweep_or_true_predicted_columns")
+        add("metric_table_in_panel", "auc_ap_f1_ece_threshold_summary")
     if (
         "model_performance_benchmark" in patterns
         or "ml_model_family" in patterns
@@ -905,7 +928,7 @@ def resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreference
         "true_label", "actual_label", "predicted_label", "prediction_label", "y_pred",
         "epoch", "learning_curve", "training_curve", "training_history",
         "train_loss", "training_loss", "val_loss", "validation_loss", "val_accuracy",
-        "model_architecture", "model_architecture_board", "neural_architecture", "architecture_diagram",
+        "model_architecture", "model_architecture_board", "classifier_validation_board", "neural_architecture", "architecture_diagram",
         "pipeline_topology", "dag_pipeline", "layer", "module", "component",
         "block", "node", "source", "target", "params", "parameters", "units",
         "channels", "heads", "attention", "transformer", "encoder", "decoder",
@@ -925,6 +948,7 @@ def resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreference
         "histogram": "marginal_joint",
         "model_architecture": "ml_model_diagnostics",
         "model_architecture_board": "ml_model_diagnostics",
+        "classifier_validation_board": "ml_model_diagnostics",
         "grouped_bar": "ml_model_diagnostics",
         "line": "ml_model_diagnostics",
         "training_curve": "ml_model_diagnostics",
@@ -942,6 +966,7 @@ def resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreference
         "forest": "forest",
         "km": "forest",
         "roc": "forest",
+        "pr_curve": "forest",
         "calibration": "forest",
         "pareto_chart": "pareto",
         "dose_response": "dual_axis",
@@ -984,7 +1009,7 @@ def resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreference
             continue
         if family and family not in families:
             families.append(family)
-        if chart in {"roc", "pr_curve", "calibration", "confusion_matrix"} and has_ml_signal and "ml_model_diagnostics" not in families:
+        if chart in {"classifier_validation_board", "roc", "pr_curve", "calibration", "confusion_matrix"} and has_ml_signal and "ml_model_diagnostics" not in families:
             families.append("ml_model_diagnostics")
 
     technique_refs = list(selected_bundle.get("techniqueRefs") or [])
@@ -1013,7 +1038,7 @@ def resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreference
             inferred_bundle_key = "rf_model_performance_report"
         elif "shap_composite" in families and {"lollipop_horizontal", "dotplot", "scatter_regression", "heatmap_annotated"} & chart_set:
             inferred_bundle_key = "rf_feature_importance_shap"
-        elif {"roc", "pr_curve", "calibration", "confusion_matrix"} & chart_set:
+        elif "classifier_validation_board" in chart_set or {"roc", "pr_curve", "calibration", "confusion_matrix"} & chart_set:
             inferred_bundle_key = "classifier_validation_board"
     template_match_mode = selected_bundle.get("templateMatchMode") or ("clone_when_known" if families else "best_effort")
     if inferred_bundle_key and families:

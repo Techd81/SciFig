@@ -75,11 +75,11 @@ When columns include `objective_1`, `objective_2`, `obj1`, `obj2`, `cost`, `late
 
 When columns include `score`, `probability`, `label`, `true_label`, `predicted_label`, `threshold`, `AUC`, `F1`, `precision`, or `recall`, clone the classifier validation board before falling back to generic ROC:
 
-- Use a ROC + PR + calibration + confusion/error-matrix panel set, not a single ROC alone.
+- Prefer the registered `classifier_validation_board` generator for the whole ROC + PR + calibration + threshold/confusion set, not a single ROC alone.
 - Add data-derived metric boxes for AUC, AP, best threshold, F1, ECE, bin count, and sample count.
 - Mark the selected threshold with a red point and reference guides.
 - Use calibration bin marker size for sample count so imbalanced bins remain visible.
-- Executable fallback: `roc` and `pr_curve` detect `classifier_validation_board`, mark the Youden / best-F1 threshold with red points plus dashed guides, and move standalone legends to bottom center. `calibration` computes ECE, scales bin markers by sample count, shades the +/-0.05 calibration band, marks the worst bin, and reports ECE / bins / n in a compact metric box. `confusion_matrix` uses true/predicted labels or thresholded score data, annotates count plus row percentage per cell, outlines the diagonal, and reports accuracy / balanced accuracy / largest off-diagonal error.
+- Executable fallback: `classifier_validation_board` creates a single self-contained four-panel board with ROC AUC, AP/F1, ECE, best threshold, and TP/FP/FN/TN sidecar. `roc` and `pr_curve` still detect `classifier_validation_board`, mark the Youden / best-F1 threshold with red points plus dashed guides, and move standalone legends to bottom center. `calibration` computes ECE, scales bin markers by sample count, shades the +/-0.05 calibration band, marks the worst bin, and reports ECE / bins / n in a compact metric box. `confusion_matrix` uses true/predicted labels or thresholded score data, annotates count plus row percentage per cell, outlines the diagonal, and reports accuracy / balanced accuracy / largest off-diagonal error.
 
 ## Routing Rules
 
