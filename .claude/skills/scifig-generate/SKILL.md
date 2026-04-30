@@ -7,34 +7,9 @@ allowed-tools: Agent, AskUserQuestion, TodoWrite, Read, Write, Edit, Bash, Glob,
 
 End-to-end workflow for turning real experimental data into submission-ready scientific figures. The skill is journal-token driven, domain-aware, and narrative-first: it reads the data, infers the scientific context, picks chart families and statistics, builds a multi-panel story when needed, and exports reproducible code plus publication assets.
 
-## Architecture Overview
+## Architecture
 
-```text
-+-----------------------------------------------------------------------------------+
-| scifig-generate (Orchestrator)                                                    |
-| -> collect preferences -> load references -> dispatch phases -> iterate on demand |
-+----------------------+----------------------+----------------------+---------------+
-                       |                      |                      |
-                       v                      v                      v
-                +-------------+        +-------------+        +-------------+
-                | Phase 1     |        | Phase 2     |        | Phase 3     |
-                | Data Detect |        | Charts+Stat |        | Code+Style  |
-                +------+------+        +------+------+        +------+------+
-                       |                      |                      |
-                       v                      v                      v
-                  dataProfile           chartPlan +             styledCode +
-                + domainHints         panelBlueprint           journalProfile
-                + panelCandidates      + palettePlan           + colorSystem
-                       \                      |                      /
-                        \                     v                     /
-                         \              +-------------+            /
-                          ------------> | Phase 4     | <----------
-                                        | Export      |
-                                        +------+------+
-                                               |
-                                               v
-                                          outputBundle
-```
+Pipeline: preference gates -> Phase 1 `dataProfile` -> Phase 2 `chartPlan` -> Phase 3 `styledCode` -> Phase 4 `outputBundle`. Each phase owns one artifact, and blocking findings route back to the owning phase before completion.
 
 ## Key Design Principles
 
@@ -69,6 +44,8 @@ End-to-end workflow for turning real experimental data into submission-ready sci
 4. **Phase 4** render QA: every required motif from the chosen arc + family must be present (`arc_required_motifs(arc)`); failures route back to Phase 3.
 
 **Re-extraction**: when `template/articles/` changes, run `python .claude/skills/scifig-generate/template-mining/_extraction/extract.py` then `enrich.py` to refresh `case-index.json`, `stats.md`, `narratives.md`. Then audit the "Distilled Universal Findings" section in `INDEX.md`.
+
+**Code promotion**: when the user asks to absorb article examples into the skill, run optional Phase 5 and follow `specs/template-distillation-contract.md`. Promote reusable Matplotlib logic into helpers/generators first; update prose only after executable behavior and tests exist.
 
 **Operational entry point** — Phase 3 generators should start with:
 
@@ -147,28 +124,6 @@ When `workflowPreferences["interactionMode"] == "auto"`:
 
 > **COMPACT DIRECTIVE**: The phase currently marked `in_progress` in TodoWrite is the active execution phase and must remain uncompressed. If a sentinel survives but the detailed protocol does not, re-read that phase file before continuing.
 
-```text
-Phase 1: Data Input, Structure Detection, Domain Signals
-   -> Ref: phases/01-data-detect.md
-      Input: file path + workflowPreferences
-      Output: dataProfile (schema, semantic roles, domainHints, risks, panelCandidates, audit)
-
-Phase 2: Chart Recommendation, Stats, Panel Blueprint
-   -> Ref: phases/02-recommend-stats.md
-      Input: dataProfile + workflowPreferences
-      Output: chartPlan (primary/secondary charts, stats, panelBlueprint, crowdingPlan, visualContentPlan, palettePlan, delegationReports)
-
-Phase 3: Code Generation, Journal Styling, Multi-panel Composition
-   -> Ref: phases/03-code-gen-style.md
-      Input: chartPlan + dataProfile + workflowPreferences
-      Output: styledCode (pythonCode, journalProfile, colorSystem, figureSpec, panelGeometry, codeReview)
-
-Phase 4: Export, Source Data, Statistical Report
-   -> Ref: phases/04-export-report.md
-      Input: styledCode + chartPlan + dataProfile + workflowPreferences
-      Output: outputBundle (figures, code, source data, reports, metadata, renderQa)
-```
-
 **Phase Reference Documents** (read on-demand):
 
 | Phase | Document                                                  | Purpose                                                        | Compact                     |
@@ -177,6 +132,7 @@ Phase 4: Export, Source Data, Statistical Report
 | 2     | [phases/02-recommend-stats.md](phases/02-recommend-stats.md) | Chart taxonomy selection, stats, panel blueprint               | TodoWrite driven + sentinel |
 | 3     | [phases/03-code-gen-style.md](phases/03-code-gen-style.md)   | Journal profiles, palette system, code generation, composition | TodoWrite driven + sentinel |
 | 4     | [phases/04-export-report.md](phases/04-export-report.md)     | Export bundle, source data, metadata, reporting                | TodoWrite driven            |
+| 5*    | [phases/05-template-distill.md](phases/05-template-distill.md) | Optional article-code distillation and runtime promotion        | TodoWrite driven + sentinel |
 
 **Reference Specs** (read on-demand when needed):
 
@@ -188,6 +144,7 @@ Phase 4: Export, Source Data, Statistical Report
 | Policies   | [specs/workflow-policies.md](specs/workflow-policies.md)                       | Shared thresholds, visual impact, performance, QA, agents |
 | Prefs      | [specs/preference-collection.md](specs/preference-collection.md)               | Preference collection helpers, bilingual card templates   |
 | Motifs     | [specs/template-visual-motifs.md](specs/template-visual-motifs.md)             | Template-derived evidence motifs and QA counters          |
+| Distill    | [specs/template-distillation-contract.md](specs/template-distillation-contract.md) | Rules for promoting article code into executable skill behavior |
 | Layouts    | [templates/panel-layout-recipes.md](templates/panel-layout-recipes.md)         | Reusable multi-panel story recipes                        |
 | Palettes   | [templates/palette-presets.md](templates/palette-presets.md)                   | Reusable categorical/sequential/diverging palette presets |
 
@@ -230,12 +187,13 @@ Blocking agent findings must route back to the owning phase before advancing. Ne
 10. Multi-panel figures must have an explicit panel blueprint before code generation.
 11. For implemented single-panel charts, increase Nature/Cell-style information density through data-derived summaries, in-plot explanatory labels, reference lines, callouts, insets, sample-size labels, metric tables, prediction diagnostics, marginal distributions, density-colored points, density halos, matrix labels, and effect-size context before adding new chart types.
 12. Treat `specs/template-visual-motifs.md` as the grammar for learning from reference examples. Add motifs to `visualContentPlan.templateMotifs` and render them through existing generators/helpers; do not register a new chart key until a real generator exists and passes QA.
-13. Do not invent statistics for visual impact. Every p-value, AUC, effect size, threshold count, or fitted parameter must come from the supplied data or a documented upstream result.
-14. Prefer vector export and generate source-data friendly artifacts for quantitative panels.
-15. If domain inference is weak, fall back to general biomedical rules instead of overfitting to a guessed specialty.
-16. If statistical assumptions are uncertain, downgrade to a conservative or descriptive choice and explain why.
-17. If rendered QA reports overlap, cross-panel title/table/text collision, negative axes text without a reserved slot, poster-scale font sizes, blank/tiny output, missing `legendContractEnforced`, missing `layoutContractEnforced`, any remaining in-axes legend, too few visual enhancements, missing template/reference visual grammar motifs, missing in-plot explanatory labels, non-editable vector text, or missing formats, return to Phase 3 or Phase 2 before declaring completion.
-18. Use `specs/workflow-policies.md` for thresholds and budgets; do not add new magic numbers in phase logic without naming the policy.
+13. When learning from `template/articles`, promote reusable code into `helpers.py`, `template_mining_helpers.py`, or split generator files before expanding coordinator prose.
+14. Do not invent statistics for visual impact. Every p-value, AUC, effect size, threshold count, or fitted parameter must come from the supplied data or a documented upstream result.
+15. Prefer vector export and generate source-data friendly artifacts for quantitative panels.
+16. If domain inference is weak, fall back to general biomedical rules instead of overfitting to a guessed specialty.
+17. If statistical assumptions are uncertain, downgrade to a conservative or descriptive choice and explain why.
+18. If rendered QA reports overlap, cross-panel title/table/text collision, negative axes text without a reserved slot, poster-scale font sizes, blank/tiny output, missing `legendContractEnforced`, missing `layoutContractEnforced`, any remaining in-axes legend, too few visual enhancements, missing template/reference visual grammar motifs, missing in-plot explanatory labels, non-editable vector text, or missing formats, return to Phase 3 or Phase 2 before declaring completion.
+19. Use `specs/workflow-policies.md` for thresholds and budgets; do not add new magic numbers in phase logic without naming the policy.
 
 ## Input Processing
 
@@ -252,89 +210,16 @@ Normalize a confirmed real-file reply into `FILE:` and carry that exact path int
 
 ## Data Flow
 
-```text
-input
-  ->
-Phase 1 -> dataProfile = {
-  format,
-  structure,
-  columns,
-  semanticRoles,
-  domainHints,
-  nGroups,
-  nObservations,
-  replicateInfo,
-  riskFlags,
-  panelCandidates,
-  warnings
-  audit
-}
-  ->
-Phase 2 -> chartPlan = {
-  primaryChart,
-  secondaryCharts,
-  statMethod,
-  multipleComparison,
-  annotations,
-  panelBlueprint,
-  crowdingPlan,
-  visualContentPlan,
-  templateMotifs,
-  palettePlan,
-  delegationReports,
-  journalOverrides,
-  rationale
-}
-  ->
-Phase 3 -> styledCode = {
-  pythonCode,
-  journalProfile,
-  figureSpec,
-  colorSystem,
-  panelGeometry,
-  statsReport,
-  codeReview,
-  seed
-}
-  ->
-Phase 4 -> outputBundle = {
-  figures,
-  code,
-  statsReport,
-  sourceData,
-  panelManifest,
-  requirements,
-  metadata,
-  renderQa
-}
-```
+Carry these canonical fields forward:
+
+- `dataProfile`: `format`, `structure`, `columns`, `semanticRoles`, `domainHints`, `nGroups`, `nObservations`, `replicateInfo`, `riskFlags`, `panelCandidates`, `warnings`, `audit`
+- `chartPlan`: `primaryChart`, `secondaryCharts`, `statMethod`, `multipleComparison`, `annotations`, `panelBlueprint`, `crowdingPlan`, `visualContentPlan`, `templateMotifs`, `palettePlan`, `delegationReports`, `journalOverrides`, `rationale`
+- `styledCode`: `pythonCode`, `journalProfile`, `figureSpec`, `colorSystem`, `panelGeometry`, `statsReport`, `codeReview`, `seed`
+- `outputBundle`: `figures`, `code`, `statsReport`, `sourceData`, `panelManifest`, `requirements`, `metadata`, `renderQa`
 
 ## TodoWrite Pattern
 
-```text
-Phase 1 starts:
-  -> [in_progress] Phase 1: data detect and domain inference
-     -> [pending] Read and parse file
-     -> [pending] Detect structure and semantic roles
-     -> [pending] Infer domain hints and panel candidates
-     -> [pending] Assess risks and build dataProfile
-     -> [pending] Run data-profile-auditor if complexity triggers fire
-
-Phase 1 ends:
-  -> [completed] Phase 1: dataProfile ready
-
-Phase 2 starts:
-  -> [in_progress] Phase 2: chart, stats, panel blueprint
-     -> [pending] Resolve domain playbook
-     -> [pending] Recommend chart family and stats
-     -> [pending] Build panel blueprint, visual content, and palette plan
-     -> [pending] Run chart/layout/palette agents if plan complexity triggers fire
-
-Phase 2 ends:
-  -> [completed] Phase 2: chartPlan locked
-```
-
-Collapse completed sub-tasks back to phase-level summaries before the next phase starts.
+Keep exactly one active phase. Expand the active phase into concrete sub-tasks, then collapse completed work back to a phase-level summary before starting the next phase.
 
 ## Post-Phase Updates
 

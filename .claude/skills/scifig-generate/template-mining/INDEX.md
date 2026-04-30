@@ -175,7 +175,8 @@ When the user supplies new reference figures or articles:
 1. Save markdown under `template/articles/`.
 2. Re-run `_extraction/extract.py` then `_extraction/enrich.py` to refresh `case-index.json`, `stats.md`, `narratives.md`.
 3. If a new motif emerges, add an entry to `05-annotation-idioms.md` or a new `07-techniques/<name>.md`.
-4. Don't overwrite distilled patterns silently — append, then mark superseded entries.
+4. If article code should improve generated figures, run `phases/05-template-distill.md` and `specs/template-distillation-contract.md`; promote reusable code into helpers/generators before changing coordinator prose.
+5. Don't overwrite distilled patterns silently — append, then mark superseded entries.
 
 ## Coordinator Cheat-Sheet
 
@@ -205,4 +206,4 @@ python .claude/skills/scifig-generate/template-mining/_extraction/extract.py
 python .claude/skills/scifig-generate/template-mining/_extraction/enrich.py
 ```
 
-This refreshes `case-index.json`, `stats.md`, `stats.json`, `narratives.md`, `palette-harvest.json`. Then audit this INDEX file's frequency tables and update the section "Distilled Universal Findings" to match the new numbers.
+This refreshes `case-index.json`, `stats.md`, `stats.json`, `narratives.md`, `palette-harvest.json`. Then audit this INDEX file's frequency tables and update the section "Distilled Universal Findings" to match the new numbers. For executable improvements, continue with Phase 5 so article code is promoted into helpers/generators and covered by tests.

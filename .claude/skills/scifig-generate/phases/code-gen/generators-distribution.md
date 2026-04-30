@@ -1918,6 +1918,8 @@ def gen_radar(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=No
         ax.grid(linewidth=0.4, color="#CCCCCC")
         ax.spines["polar"].set_linewidth(0.4)
 
+    template_rows = []
+    template_colors = []
     if group_col and group_col in df.columns:
         groups = df[group_col].dropna().unique().tolist()
         for i, grp in enumerate(groups):
@@ -1930,8 +1932,8 @@ def gen_radar(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=No
             color = cat_map.get(grp, fallback[i % len(fallback)])
             ax.plot(angles, values, linewidth=0.8, color=color, label=grp)
             ax.fill(angles, values, alpha=0.15, color=color)
-        ax.legend(loc="upper right", bbox_to_anchor=(1.3, 1.1),
-                  frameon=False, fontsize=5)
+            template_rows.append(values[:-1])
+            template_colors.append(color)
     else:
         values = []
         for attr in attributes:
@@ -1941,6 +1943,16 @@ def gen_radar(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=No
         color = fallback[0]
         ax.plot(angles, values, linewidth=0.8, color=color)
         ax.fill(angles, values, alpha=0.15, color=color)
+        template_rows.append(values[:-1])
+        template_colors.append(color)
+
+    apply_template_radar_signature(
+        ax,
+        angles[:-1],
+        value_rows=template_rows,
+        colors=template_colors,
+        visualPlan=chartPlan.get("visualContentPlan", {}),
+    )
 
     if standalone:
         apply_chart_polish(ax, "radar")
@@ -3246,7 +3258,6 @@ def gen_heatmap_annotated(df, dataProfile, chartPlan, rcParams, palette, col_map
     group_col = roles.get("group") or roles.get("x")
     value_col = roles.get("value")
     feature_col = roles.get("feature_id") or roles.get("y")
-
     if group_col and value_col and feature_col:
         pivot = df.pivot_table(index=feature_col, columns=group_col,
                                values=value_col, aggfunc="mean")
@@ -3282,6 +3293,7 @@ def gen_heatmap_triangular(df, dataProfile, chartPlan, rcParams, palette, col_ma
     group_col = roles.get("group") or roles.get("x")
     value_col = roles.get("value")
     feature_col = roles.get("feature_id") or roles.get("y")
+    pvalue_col = roles.get("pvalue") or roles.get("p_value") or roles.get("padj") or roles.get("fdr")
 
     if group_col and value_col and feature_col:
         pivot = df.pivot_table(index=feature_col, columns=group_col,
@@ -3303,6 +3315,17 @@ def gen_heatmap_triangular(df, dataProfile, chartPlan, rcParams, palette, col_ma
     sns.heatmap(pivot, mask=mask, cmap="coolwarm", center=0,
                 linewidths=0.3, linecolor="white", square=True,
                 cbar_kws={"shrink": 0.6, "label": value_col or "Value"}, ax=ax)
+    pvalue_lookup = {}
+    if pvalue_col and group_col and feature_col and pvalue_col in df:
+        for _, row in df[[feature_col, group_col, pvalue_col]].dropna().iterrows():
+            pvalue_lookup[(row[feature_col], row[group_col])] = row[pvalue_col]
+    apply_template_triangular_heatmap_signature(
+        ax,
+        row_labels=list(pivot.index),
+        col_labels=list(pivot.columns),
+        pvalue_lookup=pvalue_lookup,
+        visualPlan=chartPlan.get("visualContentPlan", {}),
+    )
     ax.set_xlabel(group_col or "Column")
     ax.set_ylabel(feature_col or "Row")
     if standalone:

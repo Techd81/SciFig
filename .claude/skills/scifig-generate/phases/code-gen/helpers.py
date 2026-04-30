@@ -568,6 +568,62 @@ def _density_color_values(x, y, bins=32):
     return density
 
 
+def _safe_kde_curve(values, grid):
+    values = np.asarray(values, dtype=float)
+    values = values[np.isfinite(values)]
+    grid = np.asarray(grid, dtype=float)
+    if len(values) < 4 or np.nanstd(values) <= 0:
+        return None
+    try:
+        from scipy.stats import gaussian_kde
+        density = gaussian_kde(values)(grid)
+    except Exception:
+        return None
+    if not np.isfinite(density).any() or np.nanmax(density) <= 0:
+        return None
+    return density / np.nanmax(density)
+
+
+def _style_template_marginal_axis(axis):
+    axis.set_xticks([])
+    axis.set_yticks([])
+    axis.set_gid("scifig_marginal_axis")
+    axis.patch.set_alpha(0.0)
+    for spine in axis.spines.values():
+        spine.set_linewidth(0.35)
+        spine.set_edgecolor("#A8A8A8")
+
+
+def _draw_template_marginal_distribution(axis, values, *, orientation, color, bins):
+    values = np.asarray(values, dtype=float)
+    values = values[np.isfinite(values)]
+    if len(values) == 0:
+        return
+    axis.hist(
+        values,
+        bins=bins,
+        density=True,
+        orientation=orientation,
+        color=color,
+        alpha=0.26,
+        edgecolor="white",
+        linewidth=0.25,
+        zorder=1,
+    )
+    grid = np.linspace(np.nanmin(values), np.nanmax(values), 160)
+    density = _safe_kde_curve(values, grid)
+    if density is None:
+        return
+    if orientation == "vertical":
+        ymax = axis.get_ylim()[1] or 1.0
+        axis.fill_between(grid, density * ymax * 0.82, color=color, alpha=0.28, linewidth=0, zorder=2)
+        axis.plot(grid, density * ymax * 0.82, color=color, lw=0.65, zorder=3)
+    else:
+        xmax = axis.get_xlim()[1] or 1.0
+        axis.fill_betweenx(grid, 0, density * xmax * 0.82, color=color, alpha=0.28, linewidth=0, zorder=2)
+        axis.plot(density * xmax * 0.82, grid, color=color, lw=0.65, zorder=3)
+
+
 def _overlay_density_colored_points(ax, x, y, visualPlan):
     if not visualPlan.get("useDensityColorEncoding", False):
         return None
@@ -609,26 +665,136 @@ def _add_marginal_distribution_axes(ax, x, y, visualPlan, color="#4C78A8"):
         return None
     x_valid = x[mask]
     y_valid = y[mask]
-    bins = min(18, max(6, int(np.sqrt(mask.sum()))))
-    top = ax.inset_axes([0.0, 1.03, 1.0, 0.18], transform=ax.transAxes)
-    right = ax.inset_axes([1.03, 0.0, 0.18, 1.0], transform=ax.transAxes)
-    top.hist(x_valid, bins=bins, color=color, alpha=0.72, edgecolor="white", linewidth=0.25)
-    right.hist(y_valid, bins=bins, orientation="horizontal", color=color, alpha=0.72, edgecolor="white", linewidth=0.25)
+    fig = ax.figure
+    fig.canvas.draw_idle()
+    pos = ax.get_position()
+    top_h = min(0.115, max(0.075, pos.height * 0.24))
+    right_w = min(0.105, max(0.07, pos.width * 0.22))
+    gap = 0.008
+    if pos.y1 + gap + top_h >= 0.985 or pos.x1 + gap + right_w >= 0.985:
+        new_pos = [
+            pos.x0,
+            pos.y0,
+            max(pos.width - right_w - gap, pos.width * 0.72),
+            max(pos.height - top_h - gap, pos.height * 0.72),
+        ]
+        ax.set_position(new_pos)
+        pos = ax.get_position()
+    top = fig.add_axes([pos.x0, pos.y1 + gap, pos.width, top_h], sharex=ax)
+    right = fig.add_axes([pos.x1 + gap, pos.y0, right_w, pos.height], sharey=ax)
+    bins = min(22, max(8, int(np.sqrt(mask.sum()))))
+    _draw_template_marginal_distribution(top, x_valid, orientation="vertical", color=color, bins=bins)
+    _draw_template_marginal_distribution(right, y_valid, orientation="horizontal", color=color, bins=bins)
     for marginal in (top, right):
-        marginal.set_xticks([])
-        marginal.set_yticks([])
-        marginal.set_gid("scifig_marginal_axis")
-        marginal.patch.set_alpha(0.0)
-        for spine in marginal.spines.values():
-            spine.set_linewidth(0.35)
-            spine.set_edgecolor("#B0B0B0")
+        _style_template_marginal_axis(marginal)
     _visual_count(visualPlan, "marginalAxesCount")
     _visual_count(visualPlan, "marginalAxesCount")
     _visual_count(visualPlan, "subAxesCount")
     _visual_count(visualPlan, "subAxesCount")
     visualPlan["outsideLayoutElements"] = True
+    visualPlan["templateSidecarAxesReserved"] = True
     _record_template_motif(visualPlan, "joint_marginal_grid")
     return top, right
+
+
+def apply_template_radar_signature(ax, angles, value_rows=None, colors=None, visualPlan=None):
+    """Apply template/articles radar polish: polygon grid plus glass markers."""
+    angles = np.asarray(list(angles), dtype=float)
+    if len(angles) < 3 or not hasattr(ax, "set_theta_offset"):
+        return {"polygonGrid": False, "glassMarkers": 0}
+    ax.grid(False)
+    try:
+        ax.spines["polar"].set_visible(False)
+    except Exception:
+        pass
+    r0, r1 = ax.get_ylim()
+    if not np.isfinite(r0) or not np.isfinite(r1) or r1 <= r0:
+        r0, r1 = 0.0, 1.0
+        ax.set_ylim(r0, r1)
+    closed_angles = np.r_[angles, angles[0]]
+    for frac in np.linspace(0.2, 1.0, 5):
+        radius = r0 + (r1 - r0) * frac
+        ax.plot(
+            closed_angles,
+            np.full_like(closed_angles, radius),
+            color="#C8CED6",
+            lw=0.45,
+            ls=(0, (2.0, 2.0)),
+            zorder=0,
+        )
+    for theta in angles:
+        ax.plot([theta, theta], [r0, r1], color="#D5D9DF", lw=0.35, zorder=0)
+    marker_count = 0
+    if value_rows is not None:
+        colors = list(colors or ["#1F4E79"] * len(value_rows))
+        for row, color in zip(value_rows, colors):
+            values = np.asarray(row, dtype=float)
+            if values.size != angles.size:
+                continue
+            ax.scatter(angles, values, s=28, color=color, alpha=0.55, edgecolor="white", linewidth=0.55, zorder=8)
+            ax.scatter(angles, values, s=9, color="white", alpha=0.75, edgecolor="none", zorder=9)
+            marker_count += len(values)
+    if visualPlan is not None:
+        _record_template_motif(visualPlan, "polar_comparison_signature")
+        if marker_count:
+            _visual_count(visualPlan, "sampleEncodingCount")
+    return {"polygonGrid": True, "glassMarkers": marker_count}
+
+
+def _pvalue_to_stars(p_value):
+    try:
+        p = float(p_value)
+    except (TypeError, ValueError):
+        return ""
+    if not np.isfinite(p):
+        return ""
+    if p < 0.001:
+        return "***"
+    if p < 0.01:
+        return "**"
+    if p < 0.05:
+        return "*"
+    return ""
+
+
+def apply_template_triangular_heatmap_signature(ax, row_labels=None, col_labels=None, pvalue_lookup=None, visualPlan=None):
+    """Apply template/articles triangular heatmap polish and real p-value stars."""
+    row_labels = list(row_labels or [])
+    col_labels = list(col_labels or [])
+    n_rows = len(row_labels)
+    n_cols = len(col_labels)
+    symmetric_labels = n_rows and n_cols and n_rows == n_cols and set(map(str, row_labels)) == set(map(str, col_labels))
+    if symmetric_labels:
+        ax.plot([0, n_cols], [0, n_rows], color="#F7F7F7", lw=1.0, zorder=8, solid_capstyle="butt")
+        ax.plot([0, n_cols], [0, n_rows], color="#6F6F6F", lw=0.35, zorder=9, alpha=0.55)
+    star_count = 0
+    pvalue_lookup = pvalue_lookup or {}
+    for i, row in enumerate(row_labels):
+        for j, col in enumerate(col_labels):
+            if symmetric_labels and j >= i:
+                continue
+            stars = _pvalue_to_stars(pvalue_lookup.get((row, col), pvalue_lookup.get((col, row))))
+            if not stars:
+                continue
+            ax.text(
+                j + 0.5,
+                i + 0.5,
+                stars,
+                ha="center",
+                va="center",
+                fontsize=5.5,
+                color="#111111",
+                fontweight="bold",
+                zorder=10,
+            )
+            star_count += 1
+    ax.tick_params(axis="x", labelrotation=45, labelsize=5, pad=1)
+    ax.tick_params(axis="y", labelsize=5, pad=1)
+    if visualPlan is not None:
+        _record_template_motif(visualPlan, "correlation_evidence_matrix")
+        if star_count:
+            _visual_count(visualPlan, "significanceStarLayerCount")
+    return {"diagonalGuide": bool(symmetric_labels), "starCount": star_count}
 
 
 def _resolve_numeric_column(dataProfile, df, *names):

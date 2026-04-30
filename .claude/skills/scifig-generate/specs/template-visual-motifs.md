@@ -6,7 +6,7 @@ Distilled from the `template/articles` reference cases. These are visual grammar
 
 | Motif | Data cues | Rendering pattern | QA counters |
 |-------|-----------|-------------------|-------------|
-| `joint_marginal_grid` | actual/predicted pairs, dense x/y diagnostics, residual diagnostics | Main scatter plus top/right marginal histograms or density strips outside the data marks | `marginalAxesCount`, `subAxesCount`, `templateMotifCount` |
+| `joint_marginal_grid` | actual/predicted pairs, dense x/y diagnostics, residual diagnostics | Main scatter plus reserved top/right sidecar axes with histogram + KDE density strips outside the data marks | `marginalAxesCount`, `subAxesCount`, `templateMotifCount` |
 | `density_encoded_scatter` | point count >= 12 and numeric x/y | Points colored by local 2D-bin density, optionally with translucent covariance halos | `densityColorEncodingCount`, `densityHaloCount` |
 | `prediction_diagnostic_matrix` | `actual` + `predicted`, optional split/model/sample columns | Perfect-fit line, R2/RMSE/MAE table, residual/error sidecar when available, sample marker shapes | `metricTableCount`, `referenceLineCount`, `sampleEncodingCount` |
 | `correlation_evidence_matrix` | correlation/covariance matrix or p-value columns | Diverging matrix, cell labels when small, p-value stars only from supplied p-values, shared colorbar outside axes | `significanceStarLayerCount`, `colorbarSlotCount` |
@@ -14,7 +14,7 @@ Distilled from the `template/articles` reference cases. These are visual grammar
 | `interval_uncertainty_band` | CI/PI lower and upper columns, SEM/STD columns, survival/effect intervals | Shaded interval band or forest-style whiskers; never synthesize intervals | `referenceLineCount`, `templateMotifCount` |
 | `dual_axis_error_sidecar` | RMSE, MAE, percent-error, new-data-point error columns | Secondary y-axis hatched error bars paired with primary predicted/experimental marks | `dualAxisEncodingCount`, `multiAxisEncodingCount` |
 | `pareto_tradeoff_board` | objective columns, rank, pareto/optimal flags | Tradeoff scatter, highlighted non-dominated or optimal points only when flags or ranks exist | `inPlotExplanatoryLabelCount`, `sampleEncodingCount` |
-| `polar_comparison_signature` | cyclic angle, radar score, category-by-metric wide tables | Radar/polar comparison with muted fills and strong outline hierarchy | `templateMotifCount` |
+| `polar_comparison_signature` | cyclic angle, radar score, category-by-metric wide tables | Radar/polar comparison with hand-drawn polygon grid, muted fills, strong outline hierarchy, and layered glass markers | `templateMotifCount`, `sampleEncodingCount` |
 
 ## Selection Rules
 
