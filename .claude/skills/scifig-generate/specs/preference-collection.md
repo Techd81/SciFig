@@ -226,6 +226,268 @@ def infer_synthetic_bundle_options(domain_family, custom_domain_text, language):
     return [{"label": e[lang][0], "description": e[lang][1]} for e in entries]
 ```
 
+## Template-backed Chart Bundle Options
+
+The chart-bundle question must be grounded in `template-mining/case-index.json` and the dedicated technique notes under `template-mining/07-techniques/`. Ask this card as:
+
+> 你希望生成哪类图表套餐？
+
+For real-file interactive runs, ask it after Phase 1 has inferred the domain and before Phase 2 locks `chartPlan`. For synthetic-data runs, ask it after the synthetic-domain and synthetic-bundle cards. In auto mode, use the first compatible template-backed bundle as the default without adding another question.
+
+```python
+_TEMPLATE_CHART_BUNDLE_SEEDS = {
+    "clinical_diagnostics_survival": [
+        {
+            "key": "clinical_survival_validation",
+            "charts": ["km", "forest", "roc", "calibration"],
+            "families": ["forest"],
+            "techniqueRefs": ["template-mining/07-techniques/dual-axis.md"],
+            "anchors": ["Python科研绘图复现_绘制多面板分组森林图展示生存分析风险比(HR)_1777453520.md"],
+            "en": ("Clinical survival + validation package (Recommended)", "Template-backed KM/forest/ROC/calibration panels for cohort, survival, and diagnostic evidence."),
+            "zh": ("临床生存+验证套餐（推荐）", "来自模板案例的 KM/森林图/ROC/校准曲线组合，适合队列、生存和诊断证据。"),
+        },
+        {
+            "key": "clinical_prediction_diagnostic",
+            "charts": ["scatter_regression", "residual_vs_fitted", "bland_altman", "histogram"],
+            "families": ["marginal_joint", "density_scatter"],
+            "techniqueRefs": ["template-mining/07-techniques/marginal-joint.md", "template-mining/07-techniques/inset-distribution.md"],
+            "anchors": ["Python 科研绘图：如何优雅地展示“模型精度+稳定性”？顶刊可视化复盘_1777452458.md"],
+            "en": ("Prediction diagnostic matrix", "Predicted-vs-actual hero panel with marginal densities, residual diagnostics, and metric boxes."),
+            "zh": ("预测诊断矩阵套餐", "预测值-真实值主图配边缘密度、残差诊断和指标框，尽量复刻模板案例结构。"),
+        },
+        {
+            "key": "clinical_effect_board",
+            "charts": ["forest", "risk_ratio_plot", "decision_curve", "waterfall"],
+            "families": ["forest"],
+            "techniqueRefs": ["template-mining/07-techniques/dual-axis.md"],
+            "anchors": ["Python科研绘图复现_绘制多面板分组森林图展示生存分析风险比(HR)_1777453520.md"],
+            "en": ("Effect-size evidence board", "Forest/effect-size panels with clinical decision support charts when estimates are available."),
+            "zh": ("效应量证据板套餐", "森林图/风险比/决策曲线组合，适合已有效应量、CI 或风险分层结果。"),
+        },
+    ],
+    "genomics_transcriptomics": [
+        {
+            "key": "omics_discovery_story",
+            "charts": ["volcano", "heatmap+cluster", "enrichment_dotplot", "pca"],
+            "families": ["heatmap_pairwise", "heatmap"],
+            "techniqueRefs": ["template-mining/07-techniques/heatmap-pairwise.md"],
+            "anchors": ["期刊复现：Nature同款皮尔逊热力图_1777451326.md"],
+            "en": ("Omics discovery package (Recommended)", "Volcano, clustered heatmap, enrichment, and PCA/embedding panels for discovery-to-validation stories."),
+            "zh": ("组学发现套餐（推荐）", "火山图、聚类热图、富集点图和 PCA/embedding，适合发现到验证的多 panel 叙事。"),
+        },
+        {
+            "key": "shap_explainability_composite",
+            "charts": ["lollipop_horizontal", "dotplot", "heatmap_annotated", "correlation"],
+            "families": ["shap_composite", "heatmap_pairwise"],
+            "techniqueRefs": ["template-mining/07-techniques/shap-composite.md", "template-mining/07-techniques/heatmap-pairwise.md"],
+            "anchors": ["复现顶刊 _ 拒绝千篇一律的SHAP图，用Matplotlib手绘一张“蜂群+条形”组合图_1777452577.md"],
+            "en": ("SHAP explainability composite", "Bar/lollipop importance, beeswarm-like feature effects, annotated heatmap, and correlation context."),
+            "zh": ("SHAP 解释复合套餐", "重要性条形/棒棒糖、蜂群式特征贡献、注释热图和相关性背景，优先按模板案例复刻。"),
+        },
+        {
+            "key": "pairwise_correlation_matrix",
+            "charts": ["heatmap_triangular", "correlation", "scatter_regression", "bubble_matrix"],
+            "families": ["heatmap_pairwise", "marginal_joint"],
+            "techniqueRefs": ["template-mining/07-techniques/heatmap-pairwise.md", "template-mining/07-techniques/marginal-joint.md"],
+            "anchors": ["如何用 Python 完美复刻一张“红蓝气泡”相关性分析图_1777451587.md"],
+            "en": ("Pairwise evidence matrix", "Triangular heatmap/correlation matrix with significance stars and lower-lane scatter diagnostics."),
+            "zh": ("成对证据矩阵套餐", "三角热图/相关矩阵配显著性星标和散点诊断，适合多变量关联分析。"),
+        },
+    ],
+    "materials_engineering": [
+        {
+            "key": "materials_prediction_stability",
+            "charts": ["scatter_regression", "residual_vs_fitted", "histogram", "correlation"],
+            "families": ["marginal_joint", "density_scatter"],
+            "techniqueRefs": ["template-mining/07-techniques/marginal-joint.md", "template-mining/07-techniques/inset-distribution.md"],
+            "anchors": ["复现 CEJ 顶刊神图 _ Python 绘制“密度散点+边缘直方图”多面板组合图_1777452838.md"],
+            "en": ("CEJ-style prediction stability package (Recommended)", "Density-colored predicted-vs-actual panels with marginal distributions and residual/stability support panels."),
+            "zh": ("CEJ 风格预测稳定性套餐（推荐）", "密度着色预测散点+边缘分布+残差/稳定性支持面板，尽量贴近 CEJ 模板案例。"),
+        },
+        {
+            "key": "materials_model_explain_optimize",
+            "charts": ["radar", "lollipop_horizontal", "heatmap_triangular", "pareto_chart"],
+            "families": ["radar", "shap_composite", "heatmap_pairwise", "pareto"],
+            "techniqueRefs": ["template-mining/07-techniques/radar.md", "template-mining/07-techniques/shap-composite.md", "template-mining/07-techniques/heatmap-pairwise.md"],
+            "anchors": ["基于PSO多目标优化与SHAP可解释分析的回归预测模型框架_1777461729.md"],
+            "en": ("Model explainability + optimization package", "Radar metrics, SHAP-style importance, triangular heatmap, and Pareto optimization panels."),
+            "zh": ("模型解释+优化套餐", "雷达指标、SHAP 风格重要性、三角热图和 Pareto 优化面板，适合材料/工程建模。"),
+        },
+        {
+            "key": "materials_characterization_panel",
+            "charts": ["xrd_pattern", "ftir_spectrum", "dsc_thermogram", "stress_strain"],
+            "families": ["dual_axis", "time_series_pi"],
+            "techniqueRefs": ["template-mining/07-techniques/dual-axis.md", "template-mining/07-techniques/time-series-pi.md"],
+            "anchors": ["如何用Python绘制教科书级的双Y轴组合图_1777451702.md"],
+            "en": ("Characterization + performance package", "XRD/FTIR/DSC/stress-strain panels for materials characterization and performance evidence."),
+            "zh": ("表征+性能套餐", "XRD/FTIR/DSC/应力-应变多 panel，适合材料表征与性能证据链。"),
+        },
+    ],
+    "_default": [
+        {
+            "key": "template_prediction_diagnostic",
+            "charts": ["scatter_regression", "residual_vs_fitted", "bland_altman", "histogram"],
+            "families": ["marginal_joint", "density_scatter"],
+            "techniqueRefs": ["template-mining/07-techniques/marginal-joint.md"],
+            "anchors": ["复现 CEJ 顶刊神图 _ Python 绘制“密度散点+边缘直方图”多面板组合图_1777452838.md"],
+            "en": ("Template prediction diagnostic package (Recommended)", "A safe top-journal template for any numeric prediction or model-validation dataset."),
+            "zh": ("模板预测诊断套餐（推荐）", "适合多数数值预测/模型验证数据的顶刊模板：密度散点、边缘分布、残差和指标框。"),
+        },
+        {
+            "key": "template_shap_explainability",
+            "charts": ["lollipop_horizontal", "dotplot", "heatmap_annotated", "correlation"],
+            "families": ["shap_composite", "heatmap_pairwise"],
+            "techniqueRefs": ["template-mining/07-techniques/shap-composite.md"],
+            "anchors": ["复现顶刊 _ 拒绝千篇一律的SHAP图，用Matplotlib手绘一张“蜂群+条形”组合图_1777452577.md"],
+            "en": ("Template SHAP/explainability package", "Use when columns imply feature importance, SHAP values, or model interpretability."),
+            "zh": ("模板 SHAP/解释性套餐", "当数据包含特征重要性、SHAP 或模型解释字段时使用。"),
+        },
+        {
+            "key": "template_pairwise_matrix",
+            "charts": ["heatmap_triangular", "correlation", "scatter_regression", "bubble_matrix"],
+            "families": ["heatmap_pairwise"],
+            "techniqueRefs": ["template-mining/07-techniques/heatmap-pairwise.md"],
+            "anchors": ["期刊复现：Nature同款皮尔逊热力图_1777451326.md"],
+            "en": ("Template pairwise matrix package", "Use for multi-feature matrices, correlations, and association-heavy datasets."),
+            "zh": ("模板成对矩阵套餐", "适合多变量矩阵、相关性和关联分析。"),
+        },
+    ],
+}
+
+_GENOMICS_BUNDLE_DOMAINS = {"genomics_transcriptomics", "single_cell_spatial", "proteomics_metabolomics", "immunology_cell_biology"}
+_MATERIALS_BUNDLE_DOMAINS = {"materials_engineering", "ecology_environmental", "agriculture_food_science", "neuroscience_behavior", "psychology_social_science", "signal_processing_acoustics"}
+
+
+def _template_bundle_domain_key(domain_family, custom_domain_text):
+    effective = infer_domain_family_from_text(domain_family, custom_domain_text)
+    if effective == "clinical_diagnostics_survival":
+        return "clinical_diagnostics_survival"
+    if effective in _GENOMICS_BUNDLE_DOMAINS:
+        return "genomics_transcriptomics"
+    if effective in _MATERIALS_BUNDLE_DOMAINS:
+        return "materials_engineering"
+    return "_default"
+
+
+def _normalize_template_bundle_entry(entry, language):
+    lang = language if language in ("zh", "en") else "en"
+    label, description = entry[lang]
+    charts = list(entry["charts"])
+    return {
+        "label": label,
+        "description": description,
+        "bundleKey": entry["key"],
+        "primaryChart": charts[0],
+        "secondaryCharts": charts[1:],
+        "templateFamilies": list(entry.get("families", [])),
+        "templateAnchors": list(entry.get("anchors", [])),
+        "techniqueRefs": list(entry.get("techniqueRefs", [])),
+        "templateMatchMode": "clone_when_known",
+    }
+
+
+def _template_bundle_profile_tokens(context):
+    profile = (context or {}).get("dataProfile") or {}
+    roles = profile.get("semanticRoles") or {}
+    columns = profile.get("columnNames") or profile.get("columns") or []
+    patterns = profile.get("specialPatterns") or []
+    tokens = [str(profile.get("structure", "")).lower()]
+    tokens.extend(str(c).lower() for c in columns)
+    tokens.extend(str(k).lower() for k in roles.keys())
+    tokens.extend(str(v).lower() for v in roles.values())
+    tokens.extend(str(p).lower() for p in patterns)
+    return " ".join(tokens)
+
+
+def _score_template_bundle_entry(entry, context):
+    """Prefer the template package whose chart grammar is most compatible with the data profile."""
+    text = _template_bundle_profile_tokens(context)
+    key = entry.get("key", "")
+    score = 0
+
+    if any(t in text for t in ("actual", "predicted", "prediction", "residual", "rmse", "mae", "r2", "r_2")):
+        if any(t in key for t in ("prediction", "diagnostic", "stability")):
+            score += 30
+    if any(t in text for t in ("shap", "importance", "feature_importance", "permutation", "explain")):
+        if any(t in key for t in ("shap", "explain")):
+            score += 35
+    if any(t in text for t in ("correlation", "corr", "matrix", "pvalue", "p_value", "padj", "fdr", "qvalue")):
+        if any(t in key for t in ("pairwise", "matrix", "discovery")):
+            score += 28
+    if any(t in text for t in ("log2fc", "logfc", "fold_change", "gene", "pathway", "enrichment", "omics")):
+        if "omics" in key or "discovery" in key:
+            score += 30
+    if any(t in text for t in ("survival", "event", "hazard", "hr", "ci_low", "ci_high", "roc", "auc")):
+        if any(t in key for t in ("survival", "clinical", "effect")):
+            score += 32
+    if any(t in text for t in ("xrd", "ftir", "dsc", "stress", "strain", "spectrum", "spectra")):
+        if "characterization" in key:
+            score += 35
+    if any(t in text for t in ("pareto", "objective", "multiobjective", "optimization", "radar")):
+        if any(t in key for t in ("optimize", "optimization", "explain")):
+            score += 25
+
+    return score
+
+
+def _rank_template_bundle_entries(entries, context):
+    scored = []
+    for index, entry in enumerate(entries):
+        scored.append((_score_template_bundle_entry(entry, context), -index, entry))
+    scored.sort(reverse=True)
+    return [entry for _, _, entry in scored]
+
+
+def _normalize_template_chart_bundle_options(options, fallback_options):
+    """Preserve chart metadata from AI output; fall back if metadata is missing."""
+    valid = []
+    for option in options or []:
+        if not isinstance(option, dict):
+            continue
+        label = option.get("label")
+        description = option.get("description")
+        primary = option.get("primaryChart")
+        secondary = option.get("secondaryCharts") or option.get("charts", [])[1:]
+        if label and description and primary:
+            valid.append({
+                "label": label,
+                "description": description,
+                "bundleKey": option.get("bundleKey") or option.get("key") or label,
+                "primaryChart": primary,
+                "secondaryCharts": list(secondary or []),
+                "templateFamilies": list(option.get("templateFamilies") or option.get("families") or []),
+                "templateAnchors": list(option.get("templateAnchors") or option.get("anchors") or []),
+                "techniqueRefs": list(option.get("techniqueRefs") or []),
+                "templateMatchMode": option.get("templateMatchMode") or "clone_when_known",
+            })
+    return valid[:3] if len(valid) >= 2 else fallback_options
+
+
+def infer_template_chart_bundle_options(domain_family, custom_domain_text, language, context=None):
+    """Return domain-matched chart-package options grounded in template-mining cases."""
+    key = _template_bundle_domain_key(domain_family, custom_domain_text)
+    entries = _TEMPLATE_CHART_BUNDLE_SEEDS.get(key, _TEMPLATE_CHART_BUNDLE_SEEDS["_default"])
+    entries = _rank_template_bundle_entries(entries, context)
+    fallback_options = [_normalize_template_bundle_entry(entry, language) for entry in entries]
+    bundle_context = dict(context or {})
+    bundle_context.update({
+        "selectedDomainFamily": domain_family,
+        "customDomainText": custom_domain_text,
+        "effectiveBundleDomain": key,
+        "fallbackTemplateBundles": fallback_options,
+    })
+    ai_options = generate_options_with_ai(bundle_context, "chart_bundle", fallback_options)
+    return _normalize_template_chart_bundle_options(ai_options, fallback_options)
+
+
+def resolve_chart_bundle_choice(selected_label, chart_bundle_options):
+    """Resolve AskUserQuestion label back to the full template-backed bundle contract."""
+    for option in chart_bundle_options or []:
+        if option.get("label") == selected_label:
+            return option
+    return (chart_bundle_options or [None])[0]
+```
+
 ## AI Option Generator
 
 ```python
@@ -236,7 +498,9 @@ def generate_options_with_ai(context, question_type, fallback_options):
     question_type: one of "domain", "chart_bundle", "layout", "palette", "synthetic_bundle", "journal_style"
     fallback_options: hardcoded list to use if AI generation fails
 
-    Returns: list of {label, description} dicts (2-5 items)
+    Returns: list of option dicts. For most cards this is {label, description}; for
+    chart_bundle and journal_style it must preserve metadata fields such as
+    primaryChart, secondaryCharts, templateAnchors, techniqueRefs, journalName, and styleKey.
     """
     prompt = _build_option_prompt(context, question_type)
     try:
@@ -260,7 +524,17 @@ def _build_option_prompt(context, question_type):
     if question_type == "domain":
         return f"Given columns {profile.get('columns', [])} and sample data patterns, suggest 3-5 specific scientific domains. Return JSON array of {{label, description}}."
     if question_type == "chart_bundle":
-        return f"For domain {domain}, data with {profile.get('nObservations', 0)} rows and {profile.get('nGroups', 0)} groups, suggest 2-3 chart bundles. Each bundle: primaryChart + 1-3 secondaryCharts. Available charts: {charts}. Return JSON array of {{label, description}}."
+        template_bundles = context.get("fallbackTemplateBundles", [])
+        return (
+            f"For domain {domain}, data with {profile.get('nObservations', 0)} rows and "
+            f"{profile.get('nGroups', 0)} groups, suggest 2-3 chart bundles grounded in the "
+            f"template-mining article cases. Prefer these template-backed seeds when compatible: {template_bundles}. "
+            f"Available implemented charts: {charts}. If a known template family matches the data, keep its "
+            f"chart composition and visual structure as close to the template case as possible. "
+            f"Each option must include label, description, bundleKey, primaryChart, secondaryCharts, "
+            f"templateFamilies, templateAnchors, techniqueRefs, and templateMatchMode='clone_when_known'. "
+            f"Return JSON array."
+        )
     if question_type == "layout":
         n_panels = context.get("panelCount", 2)
         return f"For {n_panels} panels in a {journal.get('style', 'nature')}-style figure, suggest 2-3 layout options. Return JSON array of {{label, description}}."
@@ -315,16 +589,19 @@ def _call_option_generator(prompt, question_type, fallback_options=None):
 
 ## Card Definitions and Flow
 
-All card option strings use a bilingual map so the same normalized answer works regardless of language. The flow is:
+All card option strings use a bilingual map so the same normalized answer works regardless of language. The base flow is:
 
 1. Data-status card (file exists / synthetic / template)
 2. Data-path card (only if file exists)
 3. Mode card (free / interactive)
 4. Synthetic-domain card (only if synthetic chosen)
 5. Synthetic-bundle card (only if synthetic chosen)
-6. Visual-preference card (4 questions: journal, color, resolution, crowding)
+6. Template chart-bundle card: ask "你希望生成哪类图表套餐？" with `infer_template_chart_bundle_options(...)`. For real-file interactive runs, ask this after Phase 1 domain inference and before Phase 2 locks `chartPlan`; for synthetic runs, ask it after synthetic-bundle selection; for auto mode, use the first compatible returned bundle without another user card.
+7. Visual-preference card (4 questions: journal, color, resolution, crowding)
 
-Before step 6, compute `journalOptions = infer_journal_style_options(resolvedDomainFamily, customDomainText, lang, context={...})` and pass `{label, description}` from those exact options into the journal-style question. Preserve the full `journalOptions` list in coordinator state so `styleKey` is available when building `workflowPreferences`. Do not replace them with a static Nature/Science/Cell list.
+Before step 6, compute `chartBundleOptions = infer_template_chart_bundle_options(resolvedDomainFamily, customDomainText, lang, context={...})`. Include `dataProfile` in `context` whenever available so `_rank_template_bundle_entries()` can put the most compatible template case first. Pass only `{label, description}` into AskUserQuestion, but preserve the full option list in coordinator state so `primaryChart`, `secondaryCharts`, `templateAnchors`, and `techniqueRefs` survive into `workflowPreferences`.
+
+Before step 7, compute `journalOptions = infer_journal_style_options(resolvedDomainFamily, customDomainText, lang, context={...})` and pass `{label, description}` from those exact options into the journal-style question. Preserve the full `journalOptions` list in coordinator state so `styleKey` is available when building `workflowPreferences`. Do not replace them with a static Nature/Science/Cell list.
 
 ### Bilingual Answer Maps
 
@@ -518,6 +795,9 @@ workflowPreferences = {
     "syntheticDomainFamily": syntheticPreferences.get("synthetic_domain_family"),
     "syntheticDomainText": syntheticPreferences.get("synthetic_domain_text"),
     "syntheticFigureBundle": syntheticPreferences.get("synthetic_bundle"),
+    "selectedChartBundle": resolve_chart_bundle_choice(preferences.chart_bundle, chartBundleOptions),
+    "chartBundleLabel": preferences.chart_bundle,
+    "chartBundleOptions": chartBundleOptions,
     "journalStyle": resolve_journal_style_choice(preferences.journal, journalOptions),
     "journalStyleLabel": preferences.journal,
     "journalStyleOptions": journalOptions,

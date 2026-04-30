@@ -40,9 +40,9 @@ VISUAL_CONTENT_DEFAULTS = {
 
 CROWDING_DEFAULTS = {
     "legendScope": "figure",
-    "legendMode": "bottom_center",
-    "legendPlacementPriority": ["bottom_center", "top_center"],
-    "legendAllowedModes": ["bottom_center", "top_center"],
+    "legendMode": "top_center",
+    "legendPlacementPriority": ["top_center"],
+    "legendAllowedModes": ["top_center"],
     "legendLabelMaxChars": 32,
     "maxLegendColumns": 6,
     "legendFrame": True,
@@ -52,6 +52,7 @@ CROWDING_DEFAULTS = {
         "linewidth": 0.55,
         "alpha": 0.96,
         "pad": 0.28,
+        "boxstyle": "round",
     },
     "legendCenterPlacementOnly": True,
     "forbidOutsideRightLegend": True,
@@ -2049,6 +2050,7 @@ def _reflow_legend_with_height_increase(fig, handles, labels, legend_labels, occ
 
 
 def apply_subplot_margins(fig, legend_mode, has_colorbar=False, legend=None):
+    legend_mode = _normalize_legend_mode(legend_mode)
     invalidate_layout_cache(fig)
     get_cached_renderer(fig, force=True)
     subplotpars = fig.subplotpars
@@ -2062,26 +2064,17 @@ def apply_subplot_margins(fig, legend_mode, has_colorbar=False, legend=None):
 
     if legend is not None:
         legend_box = _bbox_in_figure_coords(fig, legend)
-        if legend_mode == "bottom_center":
-            bottom = max(bottom, min(0.74, legend_box.y1 + 0.055))
-        elif legend_mode == "top_center":
-            top = min(top, max(0.26, legend_box.y0 - 0.055))
+        top = min(top, max(0.26, legend_box.y0 - 0.055))
 
     if right <= left + 0.12:
         right = left + 0.12
     if top <= bottom + 0.12:
-        if legend_mode == "bottom_center":
-            bottom = max(0.12, top - 0.12)
-        else:
-            top = min(0.95, bottom + 0.12)
+        top = min(0.95, bottom + 0.12)
 
     if legend is not None:
         renderer = get_cached_renderer(fig)
         legend_box = legend.get_window_extent(renderer=renderer).transformed(fig.transFigure.inverted())
-        if legend_mode == "bottom_center":
-            bottom = max(bottom, min(0.74, legend_box.y1 + 0.055))
-        elif legend_mode == "top_center":
-            top = min(top, max(0.26, legend_box.y0 - 0.055))
+        top = min(top, max(0.26, legend_box.y0 - 0.055))
 
     fig.subplots_adjust(top=top, bottom=bottom, left=left, right=right)
     invalidate_layout_cache(fig)
@@ -2096,21 +2089,11 @@ def _unique_modes(modes):
 
 
 def _normalize_legend_mode(mode):
-    if mode in ("top_center", "bottom_center"):
-        return mode
-    return "bottom_center"
+    return "top_center"
 
 
 def _center_legend_modes(modes=None):
-    normalized = []
-    for mode in list(modes or []):
-        mode = _normalize_legend_mode(mode)
-        if mode not in normalized:
-            normalized.append(mode)
-    for mode in ("bottom_center", "top_center"):
-        if mode not in normalized:
-            normalized.append(mode)
-    return normalized
+    return ["top_center"]
 
 
 def _legend_column_options(label_count, legend_mode, max_columns):
@@ -2131,6 +2114,7 @@ def _apply_legend_frame_style(legend, frame_style=None):
         "linewidth": 0.55,
         "alpha": 0.96,
         "pad": 0.28,
+        "boxstyle": "round",
     }
     style.update(frame_style or {})
     frame = legend.get_frame()
@@ -2140,7 +2124,7 @@ def _apply_legend_frame_style(legend, frame_style=None):
     frame.set_linewidth(style["linewidth"])
     frame.set_alpha(style["alpha"])
     if hasattr(frame, "set_boxstyle"):
-        frame.set_boxstyle(f"square,pad={style['pad']}")
+        frame.set_boxstyle(f"{style.get('boxstyle', 'round')},pad={style['pad']}")
     legend.set_gid("scifig_shared_legend")
     legend.set_zorder(1000)
     return True
@@ -2152,7 +2136,7 @@ def create_figure_legend(fig, handles, labels, legend_mode, fontsize, ncol=1, fr
     common = {
         "ncol": ncol,
         "frameon": True,
-        "fancybox": False,
+        "fancybox": True,
         "fontsize": fontsize,
         "borderaxespad": 0.0,
         "borderpad": 0.35,
@@ -2161,12 +2145,8 @@ def create_figure_legend(fig, handles, labels, legend_mode, fontsize, ncol=1, fr
         "labelspacing": 0.35,
         "columnspacing": 0.8,
     }
-    if legend_mode == "top_center":
-        legend = fig.legend(handles, labels, loc="upper center",
-                            bbox_to_anchor=(0.5, 0.99), **common)
-    else:
-        legend = fig.legend(handles, labels, loc="lower center",
-                            bbox_to_anchor=(0.5, 0.01), **common)
+    legend = fig.legend(handles, labels, loc="upper center",
+                        bbox_to_anchor=(0.5, 0.99), **common)
     _apply_legend_frame_style(legend, frame_style)
     return legend
 
@@ -2178,12 +2158,8 @@ def enforce_non_overlapping_legend(fig, legend, legend_mode, occupied_axes, has_
             return True
 
         subplotpars = fig.subplotpars
-        if legend_mode == "bottom_center":
-            next_bottom = min(0.76, subplotpars.bottom + 0.04)
-            fig.subplots_adjust(bottom=next_bottom)
-        elif legend_mode == "top_center":
-            next_top = max(subplotpars.bottom + 0.12, subplotpars.top - 0.04)
-            fig.subplots_adjust(top=next_top)
+        next_top = max(subplotpars.bottom + 0.12, subplotpars.top - 0.04)
+        fig.subplots_adjust(top=next_top)
         invalidate_layout_cache(fig)
 
     if not legend_overlaps_axes(fig, legend, occupied_axes):
@@ -2202,16 +2178,16 @@ def place_shared_legend(fig, axes, occupied_axes, crowdingPlan, journalProfile, 
         "legendLabelsShortened": False,
         "legendNColumns": 0,
         "legendOutsidePlotArea": True,
-        "legendAllowedModes": ["bottom_center", "top_center"],
+        "legendAllowedModes": ["top_center"],
         "legendCenterPlacementOnly": True,
         "legendFrameApplied": False,
         "forbidOutsideRightLegend": True,
     }
     if not handles:
-        return None, _normalize_legend_mode(crowdingPlan.get("legendMode", "bottom_center")), empty_info
+        return None, _normalize_legend_mode(crowdingPlan.get("legendMode", "top_center")), empty_info
 
-    requested_mode = _normalize_legend_mode(crowdingPlan.get("legendMode", "bottom_center"))
-    priority = crowdingPlan.get("legendPlacementPriority") or ["bottom_center", "top_center"]
+    requested_mode = _normalize_legend_mode(crowdingPlan.get("legendMode", "top_center"))
+    priority = crowdingPlan.get("legendPlacementPriority") or ["top_center"]
     allowed_modes = _center_legend_modes(crowdingPlan.get("legendAllowedModes"))
     candidate_modes = _center_legend_modes(priority + [requested_mode] + allowed_modes)
     fontsize = journalProfile.get("font_size_small_pt", 5)
@@ -2294,7 +2270,7 @@ def apply_crowding_management(fig, axes, chartPlan, journalProfile):
         "legendLabelsShortened": False,
         "legendNColumns": 0,
         "legendOutsidePlotArea": True,
-        "legendAllowedModes": ["bottom_center", "top_center"],
+        "legendAllowedModes": ["top_center"],
         "legendCenterPlacementOnly": True,
         "legendFrameApplied": False,
         "legendFrameStyle": crowdingPlan.get("legendFrameStyle", CROWDING_DEFAULTS["legendFrameStyle"]),
@@ -2388,8 +2364,9 @@ def apply_crowding_management(fig, axes, chartPlan, journalProfile):
 
     crowdingPlan["droppedDirectLabelCount"] = dropped_direct_labels
     crowdingPlan["legendScope"] = "figure"
+    crowdingPlan["legendMode"] = "top_center"
     crowdingPlan["legendModeUsed"] = legend_mode_used
-    crowdingPlan["legendAllowedModes"] = ["bottom_center", "top_center"]
+    crowdingPlan["legendAllowedModes"] = ["top_center"]
     crowdingPlan["legendPlacementPriority"] = _center_legend_modes(crowdingPlan.get("legendPlacementPriority"))
     crowdingPlan["legendCenterPlacementOnly"] = True
     crowdingPlan["forbidOutsideRightLegend"] = True
@@ -2460,9 +2437,9 @@ def enforce_figure_legend_contract(fig, axes=None, chartPlan=None, journalProfil
     if crowdingPlan:
         plan["crowdingPlan"].update(crowdingPlan)
     plan["crowdingPlan"]["legendContractRequired"] = True
-    plan["crowdingPlan"]["legendMode"] = _normalize_legend_mode(plan["crowdingPlan"].get("legendMode", "bottom_center"))
-    plan["crowdingPlan"]["legendPlacementPriority"] = ["bottom_center", "top_center"]
-    plan["crowdingPlan"]["legendAllowedModes"] = ["bottom_center", "top_center"]
+    plan["crowdingPlan"]["legendMode"] = "top_center"
+    plan["crowdingPlan"]["legendPlacementPriority"] = ["top_center"]
+    plan["crowdingPlan"]["legendAllowedModes"] = ["top_center"]
     plan["crowdingPlan"]["legendFrame"] = True
     plan["crowdingPlan"]["forbidOutsideRightLegend"] = True
     plan["crowdingPlan"]["forbidInAxesLegend"] = True
@@ -2475,8 +2452,8 @@ def enforce_figure_legend_contract(fig, axes=None, chartPlan=None, journalProfil
         failures.append("axis_legend_remaining")
     if legend_exists and len(fig.legends) != 1:
         failures.append("figure_legend_count_not_one")
-    if legend_exists and report.get("legendModeUsed") not in ("bottom_center", "top_center"):
-        failures.append("legend_not_centered_top_or_bottom")
+    if legend_exists and report.get("legendModeUsed") != "top_center":
+        failures.append("legend_not_top_center")
     if legend_exists and not report.get("legendFrameApplied"):
         failures.append("legend_frame_missing")
     if legend_exists and not report.get("legendOutsidePlotArea", False):

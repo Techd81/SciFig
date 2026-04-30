@@ -62,8 +62,8 @@ Template-derived motifs are governed by `specs/template-visual-motifs.md`. Phase
 ```python
 CROWDING_POLICY = {
     "legend_scope": "figure",
-    "legend_priority": ["bottom_center", "top_center"],
-    "legend_allowed_modes": ["bottom_center", "top_center"],
+    "legend_priority": ["top_center"],
+    "legend_allowed_modes": ["top_center"],
     "legend_label_max_chars": 32,
     "max_legend_columns": 6,
     "legend_frame": True,
@@ -73,6 +73,7 @@ CROWDING_POLICY = {
         "linewidth": 0.55,
         "alpha": 0.96,
         "pad": 0.28,
+        "boxstyle": "round",
     },
     "legend_center_placement_only": True,
     "forbid_outside_right_legend": True,
@@ -194,4 +195,4 @@ Phase 4 must produce `render_qa.json` with:
 - `statProvenanceWarnings`
 - `impactScore` (0-100 from visual-impact-scorer agent)
 
-Any hard failure returns to Phase 3 for styling/layout/code or Phase 2 for an overpacked plan. `legendContractEnforced != true`, non-empty `legendContractFailures`, `layoutContractEnforced != true`, non-empty `layoutContractFailures`, `axisLegendRemainingCount > 0`, `legendOutsidePlotArea == false`, `figureLegendCount != 1` when a legend exists, `legendModeUsed not in ["bottom_center", "top_center"]` when a legend exists, `legendFrameApplied == false` when a legend exists, negative axes text without a reserved slot, poster-scale font sizes, cross-panel table/title/text overlap, missing in-plot explanatory labels, missing required reference motifs, or `visualEnhancementCount < visualContentPlan.minTotalEnhancements` are hard failures. `impactScore < 20` is a hard fail; `impactScore < 40` is a warning.
+Any hard failure returns to Phase 3 for styling/layout/code or Phase 2 for an overpacked plan. `legendContractEnforced != true`, non-empty `legendContractFailures`, `layoutContractEnforced != true`, non-empty `layoutContractFailures`, `axisLegendRemainingCount > 0`, `legendOutsidePlotArea == false`, `figureLegendCount != 1` when a legend exists, `legendModeUsed != "top_center"` when a legend exists, `legendFrameApplied == false` when a legend exists, negative axes text without a reserved slot, poster-scale font sizes, cross-panel table/title/text overlap, missing in-plot explanatory labels, missing required reference motifs, or `visualEnhancementCount < visualContentPlan.minTotalEnhancements` are hard failures. `impactScore < 20` is a hard fail; `impactScore < 40` is a warning.

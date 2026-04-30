@@ -127,6 +127,16 @@ def recommend_chart_bundle(dataProfile, workflowPreferences):
         }
         return FALLBACKS.get(key, "box+strip")
 
+    selected_bundle = workflowPreferences.get("selectedChartBundle") or {}
+    if isinstance(selected_bundle, dict) and selected_bundle.get("primaryChart"):
+        primary = _safe(selected_bundle.get("primaryChart"))
+        secondary = []
+        for chart in selected_bundle.get("secondaryCharts", []):
+            safe_chart = _safe(chart)
+            if safe_chart and safe_chart != primary and safe_chart not in secondary:
+                secondary.append(safe_chart)
+        return primary, secondary
+
     # Direct pattern matches
     if "genomic_association" in patterns:
         return _safe("manhattan"), [_safe("qq"), "forest"]
@@ -456,10 +466,7 @@ def build_crowding_plan(primaryChart, secondaryCharts, dataProfile, workflowPref
     else:
         point_density_mode = "summary_or_thin_points"
 
-    if panelBlueprint.get("sharedLegend", False):
-        legend_mode = "bottom_center"
-    else:
-        legend_mode = "bottom_center"
+    legend_mode = "top_center"
 
     layout_fallbacks = {
         "story_board_2x2": ["hero_plus_stacked_support", "comparison_pair", "single"],
@@ -498,8 +505,8 @@ def build_crowding_plan(primaryChart, secondaryCharts, dataProfile, workflowPref
         "layoutFallbacks": layout_fallbacks,
         "legendScope": "figure",
         "legendMode": legend_mode,
-        "legendPlacementPriority": ["bottom_center", "top_center"],
-        "legendAllowedModes": ["bottom_center", "top_center"],
+        "legendPlacementPriority": ["top_center"],
+        "legendAllowedModes": ["top_center"],
         "legendLabelMaxChars": 32,
         "maxLegendColumns": 6,
         "legendFrame": True,
@@ -509,6 +516,7 @@ def build_crowding_plan(primaryChart, secondaryCharts, dataProfile, workflowPref
             "linewidth": 0.55,
             "alpha": 0.96,
             "pad": 0.28,
+            "boxstyle": "round",
         },
         "legendCenterPlacementOnly": True,
         "forbidOutsideRightLegend": True,
@@ -702,6 +710,80 @@ def infer_template_visual_motifs(charts, dataProfile):
     }
 
 
+def resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreferences):
+    """Bind selected or detected chart families to template-mining cases and technique refs."""
+    selected_bundle = workflowPreferences.get("selectedChartBundle") or {}
+    charts = [primaryChart] + list(secondaryCharts or [])
+    normalized = {str(chart or "").replace("+", "_").lower() for chart in charts if chart}
+    family_map = {
+        "scatter_regression": "marginal_joint",
+        "residual_vs_fitted": "marginal_joint",
+        "bland_altman": "marginal_joint",
+        "histogram": "marginal_joint",
+        "lollipop_horizontal": "shap_composite",
+        "dotplot": "shap_composite",
+        "heatmap_annotated": "shap_composite",
+        "heatmap_triangular": "heatmap_pairwise",
+        "heatmap_symmetric": "heatmap_pairwise",
+        "correlation": "heatmap_pairwise",
+        "bubble_matrix": "heatmap_pairwise",
+        "radar": "radar",
+        "biodiversity_radar": "radar",
+        "forest": "forest",
+        "km": "forest",
+        "roc": "forest",
+        "calibration": "forest",
+        "dose_response": "dual_axis",
+        "line_ci": "time_series_pi",
+        "xrd_pattern": "dual_axis",
+        "ftir_spectrum": "dual_axis",
+        "dsc_thermogram": "dual_axis",
+        "stress_strain": "dual_axis",
+    }
+    technique_by_family = {
+        "marginal_joint": "template-mining/07-techniques/marginal-joint.md",
+        "density_scatter": "template-mining/07-techniques/marginal-joint.md",
+        "shap_composite": "template-mining/07-techniques/shap-composite.md",
+        "heatmap_pairwise": "template-mining/07-techniques/heatmap-pairwise.md",
+        "radar": "template-mining/07-techniques/radar.md",
+        "dual_axis": "template-mining/07-techniques/dual-axis.md",
+        "time_series_pi": "template-mining/07-techniques/time-series-pi.md",
+        "gradient_box": "template-mining/07-techniques/gradient-box.md",
+        "inset_distribution": "template-mining/07-techniques/inset-distribution.md",
+    }
+
+    families = list(selected_bundle.get("templateFamilies") or [])
+    for chart in sorted(normalized):
+        family = family_map.get(chart)
+        if family and family not in families:
+            families.append(family)
+
+    technique_refs = list(selected_bundle.get("techniqueRefs") or [])
+    for family in families:
+        ref = technique_by_family.get(family)
+        if ref and ref not in technique_refs:
+            technique_refs.append(ref)
+
+    anchors = list(selected_bundle.get("templateAnchors") or [])
+    return {
+        "selectedByUser": bool(selected_bundle),
+        "bundleKey": selected_bundle.get("bundleKey"),
+        "label": selected_bundle.get("label"),
+        "templateMatchMode": selected_bundle.get("templateMatchMode") or ("clone_when_known" if families else "best_effort"),
+        "exactTemplateReplicationRequired": bool(families),
+        "primaryChart": primaryChart,
+        "secondaryCharts": list(secondaryCharts or []),
+        "families": families,
+        "techniqueRefs": technique_refs,
+        "anchors": anchors,
+        "instructions": [
+            "if_chart_type_matches_template_family_clone_template_structure_first",
+            "preserve_template_chart_composition_before_data_specific_adaptation",
+            "use_template_palette_layering_annotation_idioms_when_supported",
+        ],
+    }
+
+
 def build_visual_content_plan(primaryChart, secondaryCharts, dataProfile, workflowPreferences):
     scale_policy = globals().get("DATA_SCALE_POLICY", {
         "point_density_alpha_max": 1000,
@@ -723,6 +805,7 @@ def build_visual_content_plan(primaryChart, secondaryCharts, dataProfile, workfl
         point_annotation_mode = "direct_when_legible"
     reference_motifs = infer_reference_visual_motifs(charts, dataProfile)
     template_motif_plan = infer_template_visual_motifs(charts, dataProfile)
+    template_case_plan = resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreferences)
     template_motifs = template_motif_plan["motifs"]
     template_density_bonus = min(2, len(template_motifs))
 
@@ -744,6 +827,11 @@ def build_visual_content_plan(primaryChart, secondaryCharts, dataProfile, workfl
         "templateMotifsApplied": [],
         "templateMotifCount": 0,
         "minTemplateMotifsPerFigure": template_density_bonus,
+        "templateCasePlan": template_case_plan,
+        "templateCaseAnchors": template_case_plan["anchors"],
+        "templateTechniqueRefs": template_case_plan["techniqueRefs"],
+        "templateMatchMode": template_case_plan["templateMatchMode"],
+        "exactTemplateReplicationRequired": template_case_plan["exactTemplateReplicationRequired"],
         "layoutIntents": template_motifs,
         "provenanceRequirements": template_motif_plan["provenanceRequirements"],
         "requireInPlotExplanatoryLabels": True,
@@ -789,6 +877,7 @@ def build_visual_content_plan(primaryChart, secondaryCharts, dataProfile, workfl
             "nature_cell_information_density",
             "reference_visual_grammar_required",
             "template_visual_motifs_required_when_data_supports_them",
+            "clone_known_template_family_before_style_generalization",
             "minimum_inplot_explanatory_labels_required",
             "minimum_visual_enhancement_count_required"
         ]
@@ -856,6 +945,7 @@ annotations = configure_annotations(dataProfile, primaryChart, statPlan)
 panelBlueprint = build_panel_blueprint(primaryChart, secondaryCharts, dataProfile, workflowPreferences)
 crowdingPlan = build_crowding_plan(primaryChart, secondaryCharts, dataProfile, workflowPreferences, panelBlueprint)
 visualContentPlan = build_visual_content_plan(primaryChart, secondaryCharts, dataProfile, workflowPreferences)
+templateCasePlan = visualContentPlan.get("templateCasePlan", resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreferences))
 palettePlan = build_palette_plan(primaryChart, dataProfile, workflowPreferences)
 
 delegationReports = {
@@ -877,10 +967,11 @@ chartPlan = {
     "crowdingPlan": crowdingPlan,
     "visualContentPlan": visualContentPlan,
     "templateMotifs": visualContentPlan.get("templateMotifs", []),
+    "templateCasePlan": templateCasePlan,
     "palettePlan": palettePlan,
     "delegationReports": delegationReports,
     "journalOverrides": {},
-    "rationale": "Selected using semantic roles, special patterns, domain hints, requested story mode, layout scoring, clarity-first crowding control, palette contrast policy, and Nature/Cell dense visual content."
+    "rationale": "Selected using semantic roles, special patterns, domain hints, requested story mode, template-case chart bundle constraints, layout scoring, clarity-first crowding control, palette contrast policy, and Nature/Cell dense visual content."
 }
 ```
 

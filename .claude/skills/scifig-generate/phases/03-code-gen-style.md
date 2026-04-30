@@ -59,7 +59,7 @@ required = arc_required_motifs(arc)
 | Narrative arc selection | `template-mining/06-narrative-arcs.md` |
 | Family deep-dive (only if needed) | `template-mining/07-techniques/<family>.md` |
 
-**Anchor cases lookup**: query `template-mining/case-index.json` for ≥3 cases matching the chosen `chart_families` or `narrative_arc`. Use them as visual references when writing the generator code — copy their layer structure, palette anchors, and annotation idioms verbatim before tuning to the user's data.
+**Anchor cases lookup**: query `template-mining/case-index.json` for ≥3 cases matching the chosen `chart_families` or `narrative_arc`. If `chartPlan.templateCasePlan.templateMatchMode == "clone_when_known"` or `visualContentPlan.exactTemplateReplicationRequired` is true, read every `templateCasePlan.techniqueRefs` file and use `templateCasePlan.anchors` as the primary visual references. For known families (marginal-joint, SHAP composite, heatmap-pairwise, radar, dual-axis, time-series-pi, gradient-box, inset-distribution), copy the template case's layer structure, subplot proportions, palette anchors, z-order stack, annotation idioms, legend/colorbar placement, and sidecar axes layout before tuning to the user's data.
 
 ## Objective
 
@@ -632,7 +632,7 @@ If direct labels still exceed the budget, keep only the highest-priority labels 
 The canonical helper runtime is `phases/code-gen/helpers.py`. Do not duplicate helper implementations in this phase document. Step 3.6 must read that file, embed it into `full_code_string`, execute it, and use its public contract:
 
 - `sanitize_columns`, `apply_chart_polish`, `apply_visual_content_pass`, `apply_template_radar_signature`, `apply_template_triangular_heatmap_signature`, `apply_crowding_management`, `enforce_figure_legend_contract`, `audit_figure_layout_contract`
-- metadata fields: `legendContractEnforced`, `layoutContractEnforced`, `legendOutsidePlotArea`, `axisLegendRemainingCount`, `layoutContractFailures`, `visualGrammarMotifsApplied`, `templateMotifsApplied`, `metricTableCount`, `referenceLineCount`, `densityHaloCount`, `marginalAxesCount`, `densityColorEncodingCount`
+- metadata fields: `legendContractEnforced`, `layoutContractEnforced`, `legendOutsidePlotArea`, `axisLegendRemainingCount`, `layoutContractFailures`, `visualGrammarMotifsApplied`, `templateMotifsApplied`, `templateCaseAnchors`, `templateTechniqueRefs`, `templateMatchMode`, `metricTableCount`, `referenceLineCount`, `densityHaloCount`, `marginalAxesCount`, `densityColorEncodingCount`
 - hard rule: generated code may create temporary `ax.legend(...)` handles, but final output must call `enforce_figure_legend_contract(...)` immediately before the first `savefig` and leave no axis legends behind
 
 If a helper behavior needs to change, edit `phases/code-gen/helpers.py` and update tests; do not paste a local replacement here.
@@ -643,7 +643,7 @@ Use `panelBlueprint` as the source of truth and embed the canonical source from 
 Composition rules that must remain true:
 
 - Shared legends/colorbars are external layout elements, not plotted-area annotations.
-- Bottom-center framed shared legend is preferred; top-center is the only fallback. Outside-right and `loc="best"` publication legends are forbidden.
+- Top-center rounded framed shared legend is mandatory for final composites. Outside-right, bottom, in-axes, and `loc="best"` publication legends are forbidden.
 - Risk tables, side summaries, and footnotes need reserved GridSpec/subfigure slots; no negative `ax.transAxes` text unless a slot is reserved.
 - Print-scale typography only: body 5-7 pt, axes labels 6-8 pt, panel labels 8-10 pt, compact titles 7-9 pt.
 - Panel labels use consistent anchor/font/offset, and axis link groups are used only when scales are semantically identical.
@@ -784,7 +784,7 @@ if is_multipanel:
     # Multi-panel mode: use gen_multipanel to create a single figure with shared axes
     primary_call = f"""# Multi-panel figure
 dataProfile_dict = {{"semanticRoles": {{{roles_code}}}, "df": df}}
-    chartPlan = {{"primaryChart": "{chartPlan['primaryChart']}", "secondaryCharts": {chartPlan.get("secondaryCharts", [])}, "panelBlueprint": {repr(chartPlan.get("panelBlueprint", {}))}, "crowdingPlan": {repr(chartPlan.get("crowdingPlan", {}))}, "visualContentPlan": {repr(chartPlan.get("visualContentPlan", {}))}}}
+chartPlan = {{"primaryChart": "{chartPlan['primaryChart']}", "secondaryCharts": {chartPlan.get("secondaryCharts", [])}, "panelBlueprint": {repr(chartPlan.get("panelBlueprint", {}))}, "crowdingPlan": {repr(chartPlan.get("crowdingPlan", {}))}, "visualContentPlan": {repr(chartPlan.get("visualContentPlan", {}))}, "templateCasePlan": {repr(chartPlan.get("templateCasePlan", {}))}}}
 palette = {repr(colorSystem)}
 
 fig = gen_multipanel(chartPlan, journalProfile, palette, dataProfile_dict, rcParams, col_map=col_map)
@@ -797,7 +797,7 @@ else:
     # Single panel mode: generate individual figures
     primary_call = f"""# Primary chart: {chartPlan['primaryChart']}
 dataProfile = {{"semanticRoles": {{{roles_code}}}, "df": df}}
-    chartPlan = {{"primaryChart": "{chartPlan['primaryChart']}", "secondaryCharts": {chartPlan.get("secondaryCharts", [])}, "panelBlueprint": {{"layout": {{"recipe": "single", "grid": "1x1"}}, "panels": [{{"id": "A", "role": "hero", "chart": "{chartPlan['primaryChart']}", "source": "primary"}}], "requestedLayout": "single", "finalLayout": "single", "sharedLegend": False, "sharedColorbar": False}}, "crowdingPlan": {repr(chartPlan.get("crowdingPlan", {}))}, "visualContentPlan": {repr(chartPlan.get("visualContentPlan", {}))}}}
+chartPlan = {{"primaryChart": "{chartPlan['primaryChart']}", "secondaryCharts": {chartPlan.get("secondaryCharts", [])}, "panelBlueprint": {{"layout": {{"recipe": "single", "grid": "1x1"}}, "panels": [{{"id": "A", "role": "hero", "chart": "{chartPlan['primaryChart']}", "source": "primary"}}], "requestedLayout": "single", "finalLayout": "single", "sharedLegend": False, "sharedColorbar": False}}, "crowdingPlan": {repr(chartPlan.get("crowdingPlan", {}))}, "visualContentPlan": {repr(chartPlan.get("visualContentPlan", {}))}, "templateCasePlan": {repr(chartPlan.get("templateCasePlan", {}))}}}
 palette = {repr(colorSystem)}
 
 single_height = journalProfile.get("canvas_height_mm", {}).get("single", 62)
@@ -820,7 +820,7 @@ plt.close()
             ])
             secondary_calls += f"""
 # Secondary chart: {sec_chart}
-secondaryPlan = {{"primaryChart": "{sec_chart}", "secondaryCharts": [], "panelBlueprint": {{"layout": {{"recipe": "single", "grid": "1x1"}}, "panels": [{{"id": "A", "role": "hero", "chart": "{sec_chart}", "source": "secondary"}}], "requestedLayout": "single", "finalLayout": "single", "sharedLegend": False, "sharedColorbar": False}}, "crowdingPlan": {repr(chartPlan.get("crowdingPlan", {}))}, "visualContentPlan": {repr(chartPlan.get("visualContentPlan", {}))}}
+secondaryPlan = {{"primaryChart": "{sec_chart}", "secondaryCharts": [], "panelBlueprint": {{"layout": {{"recipe": "single", "grid": "1x1"}}, "panels": [{{"id": "A", "role": "hero", "chart": "{sec_chart}", "source": "secondary"}}], "requestedLayout": "single", "finalLayout": "single", "sharedLegend": False, "sharedColorbar": False}}, "crowdingPlan": {repr(chartPlan.get("crowdingPlan", {}))}, "visualContentPlan": {repr(chartPlan.get("visualContentPlan", {}))}, "templateCasePlan": {repr(chartPlan.get("templateCasePlan", {}))}}
 single_height = journalProfile.get("canvas_height_mm", {}).get("single", 62)
 fig, ax = plt.subplots(figsize=({journalProfile['single_width_mm']}*MM, single_height*MM), constrained_layout=False)
 ax = {sec_gen}(df, dataProfile, secondaryPlan, rcParams, palette, col_map=col_map, ax=ax)
@@ -948,6 +948,7 @@ styledCode = {
     "panelGeometry": panelGeometry,
     "colorSystem": colorSystem,
     "visualContentPlan": chartPlan.get("visualContentPlan", {}),
+    "templateCasePlan": chartPlan.get("templateCasePlan", {}),
     "statsReport": statsReport,
     "codeReview": codeReview,
     "generatorCoverage": {

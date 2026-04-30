@@ -128,7 +128,7 @@ render_qa = {
     "axisLegendRemainingCount": chartPlan.get("crowdingPlan", {}).get("axisLegendRemainingCount", 0),
     "figureLegendCount": chartPlan.get("crowdingPlan", {}).get("figureLegendCount", 0),
     "legendModeUsed": chartPlan.get("crowdingPlan", {}).get("legendModeUsed", "none"),
-    "legendAllowedModes": chartPlan.get("crowdingPlan", {}).get("legendAllowedModes", ["bottom_center", "top_center"]),
+    "legendAllowedModes": chartPlan.get("crowdingPlan", {}).get("legendAllowedModes", ["top_center"]),
     "legendCenterPlacementOnly": chartPlan.get("crowdingPlan", {}).get("legendCenterPlacementOnly", True),
     "legendFrameApplied": chartPlan.get("crowdingPlan", {}).get("legendFrameApplied", False),
     "legendFrameStyle": chartPlan.get("crowdingPlan", {}).get("legendFrameStyle", {}),
@@ -204,7 +204,7 @@ if legend_exists and render_qa["figureLegendCount"] != 1:
     render_qa["overlapFailures"].append("figure_legend_count_invalid")
 
 if legend_exists and render_qa["legendModeUsed"] not in render_qa["legendAllowedModes"]:
-    render_qa["overlapFailures"].append("legend_not_bottom_or_top_center")
+    render_qa["overlapFailures"].append("legend_not_top_center")
 
 if legend_exists and not render_qa["legendFrameApplied"]:
     render_qa["overlapFailures"].append("legend_frame_missing")
@@ -273,7 +273,7 @@ Hard failures:
 - generated typography is poster-scale (`font.size >= 12`, `fontsize >= 13`, or panel labels above 12 pt)
 - any title, risk table, text box, or statistical bracket overlaps another panel's rendered layout box
 - any axis-level legend remains after crowding management
-- any final legend is outside `bottom_center` / `top_center`, missing its rectangular frame, or placed outside-right
+- any final legend is outside `top_center`, missing its rounded frame, or placed outside-right
 - visual content is under-dense: too few data-derived enhancements or no in-plot explanatory labels
 - required reference visual grammar is missing: too few data-supported motif layers such as metric tables, perfect-fit/reference lines, density halos, matrix labels, p-value stars, sample-shape overlays, or dual-axis error bars
 - required template visual grammar is missing: planned motif layers such as joint marginal axes, density-colored scatter, prediction diagnostic matrix, correlation evidence matrix, interval band, or dual-axis error sidecar were not applied
@@ -340,7 +340,7 @@ metadata = {
     "simplificationsApplied": chartPlan.get("crowdingPlan", {}).get("simplificationsApplied", []),
     "droppedDirectLabelCount": chartPlan.get("crowdingPlan", {}).get("droppedDirectLabelCount", 0),
     "legendModeUsed": chartPlan.get("crowdingPlan", {}).get("legendModeUsed", "none"),
-    "legendAllowedModes": chartPlan.get("crowdingPlan", {}).get("legendAllowedModes", ["bottom_center", "top_center"]),
+    "legendAllowedModes": chartPlan.get("crowdingPlan", {}).get("legendAllowedModes", ["top_center"]),
     "legendFrameApplied": chartPlan.get("crowdingPlan", {}).get("legendFrameApplied", False),
     "legendContractEnforced": chartPlan.get("crowdingPlan", {}).get("legendContractEnforced", False),
     "legendContractFailures": chartPlan.get("crowdingPlan", {}).get("legendContractFailures", []),

@@ -91,19 +91,22 @@ Key functions from that file used in the flow below:
 - `resolve_domain_answer(raw_answer, mapping)` -- maps domain card answers to family keys
 - `infer_journal_style_options(domain_family, custom_domain_text, language, context=None)` -- AI-generated journal options with domain-aware fallback
 - `infer_synthetic_bundle_options(domain_family, custom_domain_text, language)` -- domain-aware bundle options
+- `infer_template_chart_bundle_options(domain_family, custom_domain_text, language, context=None)` -- template-case-backed chart package options
+- `resolve_chart_bundle_choice(selected_label, chart_bundle_options)` -- maps the chart-package answer to primary/secondary charts plus template anchors
 - `generate_options_with_ai(context, question_type, fallback_options)` -- AI option generation with fallback chain
 - `_call_option_generator(prompt, question_type, fallback_options)` -- coordinator-interceptable call with proper fallback
 
 ## Preference Collection Flow
 
-Execute the 6-card flow defined in [specs/preference-collection.md](specs/preference-collection.md) § "Card Definitions and Flow". Use the bilingual answer maps, card option templates, and resolution maps from that file. The flow is:
+Execute the base preference gates defined in [specs/preference-collection.md](specs/preference-collection.md) § "Card Definitions and Flow", plus the template-backed chart-bundle card when a domain is available. Use the bilingual answer maps, card option templates, and resolution maps from that file. The flow is:
 
 1. **Data-status card**: `normalize_card_answer(answer, DATA_STATUS_MAP)` → `file_exists` / `synthetic_data` / `template`
 2. **Data-path card** (only if file exists): `normalize_card_answer(answer, DATA_PATH_MAP)` → validate with `is_concrete_data_file_path()`
 3. **Mode card**: `normalize_card_answer(answer, MODE_MAP)` → `auto` / `interactive`
 4. **Synthetic-domain card** (only if synthetic): `resolve_domain_answer(answer, SYNTHETIC_DOMAIN_MAP)` → domain family + custom text
 5. **Synthetic-bundle card** (only if synthetic): `infer_synthetic_bundle_options()` + optional `generate_options_with_ai()`
-6. **Visual-preference card** (4 questions): use `_localize_options(template, lang)` for palette/resolution/crowding; use `infer_journal_style_options(..., context={...})` for AI-generated field-top-journal options based on the selected domain. Pass only `{label, description}` to AskUserQuestion, but keep the full `journalOptions` list in state for `styleKey` resolution. Example: audio/signal/acoustics should produce options such as IEEE/ACM TASLP, JASA, IEEE TSP / Signal Processing, ICASSP, or Interspeech when appropriate, not generic Nature-like / Science-like / Cell-like options.
+6. **Template chart-bundle card**: ask `你希望生成哪类图表套餐？` and fill options with `infer_template_chart_bundle_options(..., context={...})`. Options must be domain-matched template-case packages ranked against `dataProfile`, not generic chart names. Pass only `{label, description}` to AskUserQuestion, but keep the full `chartBundleOptions` list in state so Phase 2 receives `selectedChartBundle.primaryChart`, `secondaryCharts`, `templateAnchors`, `templateFamilies`, and `techniqueRefs`. For real-file interactive mode, ask this after Phase 1 domain inference and before Phase 2 locks `chartPlan`; for synthetic runs, ask it after the synthetic-bundle card; for auto mode, choose the first compatible returned bundle without another user card.
+7. **Visual-preference card** (4 questions): use `_localize_options(template, lang)` for palette/resolution/crowding; use `infer_journal_style_options(..., context={...})` for AI-generated field-top-journal options based on the selected domain. Pass only `{label, description}` to AskUserQuestion, but keep the full `journalOptions` list in state for `styleKey` resolution. Example: audio/signal/acoustics should produce options such as IEEE/ACM TASLP, JASA, IEEE TSP / Signal Processing, ICASSP, or Interspeech when appropriate, not generic Nature-like / Science-like / Cell-like options.
 
 After all cards, assemble `workflowPreferences` using the resolution maps (`JOURNAL_STYLE_RESOLVE`, `STORY_MODE_RESOLVE`, `MISSING_RESOLVE`, `COLOR_MODE_RESOLVE`, `DPI_RESOLVE`, `CROWDING_RESOLVE`, `EXPORT_FORMATS_RESOLVE`, `STATS_RIGOR_RESOLVE`, `PANEL_LAYOUT_RESOLVE`) as defined in § "Building `workflowPreferences`".
 
@@ -114,11 +117,11 @@ For auto mode: fill visual-preference card with submission-safe defaults unless 
 When `workflowPreferences["interactionMode"] == "auto"`:
 
 - Ask the data-status card first, then always ask the explicit mode card before any plotting or synthetic-data generation branch. Ask the data-path card only when the user already has a file.
-- If the user chooses synthetic data, ask the synthetic-domain card after mode selection, infer suitable journal-style and bundle options from that answer, then ask the synthetic-bundle card as a separate follow-up.
+- If the user chooses synthetic data, ask the synthetic-domain card after mode selection, infer suitable journal-style, synthetic-bundle, and template chart-bundle options from that answer, then ask the synthetic-bundle card and template chart-bundle card as separate follow-ups.
 - Ask journal style, color, raster DPI, and crowding together in the final visual preference card for every synthetic-data run. The journal-style options in that card must come from `infer_journal_style_options(..., context={...})`, which first asks AI to reason from the selected domain, custom domain text, and available data/profile context, then falls back to domain-specific top-journal seeds only if AI generation is unavailable or invalid. Do not show the broad Nature/Science/Cell trio unless the selected field itself is broad high-impact biology or the user explicitly asks for cross-disciplinary top-journal styling. For real-file auto mode, fill these with submission-safe defaults unless the user selected interactive mode.
 - Use `crowdingPolicy=auto_simplify` and `overlapPriority=clarity_first`.
 - Continue directly into Phase 1 only after either a concrete user-confirmed file path exists or a user-approved synthetic-data plan exists, and only after the user explicitly selected free mode.
-- Let the data and detected domain cues drive the recommendation unless the user already supplied explicit `DOMAIN_OVERRIDE` or `MUST_HAVE` constraints.
+- Let the data, detected domain cues, and template-backed `selectedChartBundle` drive the recommendation unless the user already supplied explicit `DOMAIN_OVERRIDE` or `MUST_HAVE` constraints. When a known template family is selected or detected, Phase 2/3 must preserve that template's chart composition, layer structure, palette anchors, and technique refs before making data-specific adaptations.
 
 ## Execution Flow
 
@@ -180,7 +183,7 @@ Blocking agent findings must route back to the owning phase before advancing. Ne
 3. Do not mix unrelated semantic color mappings across panels of the same figure.
 4. Do not use rainbow colormaps unless the variable is cyclic and the legend explicitly justifies it.
 5. Keep all figure text editable, sans serif, and legible at final print size.
-6. Treat every legend as a figure-level layout element in final output, not as an axes annotation. When panels share group, color, marker, or line semantics, keep one shared framed `fig.legend` outside every plotting area; allowed positions are bottom-center first, then top-center. Never use `loc="best"` or outside-right for publication output.
+6. Treat every legend as a figure-level layout element in final output, not as an axes annotation. When panels share group, color, marker, or line semantics, keep one shared rounded-frame `fig.legend` at the figure top center, outside every plotting area. Never use `loc="best"`, in-axes, bottom, or outside-right legends for publication output.
 7. Every generated script must call `enforce_figure_legend_contract(...)` immediately before the first `savefig` for each figure. Direct `ax.legend(...)` calls are temporary handle sources only; if the finalizer is missing, or if any axis legend remains after the finalizer, return to Phase 3.
 8. Do not hand-write replacement runtime helpers when the skill already provides them. Generated code must embed and execute the helper source from `phases/code-gen/helpers.py`, so `legendContractEnforced`, `layoutContractEnforced`, overlap checks, and typography gates are real runtime results rather than local approximations.
 9. Use shared legends or shared colorbars when panels encode the same semantics.
@@ -213,7 +216,7 @@ Normalize a confirmed real-file reply into `FILE:` and carry that exact path int
 Carry these canonical fields forward:
 
 - `dataProfile`: `format`, `structure`, `columns`, `semanticRoles`, `domainHints`, `nGroups`, `nObservations`, `replicateInfo`, `riskFlags`, `panelCandidates`, `warnings`, `audit`
-- `chartPlan`: `primaryChart`, `secondaryCharts`, `statMethod`, `multipleComparison`, `annotations`, `panelBlueprint`, `crowdingPlan`, `visualContentPlan`, `templateMotifs`, `palettePlan`, `delegationReports`, `journalOverrides`, `rationale`
+- `chartPlan`: `primaryChart`, `secondaryCharts`, `statMethod`, `multipleComparison`, `annotations`, `panelBlueprint`, `crowdingPlan`, `visualContentPlan`, `templateMotifs`, `templateCasePlan`, `palettePlan`, `delegationReports`, `journalOverrides`, `rationale`
 - `styledCode`: `pythonCode`, `journalProfile`, `figureSpec`, `colorSystem`, `panelGeometry`, `statsReport`, `codeReview`, `seed`
 - `outputBundle`: `figures`, `code`, `statsReport`, `sourceData`, `panelManifest`, `requirements`, `metadata`, `renderQa`
 
@@ -251,7 +254,7 @@ Keep exactly one active phase. Expand the active phase into concrete sub-tasks, 
 - Before Phase 3, ensure the panel blueprint and palette plan are explicit.
 - Before Phase 3, resolve blocking chart/stat/layout/palette agent findings.
 - Before Phase 4, ensure code generation includes source-data, render-QA, and metadata hooks.
-- Before completion, require `renderQa.hardFail == false`, `legendContractEnforced == true`, `layoutContractEnforced == true`, `legendOutsidePlotArea == true`, `axisLegendRemainingCount == 0`, `layoutContractFailures == []`, `legendModeUsed in ["bottom_center", "top_center", "none"]`, exactly one framed shared legend when a legend exists, and enough data-derived visual content to satisfy `visualContentPlan.minTotalEnhancements` and `visualContentPlan.minInPlotLabelsPerFigure`.
+- Before completion, require `renderQa.hardFail == false`, `legendContractEnforced == true`, `layoutContractEnforced == true`, `legendOutsidePlotArea == true`, `axisLegendRemainingCount == 0`, `layoutContractFailures == []`, `legendModeUsed in ["top_center", "none"]`, exactly one rounded-frame shared top-center legend when a legend exists, and enough data-derived visual content to satisfy `visualContentPlan.minTotalEnhancements` and `visualContentPlan.minInPlotLabelsPerFigure`.
 
 ## Related Commands
 
