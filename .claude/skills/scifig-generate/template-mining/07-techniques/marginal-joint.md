@@ -130,6 +130,8 @@ ax_right.tick_params(labelleft=False)
 
 Cleaner but less control over corner panel. Use for pure marginal-joint without colorbar inside.
 
+Executable mapping: `scatter_regression` enters marginal-joint mode for standalone prediction/accuracy-vs-stability scatters when `visualContentPlan.useMarginalAxes`, the `joint_marginal_grid` motif, or the `marginal_joint` family is present. It calls the shared density-color and marginal-axis helpers, keeps split markers as hollow overlays when supplied, reserves top/right sidecar axes, and adds a slim density colorbar outside those sidecars.
+
 ## Discipline rules
 
 | Rule | Reason |

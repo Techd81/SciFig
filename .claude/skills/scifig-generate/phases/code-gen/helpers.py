@@ -698,18 +698,19 @@ def _add_marginal_distribution_axes(ax, x, y, visualPlan, color="#4C78A8"):
     pos = ax.get_position()
     top_h = min(0.115, max(0.075, pos.height * 0.24))
     right_w = min(0.105, max(0.07, pos.width * 0.22))
-    gap = 0.008
-    if pos.y1 + gap + top_h >= 0.985 or pos.x1 + gap + right_w >= 0.985:
+    side_gap = 0.008
+    top_gap = 0.085 if visualPlan.get("reserveMarginalTitleGap", True) else 0.008
+    if pos.y1 + top_gap + top_h >= 0.985 or pos.x1 + side_gap + right_w >= 0.985:
         new_pos = [
             pos.x0,
             pos.y0,
-            max(pos.width - right_w - gap, pos.width * 0.72),
-            max(pos.height - top_h - gap, pos.height * 0.72),
+            max(pos.width - right_w - side_gap, pos.width * 0.72),
+            max(pos.height - top_h - top_gap, pos.height * 0.72),
         ]
         ax.set_position(new_pos)
         pos = ax.get_position()
-    top = fig.add_axes([pos.x0, pos.y1 + gap, pos.width, top_h], sharex=ax)
-    right = fig.add_axes([pos.x1 + gap, pos.y0, right_w, pos.height], sharey=ax)
+    top = fig.add_axes([pos.x0, pos.y1 + top_gap, pos.width, top_h], sharex=ax)
+    right = fig.add_axes([pos.x1 + side_gap, pos.y0, right_w, pos.height], sharey=ax)
     bins = min(22, max(8, int(np.sqrt(mask.sum()))))
     _draw_template_marginal_distribution(top, x_valid, orientation="vertical", color=color, bins=bins)
     _draw_template_marginal_distribution(right, y_valid, orientation="horizontal", color=color, bins=bins)

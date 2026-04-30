@@ -3556,6 +3556,7 @@ def gen_correlation(df, dataProfile, chartPlan, rcParams, palette, col_map=None,
 def gen_scatter_regression(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=None):
     """Scatter with regression line, parity diagnostics, or SHAP dependence view."""
     standalone = ax is None
+    plt.rcParams.update(rcParams)
     roles = dataProfile.get("semanticRoles", {})
     columns_lower = {str(c).lower(): c for c in df.columns}
 
@@ -3576,6 +3577,24 @@ def gen_scatter_regression(df, dataProfile, chartPlan, rcParams, palette, col_ma
     template_case = (chartPlan.get("templateCasePlan") or chartPlan.get("visualContentPlan", {}).get("templateCasePlan") or {})
     patterns = {str(p).lower() for p in dataProfile.get("specialPatterns", [])}
     bundle_key = str(template_case.get("bundleKey") or "").lower()
+    visual_plan = chartPlan.get("visualContentPlan")
+    if not isinstance(visual_plan, dict):
+        visual_plan = {}
+        chartPlan["visualContentPlan"] = visual_plan
+    template_families = {
+        str(f).lower()
+        for f in (
+            template_case.get("families")
+            or template_case.get("templateFamilies")
+            or visual_plan.get("families")
+            or visual_plan.get("templateFamilies")
+            or []
+        )
+    }
+    template_motifs = {
+        str(m).lower()
+        for m in (visual_plan.get("templateMotifs") or chartPlan.get("templateMotifs") or [])
+    }
     feature_value_col = _role_or_column("feature_value", "feature_val", "feature_numeric", "x")
     shap_value_col = _role_or_column("shap_value", "shap", "shap_impact", "y")
     interaction_col = _role_or_column("interaction_value", "interaction", "feature_color", "color", "hue")
@@ -3621,6 +3640,24 @@ def gen_scatter_regression(df, dataProfile, chartPlan, rcParams, palette, col_ma
     plot_df[x_col] = pd.to_numeric(plot_df[x_col], errors="coerce")
     plot_df[y_col] = pd.to_numeric(plot_df[y_col], errors="coerce")
     plot_df = plot_df.dropna(subset=[x_col, y_col])
+    use_marginal_joint = (
+        standalone
+        and not is_shap_dependence
+        and len(plot_df) >= 30
+        and (
+            visual_plan.get("useMarginalAxes")
+            or "joint_marginal_grid" in template_motifs
+            or "marginal_joint" in template_families
+            or (is_prediction_report and (bundle_key == "rf_model_performance_report" or "prediction_diagnostic" in patterns))
+        )
+    )
+    if use_marginal_joint:
+        visual_plan["useMarginalAxes"] = True
+        visual_plan["useDensityColorEncoding"] = True
+        if "joint_marginal_grid" not in visual_plan.get("templateMotifs", []):
+            visual_plan.setdefault("templateMotifs", []).append("joint_marginal_grid")
+        if "density_encoded_scatter" not in visual_plan.get("templateMotifs", []):
+            visual_plan.setdefault("templateMotifs", []).append("density_encoded_scatter")
 
     if is_shap_dependence:
         if interaction_col and interaction_col in plot_df.columns:
@@ -3696,6 +3733,7 @@ def gen_scatter_regression(df, dataProfile, chartPlan, rcParams, palette, col_ma
             apply_chart_polish(ax, "scatter_regression")
         return ax
 
+    density_scatter = None
     if is_prediction_report:
         split_styles = {
             "train": ("s", "#F6CFA3"),
@@ -3708,20 +3746,25 @@ def gen_scatter_regression(df, dataProfile, chartPlan, rcParams, palette, col_ma
         }
         groups = [(None, plot_df)] if not split_col or split_col not in plot_df.columns else list(plot_df.groupby(split_col))
         fallback = palette.get("categorical", ["#1F4E79", "#D55E00", "#009E73"])
-        for i, (name, grp) in enumerate(groups):
-            label = "samples" if name is None else str(name)
-            marker, color = split_styles.get(label.lower(), ("o", fallback[i % len(fallback)]))
-            ax.scatter(
-                grp[x_col], grp[y_col], marker=marker, s=22,
-                facecolors="none", edgecolors=color, linewidth=0.75,
-                alpha=0.9, label=label, zorder=3,
-            )
+        if use_marginal_joint and "_overlay_density_colored_points" in globals():
+            density_scatter = _overlay_density_colored_points(ax, plot_df[x_col], plot_df[y_col], visual_plan)
+        if density_scatter is None or (split_col and split_col in plot_df.columns):
+            for i, (name, grp) in enumerate(groups):
+                label = "samples" if name is None else str(name)
+                marker, color = split_styles.get(label.lower(), ("o", fallback[i % len(fallback)]))
+                ax.scatter(
+                    grp[x_col], grp[y_col], marker=marker, s=18 if density_scatter is not None else 22,
+                    facecolors="none", edgecolors=color, linewidth=0.55 if density_scatter is not None else 0.75,
+                    alpha=0.62 if density_scatter is not None else 0.9, label=label, zorder=7 if density_scatter is not None else 3,
+                )
         lo = float(np.nanmin([plot_df[x_col].min(), plot_df[y_col].min()]))
         hi = float(np.nanmax([plot_df[x_col].max(), plot_df[y_col].max()]))
         pad = max((hi - lo) * 0.04, 1e-9)
         ax.plot([lo - pad, hi + pad], [lo - pad, hi + pad], color="black", lw=0.8, ls="--", label="1:1", zorder=2)
         ax.set_xlim(lo - pad, hi + pad)
         ax.set_ylim(lo - pad, hi + pad)
+        if use_marginal_joint:
+            ax.set_aspect("equal", adjustable="box")
         residuals = plot_df[y_col] - plot_df[x_col]
         ss_res = float(np.sum((plot_df[y_col] - plot_df[x_col]) ** 2))
         ss_tot = float(np.sum((plot_df[x_col] - plot_df[x_col].mean()) ** 2))
@@ -3738,8 +3781,11 @@ def gen_scatter_regression(df, dataProfile, chartPlan, rcParams, palette, col_ma
         if labels:
             ax.legend(frameon=False, fontsize=5, ncol=min(4, len(labels)))
     else:
-        ax.scatter(plot_df[x_col], plot_df[y_col], c="#000000", s=15, alpha=0.7,
-                   linewidth=0.3, edgecolors="white")
+        if use_marginal_joint and "_overlay_density_colored_points" in globals():
+            density_scatter = _overlay_density_colored_points(ax, plot_df[x_col], plot_df[y_col], visual_plan)
+        if density_scatter is None:
+            ax.scatter(plot_df[x_col], plot_df[y_col], c="#000000", s=15, alpha=0.7,
+                       linewidth=0.3, edgecolors="white")
 
     z = np.polyfit(plot_df[x_col], plot_df[y_col], 1)
     p_line = np.poly1d(z)
@@ -3750,8 +3796,25 @@ def gen_scatter_regression(df, dataProfile, chartPlan, rcParams, palette, col_ma
     if not is_prediction_report:
         ax.text(0.05, 0.95, f"r = {r:.3f}", transform=ax.transAxes, fontsize=6, va="top")
 
-    ax.set_xlabel("Actual" if is_prediction_report else x_col)
-    ax.set_ylabel("Predicted" if is_prediction_report else y_col)
+    ax.set_xlabel(("Actual" if is_prediction_report else x_col) if standalone else "")
+    ax.set_ylabel(("Predicted" if is_prediction_report else y_col) if standalone else "")
+    if use_marginal_joint and "_add_marginal_distribution_axes" in globals():
+        marginal_axes = _add_marginal_distribution_axes(
+            ax, plot_df[x_col], plot_df[y_col], visual_plan,
+            color=palette.get("categorical", ["#69B3A2"])[0],
+        )
+        if density_scatter is not None:
+            if marginal_axes:
+                right_ax = marginal_axes[1]
+                pos = right_ax.get_position()
+                cbar_x = min(pos.x1 + 0.01, 0.965)
+                cax = ax.figure.add_axes([cbar_x, pos.y0, 0.010, pos.height])
+                cbar = ax.figure.colorbar(density_scatter, cax=cax)
+            else:
+                cbar = ax.figure.colorbar(density_scatter, ax=ax, fraction=0.04, pad=0.025)
+            cbar.set_label("Density", fontsize=5.5)
+            cbar.ax.tick_params(labelsize=4.8, length=2)
+            globals().get("_visual_count", lambda *args, **kwargs: None)(visual_plan, "colorbarSlotCount")
     if standalone:
         apply_chart_polish(ax, "scatter_regression")
     return ax
