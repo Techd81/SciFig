@@ -4197,10 +4197,67 @@ def gen_classifier_validation_board(df, dataProfile, chartPlan, rcParams, palett
 
     score_col = _role_or_col("score", "probability", "proba", "prediction_score", "y_score", "value")
     label_col = _role_or_col("label", "true_label", "actual_label", "y_true", "event", "class")
+    model_col = _role_or_col("model", "algorithm", "estimator", "method")
+    selected_col = _role_or_col("selected_model", "focus_model", "is_selected", "selected", "highlight", "winner")
     if score_col is None or label_col is None:
         raise ValueError("classifier_validation_board requires score/probability and binary label columns")
 
-    work = df[[score_col, label_col]].dropna().copy()
+    def _is_rf_model(value):
+        label = str(value).lower().replace("-", " ").replace("_", " ")
+        collapsed = label.replace(" ", "")
+        return "random forest" in label or collapsed in {"rf", "rfr", "randomforest"} or collapsed.startswith("rf")
+
+    def _truthy(value):
+        return str(value).strip().lower() in {"1", "true", "yes", "y", "selected", "focus", "winner", "best"}
+
+    def _compact_model_label(value, width=17):
+        text = str(value).strip()
+        if len(text) <= width:
+            return text
+        return text[:max(3, width - 3)].rstrip() + "..."
+
+    def _ordered_models(source_df):
+        if not model_col or model_col not in source_df.columns:
+            return []
+        return [str(value) for value in source_df[model_col].dropna().drop_duplicates().tolist()]
+
+    def _choose_selected_model(model_values, source_df):
+        requested = (
+            chartPlan.get("selectedModel")
+            or chartPlan.get("focusModel")
+            or chartPlan.get("highlightModel")
+            or chartPlan.get("referenceModel")
+        ) if isinstance(chartPlan, dict) else None
+        if requested:
+            requested_text = str(requested).lower()
+            for model in model_values:
+                if str(model).lower() == requested_text or requested_text in str(model).lower():
+                    return model
+        if selected_col and selected_col in source_df.columns and model_col in source_df.columns:
+            selected_values = source_df[selected_col].dropna().astype(str).tolist()
+            for value in selected_values:
+                for model in model_values:
+                    if value.lower() == str(model).lower() or value.lower() in str(model).lower():
+                        return model
+            truth_mask = source_df[selected_col].apply(_truthy)
+            if truth_mask.any():
+                selected_models = source_df.loc[truth_mask, model_col].dropna()
+                if len(selected_models):
+                    return str(selected_models.iloc[0])
+        for model in model_values:
+            if _is_rf_model(model):
+                return model
+        return model_values[0] if model_values else None
+
+    model_values = _ordered_models(df)
+    selected_model = _choose_selected_model(model_values, df) if model_values else None
+    validation_df = df
+    if selected_model and len(model_values) > 1 and model_col in df.columns:
+        model_mask = df[model_col].astype(str).eq(str(selected_model))
+        if model_mask.any():
+            validation_df = df[model_mask].copy()
+
+    work = validation_df[[score_col, label_col]].dropna().copy()
     if work.empty:
         raise ValueError("classifier_validation_board requires non-empty score/label pairs")
     score = pd.to_numeric(work[score_col], errors="coerce").astype(float).clip(0, 1)
@@ -4222,12 +4279,78 @@ def gen_classifier_validation_board(df, dataProfile, chartPlan, rcParams, palett
     if len(score) == 0 or len(np.unique(y_true)) < 2:
         raise ValueError("classifier_validation_board requires both positive and negative labels")
 
+    def _score_label_arrays(source_df):
+        if score_col not in source_df.columns or label_col not in source_df.columns:
+            return np.array([]), np.array([])
+        score_series = pd.to_numeric(source_df[score_col], errors="coerce").astype(float).clip(0, 1)
+        raw_label_series = source_df[label_col]
+        if pd.api.types.is_numeric_dtype(raw_label_series):
+            label_series = pd.to_numeric(raw_label_series, errors="coerce")
+            unique_values = sorted([v for v in label_series.dropna().unique().tolist()], key=lambda value: str(value))
+            positive_value = unique_values[-1] if unique_values else 1
+            y_series = (label_series == positive_value).astype(int)
+            valid_mask = score_series.notna() & label_series.notna()
+        else:
+            unique_values = sorted(raw_label_series.dropna().astype(str).unique().tolist())
+            positive_value = unique_values[-1] if unique_values else "positive"
+            y_series = raw_label_series.astype(str).eq(str(positive_value)).astype(int)
+            valid_mask = score_series.notna() & raw_label_series.notna()
+        return score_series[valid_mask].to_numpy(), y_series[valid_mask].to_numpy()
+
+    def _auc_for_frame(source_df):
+        scores, labels = _score_label_arrays(source_df)
+        if len(scores) == 0 or len(np.unique(labels)) < 2:
+            return np.nan
+        positives = float(np.sum(labels == 1))
+        negatives = float(np.sum(labels == 0))
+        if positives == 0 or negatives == 0:
+            return np.nan
+        order = np.argsort(scores)
+        ranks = np.empty_like(order, dtype=float)
+        ranks[order] = np.arange(1, len(scores) + 1, dtype=float)
+        positive_rank_sum = float(np.sum(ranks[labels == 1]))
+        return (positive_rank_sum - positives * (positives + 1.0) / 2.0) / max(positives * negatives, 1.0)
+
+    model_palette = palette.get("categorical", ["#1F4E79", "#D55E00", "#009E73", "#7A6C8F"])
+
+    def _model_color(model, index):
+        label = str(model).lower()
+        if _is_rf_model(model):
+            return model_palette[0 % len(model_palette)]
+        if any(token in label for token in ("xgboost", "xgb", "lightgbm", "gbdt")):
+            return model_palette[1 % len(model_palette)]
+        if "svm" in label or "support vector" in label:
+            return model_palette[2 % len(model_palette)]
+        return model_palette[(index + 3) % len(model_palette)]
+
+    display_models = []
+    if selected_model:
+        display_models.append(selected_model)
+    display_models.extend([model for model in model_values if str(model) != str(selected_model)])
+    display_models = display_models[:4]
+    model_entries = []
+    if model_col and model_col in df.columns:
+        for idx, model in enumerate(display_models):
+            model_frame = df[df[model_col].astype(str).eq(str(model))]
+            model_entries.append({
+                "label": _compact_model_label(model),
+                "color": _model_color(model, idx),
+                "selected": selected_model is not None and str(model) == str(selected_model),
+                "auc": _auc_for_frame(model_frame),
+                "n": int(len(model_frame)),
+            })
+
     if standalone:
         fig, ax = plt.subplots(figsize=(183 / 25.4, 128 / 25.4), constrained_layout=False)
     fig = ax.figure
     ax.set_axis_off()
     if not chartPlan.get("suppressBoardTitle"):
         ax.set_title("Classifier validation board", loc="left", fontsize=8.2, fontweight="bold", pad=7)
+    if len(model_entries) > 1 and not chartPlan.get("suppressBoardTitle"):
+        selected_label = _compact_model_label(selected_model or model_entries[0]["label"], width=18)
+        ax.text(0.055, 0.956, f"selected: {selected_label}   compared={len(model_values)} models",
+                transform=ax.transAxes, ha="left", va="top", fontsize=5.2,
+                bbox=dict(boxstyle="round,pad=0.18", facecolor="white", edgecolor="#333333", linewidth=0.35, alpha=0.92))
 
     visual_plan = chartPlan.get("visualContentPlan", {}) if isinstance(chartPlan, dict) else {}
     if callable(globals().get("_record_template_motif")):
@@ -4371,15 +4494,44 @@ def gen_classifier_validation_board(df, dataProfile, chartPlan, rcParams, palett
                      color=blue, fontsize=4.9, fontweight="bold")
     axes["thr"].text(0.08, 0.22, "Balanced", transform=axes["thr"].transAxes,
                      color=orange, fontsize=4.9, fontweight="bold")
-    sidecar = f"thr={best_threshold:.2f}\nF1={best_f1:.3f}\nTP {int(tp)} | FP {int(fp)}\nFN {int(fn)} | TN {int(tn)}"
-    axes["thr"].text(0.98, 0.08, sidecar, transform=axes["thr"].transAxes, fontsize=4.9,
+    if chartPlan.get("suppressBoardTitle"):
+        sidecar = f"thr={best_threshold:.2f}  F1={best_f1:.2f}\nTP/FP {int(tp)}/{int(fp)}\nFN/TN {int(fn)}/{int(tn)}"
+        sidecar_font = 4.55
+    else:
+        sidecar = f"thr={best_threshold:.2f}\nF1={best_f1:.3f}\nTP {int(tp)} | FP {int(fp)}\nFN {int(fn)} | TN {int(tn)}"
+        sidecar_font = 4.9
+    axes["thr"].text(0.98, 0.08, sidecar, transform=axes["thr"].transAxes, fontsize=sidecar_font,
                      ha="right", va="bottom",
                      bbox=dict(boxstyle="round,pad=0.24", facecolor="white", edgecolor=gray, linewidth=0.45, alpha=0.95))
     threshold_title = "D. Threshold sweep" if chartPlan.get("suppressBoardTitle") else "D. Threshold + confusion sidecar"
     _polish_subaxis(axes["thr"], threshold_title)
 
     if standalone:
-        fig.subplots_adjust(left=0.05, right=0.98, top=0.93, bottom=0.09)
+        if len(model_entries) > 1:
+            handles = [
+                plt.Line2D(
+                    [0], [0], marker="D" if entry["selected"] else "o", linestyle="",
+                    markerfacecolor=entry["color"],
+                    markeredgecolor="#111111" if entry["selected"] else "white",
+                    markeredgewidth=0.55, markersize=4.2,
+                    label=("selected: " if entry["selected"] else "") + entry["label"],
+                )
+                for entry in model_entries
+            ]
+            legend = fig.legend(
+                handles=handles,
+                loc="lower center", bbox_to_anchor=(0.5, 0.018),
+                ncol=min(4, len(handles)), fontsize=5.0,
+                frameon=True, fancybox=True, borderpad=0.25,
+                handlelength=1.2, columnspacing=0.8,
+            )
+            legend.set_gid("scifig_shared_legend")
+            legend.get_frame().set_linewidth(0.35)
+            legend.get_frame().set_edgecolor("#333333")
+            legend.get_frame().set_alpha(0.94)
+            fig.subplots_adjust(left=0.05, right=0.98, top=0.91, bottom=0.145)
+        else:
+            fig.subplots_adjust(left=0.05, right=0.98, top=0.93, bottom=0.09)
     return ax
 
 

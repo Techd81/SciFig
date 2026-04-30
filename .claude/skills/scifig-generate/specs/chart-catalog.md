@@ -46,7 +46,7 @@ Expanded chart taxonomy for `scifig-generate`. Use this as the lookup table duri
 | `roc` | ✅ | score + binary label | Classifier discrimination |
 | `pr_curve` | ✅ | score + binary label (imbalanced) | Precision-recall assessment |
 | `calibration` | ✅ | predicted risk + observed outcome | Calibration of risk models |
-| `classifier_validation_board` | ✅ | score/probability + binary label, optional threshold or true/predicted classes | ROC + PR + calibration + threshold/confusion storyboard |
+| `classifier_validation_board` | ✅ | score/probability + binary label, optional threshold, model/algorithm, selected model, or true/predicted classes | ROC + PR + calibration + threshold/confusion storyboard |
 | `rf_classifier_report_board` | ✅ | Random Forest/RF + score/label + feature importance/SHAP/gain, including stacked prediction/importance rows and multi-model classifier comparisons | RF classifier validation plus feature-importance report board |
 | `training_curve` | ✅ | epoch/step + loss/accuracy/validation metrics | Neural-network training dynamics |
 | `model_architecture` | ✅ | layer/module/source-target architecture tables | Neural-network or ML pipeline topology |

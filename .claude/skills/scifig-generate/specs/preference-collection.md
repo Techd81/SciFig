@@ -332,7 +332,7 @@ _TEMPLATE_CHART_BUNDLE_SEEDS = {
             "families": ["ml_model_diagnostics"],
             "techniqueRefs": ["template-mining/07-techniques/ml-model-diagnostics.md"],
             "anchors": ["拒绝默认配色：Python 绘制多模型性能对比图的进阶实战_1777451272.md"],
-            "en": ("Classifier validation board", "Use for classifier probability, labels, true/predicted classes, ROC-AUC, F1, precision/recall, calibration, confusion matrix, or threshold tuning datasets."),
+            "en": ("Classifier validation board", "Use for classifier probability, labels, model/algorithm comparisons, true/predicted classes, ROC-AUC, F1, precision/recall, calibration, confusion matrix, or threshold tuning datasets."),
             "zh": ("分类器验证板套餐", "适合分类概率、标签、真实/预测类别、ROC-AUC、F1、precision/recall、校准、混淆矩阵或阈值调优数据。"),
         },
     ],

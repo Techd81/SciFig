@@ -73,6 +73,8 @@ Reusable layout blueprints for multi-panel scientific figures.
 **Rules**
 - Prefer `classifier_validation_board` as one self-contained single-chart generator when the user asks for one figure.
 - Use separate `roc`, `pr_curve`, `calibration`, and `confusion_matrix` panels only when the requested output is explicitly multi-panel.
+- If multiple model/probability rows are supplied without feature-importance columns, filter the validation curves to the selected/RF model and keep competitor labels in a bottom-centered shared legend.
+- In embedded/narrow slots, shorten the threshold sidecar and panel title before shrinking fonts or allowing text to cross into adjacent panels.
 
 ## Recipe 4c: RF Classifier Report Board
 

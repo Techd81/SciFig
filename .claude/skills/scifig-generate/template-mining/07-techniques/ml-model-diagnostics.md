@@ -78,8 +78,10 @@ When columns include `score`, `probability`, `label`, `true_label`, `predicted_l
 - Prefer the registered `classifier_validation_board` generator for the whole ROC + PR + calibration + threshold/confusion set, not a single ROC alone.
 - Add data-derived metric boxes for AUC, AP, best threshold, F1, ECE, bin count, and sample count.
 - Mark the selected threshold with a red point and reference guides.
+- When a probability table contains multiple classifier models but no feature-importance fields, select the explicit `selected_model` / `is_selected` model when supplied, otherwise prefer RF, and keep competing model colors in a bottom-centered figure legend rather than mixing score rows.
+- In narrow embedded slots, compress the threshold sidecar to TP/FP and FN/TN shorthand so it does not collide with neighboring panels.
 - Use calibration bin marker size for sample count so imbalanced bins remain visible.
-- Executable fallback: `classifier_validation_board` creates a single self-contained four-panel board with ROC AUC, AP/F1, ECE, best threshold, and TP/FP/FN/TN sidecar. `roc` and `pr_curve` still detect `classifier_validation_board`, mark the Youden / best-F1 threshold with red points plus dashed guides, and move standalone legends to bottom center. `calibration` computes ECE, scales bin markers by sample count, shades the +/-0.05 calibration band, marks the worst bin, and reports ECE / bins / n in a compact metric box. `confusion_matrix` uses true/predicted labels or thresholded score data, annotates count plus row percentage per cell, outlines the diagonal, and reports accuracy / balanced accuracy / largest off-diagonal error.
+- Executable fallback: `classifier_validation_board` creates a single self-contained four-panel board with ROC AUC, AP/F1, ECE, best threshold, and TP/FP/FN/TN sidecar; multi-model probability tables are filtered to the selected/RF model before metrics are computed. `roc` and `pr_curve` still detect `classifier_validation_board`, mark the Youden / best-F1 threshold with red points plus dashed guides, and move standalone legends to bottom center. `calibration` computes ECE, scales bin markers by sample count, shades the +/-0.05 calibration band, marks the worst bin, and reports ECE / bins / n in a compact metric box. `confusion_matrix` uses true/predicted labels or thresholded score data, annotates count plus row percentage per cell, outlines the diagonal, and reports accuracy / balanced accuracy / largest off-diagonal error.
 
 ## RF Classifier Validation + Importance Board
 
@@ -98,6 +100,7 @@ When RF/Random Forest classifier probability and label columns appear together w
 
 - Prefer `rf_model_performance_report` when both model benchmark metrics and actual/predicted or residual fields exist.
 - Prefer `rf_classifier_validation_report` / `rf_classifier_report_board` when RF classifier score+label data also include feature importance or SHAP-style explanation fields, especially when RF is one competitor among XGBoost/SVM/other classifiers and needs a highlighted manuscript-ready report.
+- Prefer `classifier_validation_board` for multi-model classifier probability tables without feature-importance columns; it must still pick one selected/RF anchor model for the validation curves.
 - Prefer `neural_architecture_metric_storyboard` / `model_architecture_board` when architecture fields include latency/FLOPs/memory/throughput/cost/edge metrics.
 - Prefer `neural_architecture_topology` when layer/module/component or source-target architecture fields exist without metric columns.
 - Prefer `neural_training_dynamics` when epoch/step training histories include loss, validation loss, accuracy, or learning-rate fields.
