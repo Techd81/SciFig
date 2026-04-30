@@ -705,12 +705,27 @@ def gen_lollipop_horizontal(df, dataProfile, chartPlan, rcParams, palette, col_m
     plt.rcParams.update(rcParams)
     roles = dataProfile.get("semanticRoles", {})
     label_col = roles.get("label") or roles.get("group") or roles.get("x")
-    val_col = roles.get("value") or roles.get("y")
+    val_col = roles.get("value") or roles.get("importance") or roles.get("mean_abs_shap") or roles.get("gain") or roles.get("y")
+    template_case = (chartPlan.get("templateCasePlan") or chartPlan.get("visualContentPlan", {}).get("templateCasePlan") or {})
+    patterns = {str(p).lower() for p in dataProfile.get("specialPatterns", [])}
+    is_rf_shap = (
+        template_case.get("bundleKey") == "rf_feature_importance_shap"
+        or "ml_explainability" in patterns
+        or "feature_importance" in patterns
+        or "shap_composite" in patterns
+        or any(str(c).lower() in ("importance", "mean_abs_shap", "shap_value", "gain", "permutation") for c in df.columns)
+    )
 
     if label_col is None or val_col is None:
         raise ValueError("lollipop_horizontal requires 'label' and 'value' in semanticRoles")
 
-    df_sorted = df.sort_values(val_col, ascending=True).reset_index(drop=True)
+    df_sorted = df.copy()
+    if is_rf_shap:
+        order_values = pd.to_numeric(df_sorted[val_col], errors="coerce").abs()
+        df_sorted = df_sorted.assign(_scifig_order=order_values).nlargest(min(len(df_sorted), 15), "_scifig_order")
+        df_sorted = df_sorted.sort_values("_scifig_order", ascending=True).reset_index(drop=True)
+    else:
+        df_sorted = df_sorted.sort_values(val_col, ascending=True).reset_index(drop=True)
     color = palette.get("categorical", ["#1F4E79"])[0]
 
     if standalone:
@@ -719,13 +734,37 @@ def gen_lollipop_horizontal(df, dataProfile, chartPlan, rcParams, palette, col_m
                            constrained_layout=True)
 
     y_pos = range(len(df_sorted))
-    ax.hlines(y_pos, 0, df_sorted[val_col], color=color, linewidth=0.8)
-    ax.scatter(df_sorted[val_col], y_pos, color=color, s=25, zorder=3,
-               linewidth=0.3, edgecolors="white")
+    if is_rf_shap:
+        values = pd.to_numeric(df_sorted[val_col], errors="coerce").fillna(0.0).to_numpy()
+        max_val = max(float(np.nanmax(np.abs(values))) if len(values) else 1.0, 1e-12)
+        cmap = plt.get_cmap("Blues")
+        colors = [cmap(0.35 + 0.55 * (abs(v) / max_val)) for v in values]
+        ax.axvline(0, color="#888888", linestyle="--", linewidth=0.65, zorder=0)
+        ax.hlines(y_pos, 0, values, color="#A7BBD6", linewidth=1.0, zorder=1)
+        ax.scatter(values, list(y_pos), color=colors, s=34, zorder=3,
+                   linewidth=0.35, edgecolors="white")
+        for y, value in zip(y_pos, values):
+            ax.text(value + max_val * 0.025, y, f"{value:.3g}", va="center", ha="left",
+                    fontsize=4.8, color="#B00000")
+        x_min = min(0.0, float(np.nanmin(values)) if len(values) else 0.0)
+        x_max = max(0.0, float(np.nanmax(values)) if len(values) else 0.0)
+        x_pad = max(max_val * 0.18, 1e-9)
+        ax.set_xlim(x_min - x_pad * 0.35, x_max + x_pad)
+        ax.text(
+            0.98, 0.05, f"top {len(df_sorted)} features\nRF / SHAP route",
+            transform=ax.transAxes, ha="right", va="bottom", fontsize=5.2,
+            bbox=dict(boxstyle="round,pad=0.22", facecolor="white", edgecolor="#333333", linewidth=0.4, alpha=0.93),
+            zorder=6,
+        )
+        ax.set_xlabel("Mean |SHAP| / importance")
+    else:
+        ax.hlines(y_pos, 0, df_sorted[val_col], color=color, linewidth=0.8)
+        ax.scatter(df_sorted[val_col], y_pos, color=color, s=25, zorder=3,
+                   linewidth=0.3, edgecolors="white")
+        ax.set_xlabel(val_col)
 
     ax.set_yticks(list(y_pos))
     ax.set_yticklabels(df_sorted[label_col].values, fontsize=5)
-    ax.set_xlabel(val_col)
     ax.set_ylim(-0.5, len(df_sorted) - 0.5)
     ax.spines["left"].set_visible(False)
     ax.tick_params(axis="y", length=0)

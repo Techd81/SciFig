@@ -36,6 +36,7 @@ When columns include `feature`, `importance`, `gain`, `permutation`, `shap`, or 
 - Left lane: horizontal importance bars with sequential blue gradient and red value labels at bar ends.
 - Right lane: SHAP donut or compact contribution summary with callout leaders outside the ring.
 - If donut is unsupported for the data, use `lollipop_horizontal` plus `dotplot`, but preserve the left/right asymmetric composition and feature ordering.
+- Executable fallback: `lollipop_horizontal` renders the top-15 importance lane and `dotplot` renders the SHAP beeswarm lane with shared feature ordering, zero reference, and feature-value color encoding.
 
 ## Classifier Validation Board
 

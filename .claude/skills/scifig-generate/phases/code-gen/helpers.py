@@ -1912,7 +1912,7 @@ def legend_overlaps_axes(fig, legend, axes):
 
 def elements_overlap_axes(fig, axes):
     renderer = get_cached_renderer(fig)
-    axes_boxes = {pid: ax.get_window_extent(renderer=renderer) for pid, ax in axes.items()}
+    axes_boxes = {pid: _axis_layout_bbox(ax, renderer) for pid, ax in axes.items()}
     issues = []
     for ax_pid, ax in axes.items():
         for child in ax.get_children():
@@ -2087,18 +2087,34 @@ def _reflow_legend_with_height_increase(fig, handles, labels, legend_labels, occ
             ok = enforce_non_overlapping_legend(fig, legend, mode, occupied_axes, retry_limit=3)
             if ok:
                 return legend, mode
+    for existing in list(fig.legends):
+        existing.remove()
     fig.set_figheight(base_height)
     return None, None
 
 
+def _disable_layout_engine_for_manual_margins(fig):
+    """Matplotlib ignores subplots_adjust while constrained layout owns the figure."""
+    try:
+        if hasattr(fig, "set_layout_engine"):
+            fig.set_layout_engine(None)
+    except Exception:
+        pass
+    try:
+        fig.set_constrained_layout(False)
+    except Exception:
+        pass
+
+
 def apply_subplot_margins(fig, legend_mode, has_colorbar=False, legend=None):
     legend_mode = _normalize_legend_mode(legend_mode)
+    _disable_layout_engine_for_manual_margins(fig)
     invalidate_layout_cache(fig)
     get_cached_renderer(fig, force=True)
     subplotpars = fig.subplotpars
-    left = max(subplotpars.left, 0.11)
+    left = max(subplotpars.left, 0.16)
     top = min(subplotpars.top, 0.95)
-    bottom = max(subplotpars.bottom, 0.14)
+    bottom = max(subplotpars.bottom, 0.18)
     right = min(subplotpars.right, 0.95)
 
     if has_colorbar:
@@ -2407,6 +2423,16 @@ def apply_crowding_management(fig, axes, chartPlan, journalProfile):
             for child in list(axes[issue["host_panel"]].get_children()):
                 gid = getattr(child, "get_gid", lambda: None)()
                 if gid == issue["element"]:
+                    if gid == "scifig_metric_box":
+                        if hasattr(child, "set_position"):
+                            child.set_position((0.98, 0.98))
+                        if hasattr(child, "set_ha"):
+                            child.set_ha("right")
+                        if hasattr(child, "set_va"):
+                            child.set_va("top")
+                        if hasattr(child, "set_clip_on"):
+                            child.set_clip_on(True)
+                        continue
                     current_x = getattr(child, '_x', None) or 1.015
                     if hasattr(child, 'set_position'):
                         child.set_position((current_x + 0.05, getattr(child, '_y', 1.0)))

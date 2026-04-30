@@ -3344,8 +3344,66 @@ def gen_dotplot(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=
     standalone = ax is None
     roles = dataProfile.get("semanticRoles", {})
     group_col = roles.get("group") or roles.get("x")
-    value_col = roles.get("value")
+    value_col = roles.get("value") or roles.get("shap_value") or roles.get("effect")
     feature_col = roles.get("feature_id") or roles.get("y")
+    feature_value_col = roles.get("feature_value") or roles.get("color") or roles.get("hue")
+    template_case = (chartPlan.get("templateCasePlan") or chartPlan.get("visualContentPlan", {}).get("templateCasePlan") or {})
+    patterns = {str(p).lower() for p in dataProfile.get("specialPatterns", [])}
+    is_shap_beeswarm = (
+        template_case.get("bundleKey") == "rf_feature_importance_shap"
+        or "shap_composite" in patterns
+        or "ml_explainability" in patterns
+        or "shap_value" in {str(c).lower() for c in df.columns}
+    )
+
+    if is_shap_beeswarm and feature_col and value_col and feature_col in df.columns and value_col in df.columns:
+        if standalone:
+            fig, ax = plt.subplots(figsize=(92 * (1 / 25.4), 92 * (1 / 25.4)),
+                               constrained_layout=True)
+        plot_df = df.copy()
+        plot_df[value_col] = pd.to_numeric(plot_df[value_col], errors="coerce")
+        plot_df = plot_df.dropna(subset=[feature_col, value_col])
+        order = (
+            plot_df.assign(_abs=plot_df[value_col].abs())
+                   .groupby(feature_col)["_abs"].mean()
+                   .sort_values(ascending=False)
+                   .head(15)
+                   .index.tolist()
+        )
+        plot_df = plot_df[plot_df[feature_col].isin(order)].copy()
+        y_lookup = {feature: i for i, feature in enumerate(order)}
+        rng = np.random.default_rng(42)
+        y = plot_df[feature_col].map(y_lookup).to_numpy(dtype=float)
+        y = y + (rng.random(len(plot_df)) - 0.5) * 0.44
+        if feature_value_col and feature_value_col in plot_df.columns:
+            colors = pd.to_numeric(plot_df[feature_value_col], errors="coerce").fillna(0.0).to_numpy()
+            sc = ax.scatter(plot_df[value_col], y, c=colors, cmap="RdYlBu_r",
+                            s=14, alpha=0.72, edgecolor="white", linewidth=0.22, zorder=3)
+            cbar = ax.figure.colorbar(sc, ax=ax, shrink=0.72, pad=0.02)
+            cbar.set_label("Feature value")
+            try:
+                cbar.set_ticks([np.nanmin(colors), np.nanmax(colors)])
+                cbar.set_ticklabels(["Low", "High"])
+            except Exception:
+                pass
+        else:
+            ax.scatter(plot_df[value_col], y, color="#1F4E79", s=14,
+                       alpha=0.72, edgecolor="white", linewidth=0.22, zorder=3)
+        ax.axvline(0, color="black", linewidth=0.8, zorder=2)
+        ax.set_yticks(range(len(order)))
+        ax.set_yticklabels(order, fontsize=5)
+        ax.set_ylim(len(order) - 0.5, -0.5)
+        ax.set_xlabel("SHAP value (impact on prediction)")
+        ax.set_ylabel("Feature" if standalone else "")
+        ax.text(
+            0.98, 0.04, f"top {len(order)} shared features",
+            transform=ax.transAxes, ha="right", va="bottom", fontsize=5.2,
+            bbox=dict(boxstyle="round,pad=0.22", facecolor="white", edgecolor="#333333", linewidth=0.4, alpha=0.93),
+            zorder=6,
+        )
+        if standalone:
+            apply_chart_polish(ax, "dotplot")
+        return ax
 
     if group_col is None or value_col is None:
         raise ValueError("dotplot requires 'group' and 'value' in semanticRoles")
@@ -3458,7 +3516,7 @@ def gen_heatmap_annotated(df, dataProfile, chartPlan, rcParams, palette, col_map
                 cmap="YlOrRd", linewidths=0.3, linecolor="white",
                 cbar_kws={"shrink": 0.6, "label": value_col or "Value"}, ax=ax)
     ax.set_xlabel(group_col or "Column")
-    ax.set_ylabel(feature_col or "Row")
+    ax.set_ylabel((feature_col or "Row") if standalone else "")
     if standalone:
         apply_chart_polish(ax, "heatmap_annotated")
     return ax
