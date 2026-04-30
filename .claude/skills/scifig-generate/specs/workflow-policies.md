@@ -62,9 +62,20 @@ Template-derived motifs are governed by `specs/template-visual-motifs.md`. Phase
 ```python
 CROWDING_POLICY = {
     "legend_scope": "figure",
-    "legend_priority": ["bottom_center", "top_center", "outside_right"],
+    "legend_priority": ["bottom_center", "top_center"],
+    "legend_allowed_modes": ["bottom_center", "top_center"],
     "legend_label_max_chars": 32,
     "max_legend_columns": 6,
+    "legend_frame": True,
+    "legend_frame_style": {
+        "facecolor": "#FFFFFF",
+        "edgecolor": "#222222",
+        "linewidth": 0.55,
+        "alpha": 0.96,
+        "pad": 0.28,
+    },
+    "legend_center_placement_only": True,
+    "forbid_outside_right_legend": True,
     "forbid_in_axes_legend": True,
     "max_direct_labels_hero": 5,
     "max_direct_labels_support": 3,
@@ -73,6 +84,14 @@ CROWDING_POLICY = {
     "layout_reflow_required_on_overlap": True,
     "legend_external_hard_limit": True,
     "axis_legend_hard_fail": True,
+    "legend_contract_finalizer_required": True,
+    "savefig_requires_legend_contract": True,
+    "legend_contract_failure_is_hard_fail": True,
+    "layout_contract_required": True,
+    "layout_contract_failure_is_hard_fail": True,
+    "max_text_font_size_pt": 12,
+    "max_panel_label_font_size_pt": 12,
+    "forbid_negative_axes_text": True,
     "legend_reflow_strategy": ["margin_adjust", "height_increase", "entry_reduction"],
     "legend_max_height_multiplier": 1.3,
 }
@@ -87,7 +106,7 @@ LAYOUT_SCORE_WEIGHTS = {
 }
 ```
 
-Before Phase 3 locks the plan, score each candidate layout for group count, label length, legend burden, colorbar need, panel count, and chart aspect ratio. Prefer a lower-scoring layout even when it has fewer panels. If a rendered legend or colorbar overlaps the plotting region, reflow before export; do not move legends back inside axes.
+Before Phase 3 locks the plan, score each candidate layout for group count, label length, legend burden, colorbar need, panel count, and chart aspect ratio. Prefer a lower-scoring layout even when it has fewer panels. In composite figures, every panel-level legend is only a temporary handle source: the final output must have one framed figure-level legend centered at the bottom or top. `outside_right`, `loc="best"`, and any in-axes legend are forbidden in final publication output. Every saved figure must pass through the skill helper `enforce_figure_legend_contract(...)` immediately before `savefig`; missing embedded helper source, custom replacement helpers, missing `legendContractEnforced`, remaining axis legend, unframed final legend, or final legend overlap is a hard failure. Risk tables, footnotes, and outside summaries require a reserved GridSpec/subfigure/table slot; negative `ax.transAxes` text coordinates such as `y=-0.18` are forbidden because they can collide with lower panels. Print-scale typography is mandatory: body 5-7 pt, axis labels 6-8 pt, panel labels 8-10 pt, titles 7-9 pt, and any generated `font.size >= 12`, `fontsize >= 13`, or panel label >12 pt is a hard failure. If a rendered legend, colorbar, title, table, risk table, or direct label overlaps another panel's layout box, reflow before export.
 
 ## Performance Policy
 
@@ -128,8 +147,23 @@ Blocking findings route back to the owning phase rather than being buried in the
 Phase 4 must produce `render_qa.json` with:
 
 - `legendOutsidePlotArea`
+- `legendContractEnforced`
+- `legendContractFailures`
+- `layoutContractEnforced`
+- `layoutContractFailures`
+- `crossPanelOverlapIssues`
+- `negativeAxesTextCount`
+- `oversizedTextCount`
+- `figureWhitespaceFraction`
+- `legendModeUsed`
+- `legendAllowedModes`
+- `legendCenterPlacementOnly`
+- `legendFrameApplied`
+- `legendFrameStyle`
+- `forbidOutsideRightLegend`
 - `axisLegendRemovedCount`
 - `axisLegendRemainingCount`
+- `figureLegendCount`
 - `sharedColorbarApplied`
 - `overlapFailures`
 - `contentDensityFailures`
@@ -160,4 +194,4 @@ Phase 4 must produce `render_qa.json` with:
 - `statProvenanceWarnings`
 - `impactScore` (0-100 from visual-impact-scorer agent)
 
-Any hard failure returns to Phase 3 for styling/layout/code or Phase 2 for an overpacked plan. `axisLegendRemainingCount > 0`, `legendOutsidePlotArea == false`, missing in-plot explanatory labels, missing required reference motifs, or `visualEnhancementCount < visualContentPlan.minTotalEnhancements` are hard failures. `impactScore < 20` is a hard fail; `impactScore < 40` is a warning.
+Any hard failure returns to Phase 3 for styling/layout/code or Phase 2 for an overpacked plan. `legendContractEnforced != true`, non-empty `legendContractFailures`, `layoutContractEnforced != true`, non-empty `layoutContractFailures`, `axisLegendRemainingCount > 0`, `legendOutsidePlotArea == false`, `figureLegendCount != 1` when a legend exists, `legendModeUsed not in ["bottom_center", "top_center"]` when a legend exists, `legendFrameApplied == false` when a legend exists, negative axes text without a reserved slot, poster-scale font sizes, cross-panel table/title/text overlap, missing in-plot explanatory labels, missing required reference motifs, or `visualEnhancementCount < visualContentPlan.minTotalEnhancements` are hard failures. `impactScore < 20` is a hard fail; `impactScore < 40` is a warning.

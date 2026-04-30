@@ -2017,8 +2017,8 @@ def gen_likert_divergent(df, dataProfile, chartPlan, rcParams, palette, col_map=
     handles = [plt.Rectangle((0, 0), 1, 1, facecolor=colors[j],
                               edgecolor="white", linewidth=0.3, label=cats[j])
                for j in range(n_cats)]
-    ax.legend(handles=handles, loc="lower center", ncol=n_cats,
-              frameon=False, fontsize=5, bbox_to_anchor=(0.5, -0.18))
+    ax.legend(handles=handles, loc="upper center", ncol=n_cats,
+              frameon=False, fontsize=5, bbox_to_anchor=(0.5, 1.02))
     if standalone:
         apply_chart_polish(ax, "likert_divergent")
     return ax
@@ -2083,8 +2083,8 @@ def gen_likert_stacked(df, dataProfile, chartPlan, rcParams, palette, col_map=No
     ax.spines["left"].set_visible(False)
     ax.tick_params(axis="y", length=0)
 
-    ax.legend(loc="lower center", ncol=n_cats, frameon=False, fontsize=5,
-              bbox_to_anchor=(0.5, -0.18))
+    ax.legend(loc="upper center", ncol=n_cats, frameon=False, fontsize=5,
+              bbox_to_anchor=(0.5, 1.02))
     if standalone:
         apply_chart_polish(ax, "likert_stacked")
     return ax
@@ -3766,7 +3766,7 @@ def gen_umap(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=Non
             color = color_map.get(grp, fallback_colors[i % len(fallback_colors)])
             ax.scatter(df[mask][x_col], df[mask][y_col], s=3, alpha=0.6, color=color,
                       label=display_label(grp, col_map), edgecolor="none", rasterized=True)
-        ax.legend(fontsize=4.5, markerscale=2, frameon=False, loc="best")
+        ax.legend(fontsize=4.5, markerscale=2, frameon=False, loc="upper right")
     else:
         ax.scatter(df[x_col], df[y_col], s=3, alpha=0.6, color="#1F4E79", edgecolor="none", rasterized=True)
 

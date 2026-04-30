@@ -28,7 +28,7 @@ from math import pi
 plt.rcParams.update({
     'font.family':       ['Times New Roman', 'Arial', 'DejaVu Sans'],
     'mathtext.fontset':  'stix',
-    'font.size':         16,
+    'font.size':         7.0,
     'axes.linewidth':    1.5,
     'xtick.direction':   'in',
     'ytick.direction':   'in',

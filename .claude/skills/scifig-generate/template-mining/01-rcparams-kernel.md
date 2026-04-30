@@ -13,7 +13,7 @@ plt.rcParams.update({
     # --- Typography ---
     'font.family':      ['Times New Roman', 'Arial', 'DejaVu Sans'],
     'mathtext.fontset': 'stix',          # LaTeX-like math
-    'font.size':        14,              # body baseline; bump to 16 for sparse panels
+    'font.size':        6.5,             # print-scale body baseline; never use poster-scale defaults
 
     # --- Axes ---
     'axes.linewidth':   1.2,             # 1.2 for n×n compact, 1.5 for hero panels
@@ -21,12 +21,12 @@ plt.rcParams.update({
     # --- Ticks ---
     'xtick.direction':  'in',            # universal — 77/77
     'ytick.direction':  'in',            # universal — 77/77
-    'xtick.major.width': 1.0,
-    'ytick.major.width': 1.0,
+    'xtick.major.width': 0.6,
+    'ytick.major.width': 0.6,
 
     # --- Lines ---
-    'lines.linewidth':  1.5,
-    'lines.markersize': 6,
+    'lines.linewidth':  0.9,
+    'lines.markersize': 3.5,
 
     # --- Save ---
     'savefig.bbox':     'tight',         # auto-trim margins
@@ -45,9 +45,9 @@ Source cases: case Nature radar, GAM scatter+residual, forest plot, mirror radia
 plt.rcParams.update({
     'font.family':      ['Times New Roman', 'Arial', 'SimHei'],
     'mathtext.fontset': 'stix',
-    'font.size':        16,
-    'axes.linewidth':   1.5,
-    'lines.linewidth':  2.0,
+    'font.size':        7.5,
+    'axes.linewidth':   0.75,
+    'lines.linewidth':  1.2,
     'xtick.direction':  'in',
     'ytick.direction':  'in',
     'savefig.bbox':     'tight',
@@ -64,10 +64,10 @@ Source cases: Nature Pearson n×n, SHAP 上三下二, gradient box 2×2, density
 plt.rcParams.update({
     'font.family':      ['Arial', 'Times New Roman', 'DejaVu Sans'],
     'mathtext.fontset': 'stix',
-    'font.size':        14,
-    'axes.linewidth':   1.2,
-    'lines.linewidth':  1.5,
-    'lines.markersize': 6,
+    'font.size':        6.5,
+    'axes.linewidth':   0.65,
+    'lines.linewidth':  0.9,
+    'lines.markersize': 3.5,
     'xtick.direction':  'in',
     'ytick.direction':  'in',
     'savefig.bbox':     'tight',
@@ -84,8 +84,8 @@ Polar plots already have heavy spine logic; keep typography clean.
 plt.rcParams.update({
     'font.family':       ['Times New Roman', 'Arial', 'DejaVu Sans'],
     'mathtext.fontset':  'stix',
-    'font.size':         16,
-    'axes.linewidth':    1.5,
+    'font.size':         7.0,
+    'axes.linewidth':    0.75,
     'xtick.direction':   'in',
     'ytick.direction':   'in',
     'grid.linestyle':    '--',

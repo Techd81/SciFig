@@ -549,7 +549,7 @@ Each generator should:
 
 ### Post-plot polish function (call after every chart generator)
 
-Generator functions draw the base chart and apply minimal polish only. The generated script then runs `apply_visual_content_pass(...)` before crowding management so content density is controlled centrally instead of being reimplemented chart-by-chart. The helper source in `phases/code-gen/helpers.py` is the execution source of truth for in-plot explanatory labels, reference/template visual grammar motifs, metric tables, marginal axes, density-colored points, density halos, enhancement counts, and residual axis-legend checks.
+Generator functions draw the base chart and apply minimal polish only. The generated script then runs `apply_visual_content_pass(...)` before the final figure contract so content density is controlled centrally instead of being reimplemented chart-by-chart. The helper source in `phases/code-gen/helpers.py` is the execution source of truth for in-plot explanatory labels, reference/template visual grammar motifs, metric tables, marginal axes, density-colored points, density halos, enhancement counts, residual axis-legend checks, typography limits, and cross-panel layout QA. Every saved figure must call the skill helper `enforce_figure_legend_contract(...)` immediately before the first `savefig`; direct `ax.legend(...)` calls are temporary handle sources only and are illegal if this finalizer is absent. Do not hand-write a replacement `enforce_figure_legend_contract`, because that bypasses rendered QA.
 
 ```python
 def apply_chart_polish(ax, chart_type):
@@ -662,9 +662,20 @@ VISUAL_CONTENT_DEFAULTS = {
 CROWDING_DEFAULTS = {
     "legendScope": "figure",
     "legendMode": "bottom_center",
-    "legendPlacementPriority": ["bottom_center", "top_center", "outside_right"],
+    "legendPlacementPriority": ["bottom_center", "top_center"],
+    "legendAllowedModes": ["bottom_center", "top_center"],
     "legendLabelMaxChars": 32,
     "maxLegendColumns": 6,
+    "legendFrame": True,
+    "legendFrameStyle": {
+        "facecolor": "#FFFFFF",
+        "edgecolor": "#222222",
+        "linewidth": 0.55,
+        "alpha": 0.96,
+        "pad": 0.28,
+    },
+    "legendCenterPlacementOnly": True,
+    "forbidOutsideRightLegend": True,
     "forbidInAxesLegend": True,
     "colorbarMode": "none",
     "maxDirectLabelsHero": 5,
@@ -1406,10 +1417,20 @@ def _bbox_in_figure_coords(fig, artist):
     return artist.get_window_extent(renderer=renderer).transformed(fig.transFigure.inverted())
 
 
+def _axis_layout_bbox(ax, renderer):
+    try:
+        tight = ax.get_tightbbox(renderer)
+        if tight is not None:
+            return tight
+    except Exception:
+        pass
+    return ax.get_window_extent(renderer=renderer)
+
+
 def legend_overlaps_axes(fig, legend, axes):
     renderer = get_cached_renderer(fig)
     legend_box = legend.get_window_extent(renderer=renderer)
-    return any(legend_box.overlaps(ax.get_window_extent(renderer=renderer)) for ax in axes)
+    return any(legend_box.overlaps(_axis_layout_bbox(ax, renderer)) for ax in axes)
 
 
 def apply_subplot_margins(fig, legend_mode, has_colorbar=False, legend=None):
@@ -1427,11 +1448,9 @@ def apply_subplot_margins(fig, legend_mode, has_colorbar=False, legend=None):
     if legend is not None:
         legend_box = _bbox_in_figure_coords(fig, legend)
         if legend_mode == "bottom_center":
-            bottom = max(bottom, min(0.74, legend_box.y1 + 0.035))
+            bottom = max(bottom, min(0.74, legend_box.y1 + 0.055))
         elif legend_mode == "top_center":
-            top = min(top, max(0.26, legend_box.y0 - 0.035))
-        elif legend_mode == "outside_right":
-            right = min(right, max(0.30, legend_box.x0 - 0.035))
+            top = min(top, max(0.26, legend_box.y0 - 0.055))
 
     if right <= left + 0.12:
         right = left + 0.12
@@ -1453,9 +1472,25 @@ def _unique_modes(modes):
     return out
 
 
+def _normalize_legend_mode(mode):
+    if mode in ("top_center", "bottom_center"):
+        return mode
+    return "bottom_center"
+
+
+def _center_legend_modes(modes=None):
+    normalized = []
+    for mode in list(modes or []):
+        mode = _normalize_legend_mode(mode)
+        if mode not in normalized:
+            normalized.append(mode)
+    for mode in ("bottom_center", "top_center"):
+        if mode not in normalized:
+            normalized.append(mode)
+    return normalized
+
+
 def _legend_column_options(label_count, legend_mode, max_columns):
-    if legend_mode == "outside_right":
-        return [1]
     candidates = [
         min(label_count, max_columns),
         min(label_count, 4),
@@ -1466,26 +1501,51 @@ def _legend_column_options(label_count, legend_mode, max_columns):
     return [n for n in dict.fromkeys(candidates) if n >= 1]
 
 
-def create_figure_legend(fig, handles, labels, legend_mode, fontsize, ncol=1):
+def _apply_legend_frame_style(legend, frame_style=None):
+    style = {
+        "facecolor": "#FFFFFF",
+        "edgecolor": "#222222",
+        "linewidth": 0.55,
+        "alpha": 0.96,
+        "pad": 0.28,
+    }
+    style.update(frame_style or {})
+    frame = legend.get_frame()
+    frame.set_visible(True)
+    frame.set_facecolor(style["facecolor"])
+    frame.set_edgecolor(style["edgecolor"])
+    frame.set_linewidth(style["linewidth"])
+    frame.set_alpha(style["alpha"])
+    if hasattr(frame, "set_boxstyle"):
+        frame.set_boxstyle(f"square,pad={style['pad']}")
+    legend.set_gid("scifig_shared_legend")
+    legend.set_zorder(1000)
+    return True
+
+
+def create_figure_legend(fig, handles, labels, legend_mode, fontsize, ncol=1, frame_style=None):
     invalidate_layout_cache(fig)
+    legend_mode = _normalize_legend_mode(legend_mode)
     common = {
         "ncol": ncol,
-        "frameon": False,
+        "frameon": True,
+        "fancybox": False,
         "fontsize": fontsize,
         "borderaxespad": 0.0,
+        "borderpad": 0.35,
         "handlelength": 1.2,
         "handletextpad": 0.4,
         "labelspacing": 0.35,
         "columnspacing": 0.8,
     }
-    if legend_mode == "outside_right":
-        return fig.legend(handles, labels, loc="center left",
-                          bbox_to_anchor=(0.80, 0.5), **common)
     if legend_mode == "top_center":
-        return fig.legend(handles, labels, loc="upper center",
-                          bbox_to_anchor=(0.5, 0.99), **common)
-    return fig.legend(handles, labels, loc="lower center",
-                      bbox_to_anchor=(0.5, 0.01), **common)
+        legend = fig.legend(handles, labels, loc="upper center",
+                            bbox_to_anchor=(0.5, 0.99), **common)
+    else:
+        legend = fig.legend(handles, labels, loc="lower center",
+                            bbox_to_anchor=(0.5, 0.01), **common)
+    _apply_legend_frame_style(legend, frame_style)
+    return legend
 
 
 def enforce_non_overlapping_legend(fig, legend, legend_mode, occupied_axes, has_colorbar=False, retry_limit=5):
@@ -1501,9 +1561,6 @@ def enforce_non_overlapping_legend(fig, legend, legend_mode, occupied_axes, has_
         elif legend_mode == "top_center":
             next_top = max(subplotpars.bottom + 0.12, subplotpars.top - 0.04)
             fig.subplots_adjust(top=next_top)
-        elif legend_mode == "outside_right":
-            next_right = max(0.28, subplotpars.right - 0.04)
-            fig.subplots_adjust(right=next_right)
         invalidate_layout_cache(fig)
 
     return not legend_overlaps_axes(fig, legend, occupied_axes)
@@ -1517,24 +1574,33 @@ def place_shared_legend(fig, axes, occupied_axes, crowdingPlan, journalProfile, 
         "legendLabelsShortened": False,
         "legendNColumns": 0,
         "legendOutsidePlotArea": True,
+        "legendAllowedModes": ["bottom_center", "top_center"],
+        "legendCenterPlacementOnly": True,
+        "legendFrameApplied": False,
+        "forbidOutsideRightLegend": True,
     }
     if not handles:
-        return None, crowdingPlan.get("legendMode", "bottom_center"), empty_info
+        return None, _normalize_legend_mode(crowdingPlan.get("legendMode", "bottom_center")), empty_info
 
-    requested_mode = crowdingPlan.get("legendMode", "bottom_center")
-    if requested_mode == "shared_auto":
-        requested_mode = "bottom_center"
-    priority = crowdingPlan.get("legendPlacementPriority") or ["bottom_center", "top_center", "outside_right"]
-    candidate_modes = _unique_modes(priority + [requested_mode, "bottom_center", "top_center", "outside_right"])
+    requested_mode = _normalize_legend_mode(crowdingPlan.get("legendMode", "bottom_center"))
+    priority = crowdingPlan.get("legendPlacementPriority") or ["bottom_center", "top_center"]
+    allowed_modes = _center_legend_modes(crowdingPlan.get("legendAllowedModes"))
+    candidate_modes = _center_legend_modes(priority + [requested_mode] + allowed_modes)
     fontsize = journalProfile.get("font_size_small_pt", 5)
     max_label_chars = crowdingPlan.get("legendLabelMaxChars", 32)
     max_columns = crowdingPlan.get("maxLegendColumns", 6)
+    frame_style = crowdingPlan.get("legendFrameStyle")
     legend_labels, labels_shortened = shorten_legend_labels(labels, max_label_chars)
     info = {
         "legendScope": "figure",
         "legendLabelsShortened": labels_shortened,
         "legendNColumns": 0,
         "legendOutsidePlotArea": False,
+        "legendAllowedModes": allowed_modes,
+        "legendCenterPlacementOnly": True,
+        "legendFrameApplied": False,
+        "legendFrameStyle": frame_style or CROWDING_DEFAULTS["legendFrameStyle"],
+        "forbidOutsideRightLegend": True,
     }
 
     for mode in candidate_modes:
@@ -1542,7 +1608,7 @@ def place_shared_legend(fig, axes, occupied_axes, crowdingPlan, journalProfile, 
             for existing in list(fig.legends):
                 existing.remove()
             invalidate_layout_cache(fig)
-            legend = create_figure_legend(fig, handles, legend_labels, mode, fontsize, ncol=ncol)
+            legend = create_figure_legend(fig, handles, legend_labels, mode, fontsize, ncol=ncol, frame_style=frame_style)
             ok = enforce_non_overlapping_legend(
                 fig,
                 legend,
@@ -1554,17 +1620,15 @@ def place_shared_legend(fig, axes, occupied_axes, crowdingPlan, journalProfile, 
             if ok:
                 info["legendNColumns"] = ncol
                 info["legendOutsidePlotArea"] = True
+                info["legendFrameApplied"] = legend.get_frame().get_visible()
                 return legend, mode, info
 
     for existing in list(fig.legends):
         existing.remove()
     invalidate_layout_cache(fig)
-    fallback_mode = "outside_right"
-    legend = create_figure_legend(fig, handles, legend_labels, fallback_mode, fontsize, ncol=1)
-    apply_subplot_margins(fig, fallback_mode, has_colorbar=has_colorbar, legend=legend)
-    info["legendNColumns"] = 1
-    info["legendOutsidePlotArea"] = not legend_overlaps_axes(fig, legend, occupied_axes)
-    return legend, fallback_mode, info
+    info["legendOutsidePlotArea"] = False
+    info["layoutReflowNeeded"] = True
+    return None, requested_mode, info
 
 
 def apply_crowding_management(fig, axes, chartPlan, journalProfile):
@@ -1588,6 +1652,11 @@ def apply_crowding_management(fig, axes, chartPlan, journalProfile):
         "legendLabelsShortened": False,
         "legendNColumns": 0,
         "legendOutsidePlotArea": True,
+        "legendAllowedModes": ["bottom_center", "top_center"],
+        "legendCenterPlacementOnly": True,
+        "legendFrameApplied": False,
+        "legendFrameStyle": crowdingPlan.get("legendFrameStyle", CROWDING_DEFAULTS["legendFrameStyle"]),
+        "forbidOutsideRightLegend": True,
     }
     shared_colorbar_applied = False
     if panelBlueprint.get("sharedColorbar", False):
@@ -1621,6 +1690,13 @@ def apply_crowding_management(fig, axes, chartPlan, journalProfile):
     crowdingPlan["droppedDirectLabelCount"] = dropped_direct_labels
     crowdingPlan["legendScope"] = "figure"
     crowdingPlan["legendModeUsed"] = legend_mode_used
+    crowdingPlan["legendAllowedModes"] = ["bottom_center", "top_center"]
+    crowdingPlan["legendPlacementPriority"] = _center_legend_modes(crowdingPlan.get("legendPlacementPriority"))
+    crowdingPlan["legendCenterPlacementOnly"] = True
+    crowdingPlan["forbidOutsideRightLegend"] = True
+    crowdingPlan["legendFrame"] = True
+    crowdingPlan["legendFrameApplied"] = legend_info.get("legendFrameApplied", False)
+    crowdingPlan["legendFrameStyle"] = legend_info.get("legendFrameStyle", CROWDING_DEFAULTS["legendFrameStyle"])
     crowdingPlan["axisLegendRemovedCount"] = removed_axis_legends
     crowdingPlan["legendNColumns"] = legend_info.get("legendNColumns", 0)
     crowdingPlan["legendLabelsShortened"] = legend_info.get("legendLabelsShortened", False)
@@ -1628,6 +1704,7 @@ def apply_crowding_management(fig, axes, chartPlan, journalProfile):
     simplifications = list(crowdingPlan.get("simplificationsApplied", []))
     if legend is not None:
         simplifications.append("figure_level_shared_legend")
+        simplifications.append("framed_shared_legend")
     if removed_axis_legends:
         simplifications.append(f"axis_legends_removed:{removed_axis_legends}")
     if legend_info.get("legendLabelsShortened", False):
@@ -1645,6 +1722,10 @@ def apply_crowding_management(fig, axes, chartPlan, journalProfile):
         "axisLegendRemovedCount": removed_axis_legends,
         "legendOutsidePlotArea": legend_info.get("legendOutsidePlotArea", True),
         "legendLabelsShortened": legend_info.get("legendLabelsShortened", False),
+        "legendAllowedModes": crowdingPlan["legendAllowedModes"],
+        "legendCenterPlacementOnly": crowdingPlan["legendCenterPlacementOnly"],
+        "legendFrameApplied": crowdingPlan["legendFrameApplied"],
+        "forbidOutsideRightLegend": crowdingPlan["forbidOutsideRightLegend"],
     }
 ```
 
@@ -1728,7 +1809,7 @@ def gen_multipanel(chartPlan, journalProfile, colorSystem, dataProfile, rcParams
 
     apply_visual_content_pass(fig, axes, chartPlan, dataProfile, journalProfile,
                               colorSystem, col_map=col_map)
-    apply_crowding_management(fig, axes, chartPlan, journalProfile)
+    enforce_figure_legend_contract(fig, axes, chartPlan, journalProfile)
 
     for panel in panels:
         panel_id = panel["id"]
@@ -1744,9 +1825,11 @@ def gen_multipanel(chartPlan, journalProfile, colorSystem, dataProfile, rcParams
 Composition rules:
 
 - Hero panel may span rows or columns.
-- Panels sharing the same group, color, marker, or line semantics should reuse one figure-level legend outside the plotting areas.
+- Panels sharing the same group, color, marker, or line semantics must be finalized into one figure-level legend outside the plotting areas.
 - Heatmaps and spatial score panels should reuse one shared colorbar when the same signal is encoded.
-- Do not use `loc="best"` or keep in-axes legends for publication output; generator-level legends are temporary handle sources only, then `apply_crowding_management(...)` must remove them, rebuild a shared `fig.legend`, and leave `axisLegendRemainingCount == 0`.
+- Do not use `loc="best"` or keep in-axes legends for publication output; generator-level legends are temporary handle sources only, then `enforce_figure_legend_contract(...)` must remove them, rebuild a framed shared `fig.legend` at bottom-center or top-center, set `legendContractEnforced == true`, and leave `axisLegendRemainingCount == 0`.
+- Do not draw risk tables, n-at-risk rows, footnotes, or side summaries with negative `ax.transAxes` coordinates unless a dedicated GridSpec/subfigure slot has been reserved for that element. Survival risk tables must use a dedicated lower row or inset/table axes owned by the survival panel, never free-floating `ax.text(..., y < 0)`.
+- Keep typography print-scale: body 5-7 pt, axes labels 6-8 pt, panel labels 8-10 pt, compact titles 7-9 pt. `font.size >= 12`, `fontsize >= 13`, or panel labels above 12 pt are poster-scale and fail publication QA.
 - When panels collide, adjust legend columns, shorten labels, reduce spacing, increase margins, or reflow panels before allowing any legend to overlap plotted data or grid regions.
 - Keep panel labels at the same anchor, font, and offset.
 - Respect `axisLinkGroups` only when scales are semantically identical.
@@ -1998,6 +2081,7 @@ def build_stats_report(chartPlan, dataProfile):
 ### Step 3.6: Assemble `styledCode`
 
 ```python
+import re
 from pathlib import Path
 
 journalProfile = resolve_journal_profile(workflowPreferences)
@@ -2104,6 +2188,7 @@ dataProfile_dict = {{"semanticRoles": {{{roles_code}}}, "df": df}}
 palette = {repr(colorSystem)}
 
 fig = gen_multipanel(chartPlan, journalProfile, palette, dataProfile_dict, rcParams, col_map=col_map)
+legend_contract_report = enforce_figure_legend_contract(fig, fig.axes, chartPlan, journalProfile)
 {savefig_lines}
 plt.close()
 """
@@ -2119,7 +2204,7 @@ single_height = journalProfile.get("canvas_height_mm", {}).get("single", 62)
 fig, ax = plt.subplots(figsize=({journalProfile['single_width_mm']}*MM, single_height*MM), constrained_layout=False)
 ax = {primary_gen}(df, dataProfile, chartPlan, rcParams, palette, col_map=col_map, ax=ax)
 apply_visual_content_pass(fig, {{"A": ax}}, chartPlan, dataProfile, journalProfile, palette, col_map=col_map)
-apply_crowding_management(fig, {{"A": ax}}, chartPlan, journalProfile)
+legend_contract_report = enforce_figure_legend_contract(fig, {{"A": ax}}, chartPlan, journalProfile)
 {savefig_lines}
 plt.close()
 """
@@ -2140,7 +2225,7 @@ single_height = journalProfile.get("canvas_height_mm", {}).get("single", 62)
 fig, ax = plt.subplots(figsize=({journalProfile['single_width_mm']}*MM, single_height*MM), constrained_layout=False)
 ax = {sec_gen}(df, dataProfile, secondaryPlan, rcParams, palette, col_map=col_map, ax=ax)
 apply_visual_content_pass(fig, {{"A": ax}}, secondaryPlan, dataProfile, journalProfile, palette, col_map=col_map)
-apply_crowding_management(fig, {{"A": ax}}, secondaryPlan, journalProfile)
+legend_contract_report = enforce_figure_legend_contract(fig, {{"A": ax}}, secondaryPlan, journalProfile)
 {sec_savefig_lines}
 plt.close()
 """
@@ -2201,6 +2286,15 @@ codeReview = {
     "registryCoverageChecked": True,
     "forbiddenLegendScan": 'loc="best"' not in full_code_string and "loc='best'" not in full_code_string,
     "axisLegendGatePresent": "axisLegendRemainingCount" in full_code_string,
+    "legendContractFinalizerPresent": "legend_contract_report = enforce_figure_legend_contract(" in full_code_string,
+    "legendContractMetadataPresent": "legendContractEnforced" in full_code_string,
+    "layoutContractMetadataPresent": "layoutContractFailures" in full_code_string and "audit_figure_layout_contract" in full_code_string,
+    "embeddedHelperSourcePresent": "# Embedded helper source from the skill package" in full_code_string and "exec(aaa, globals())" in full_code_string,
+    "singleLegendContractDefinition": full_code_string.count("def enforce_figure_legend_contract(") == 1,
+    "negativeLegendAnchorScan": re.search(r"bbox_to_anchor\s*=\s*\([^)]*-\d", full_code_string) is None,
+    "negativeAxesTextScan": re.search(r"(risk_table_y|table_y|footnote_y|label_y)\s*=\s*-\d", full_code_string) is None,
+    "posterScaleFontScan": re.search(r"(font\.size['\"]?\s*:\s*(1[2-9]|[2-9]\d)|fontsize\s*=\s*(1[3-9]|[2-9]\d))", full_code_string) is None,
+    "directAxesLegendCalls": len(re.findall(r"\b[a-zA-Z_]\w*\.legend\s*\(", full_code_string)),
     "visualDensityGatePresent": "minTotalEnhancements" in full_code_string and "inPlotExplanatoryLabelCount" in full_code_string,
     "referenceGrammarGatePresent": "minReferenceMotifsPerFigure" in full_code_string and "visualGrammarMotifsApplied" in full_code_string,
     "predictionDiagnosticGatePresent": "metricTableCount" in full_code_string and "densityHaloCount" in full_code_string,
@@ -2214,6 +2308,24 @@ if 'loc="best"' in full_code_string or "loc='best'" in full_code_string:
     codeReview["blockingFindings"].append("forbidden_loc_best")
 if "axisLegendRemainingCount" not in full_code_string:
     codeReview["blockingFindings"].append("missing_axis_legend_remaining_gate")
+if "legend_contract_report = enforce_figure_legend_contract(" not in full_code_string:
+    codeReview["blockingFindings"].append("missing_legend_contract_finalizer_before_savefig")
+if "legendContractEnforced" not in full_code_string:
+    codeReview["blockingFindings"].append("missing_legend_contract_metadata")
+if "layoutContractFailures" not in full_code_string or "audit_figure_layout_contract" not in full_code_string:
+    codeReview["blockingFindings"].append("missing_layout_contract_metadata")
+if "# Embedded helper source from the skill package" not in full_code_string or "exec(aaa, globals())" not in full_code_string:
+    codeReview["blockingFindings"].append("missing_embedded_skill_helper_source")
+if full_code_string.count("def enforce_figure_legend_contract(") != 1:
+    codeReview["blockingFindings"].append("custom_or_duplicate_legend_contract_finalizer")
+if re.search(r"bbox_to_anchor\s*=\s*\([^)]*-\d", full_code_string):
+    codeReview["blockingFindings"].append("negative_legend_bbox_anchor")
+if re.search(r"(risk_table_y|table_y|footnote_y|label_y)\s*=\s*-\d", full_code_string):
+    codeReview["blockingFindings"].append("negative_axes_text_without_reserved_slot")
+if re.search(r"(font\.size['\"]?\s*:\s*(1[2-9]|[2-9]\d)|fontsize\s*=\s*(1[3-9]|[2-9]\d))", full_code_string):
+    codeReview["blockingFindings"].append("poster_scale_fontsize")
+if codeReview["directAxesLegendCalls"] and "legend_contract_report = enforce_figure_legend_contract(" not in full_code_string:
+    codeReview["blockingFindings"].append("direct_axes_legend_without_finalizer")
 if "inPlotExplanatoryLabelCount" not in full_code_string or "minTotalEnhancements" not in full_code_string:
     codeReview["blockingFindings"].append("missing_visual_density_gate")
 if "minReferenceMotifsPerFigure" not in full_code_string or "visualGrammarMotifsApplied" not in full_code_string:
@@ -2222,6 +2334,8 @@ if "metricTableCount" not in full_code_string or "densityHaloCount" not in full_
     codeReview["blockingFindings"].append("missing_prediction_diagnostic_gate")
 if "savefig" not in full_code_string:
     codeReview["blockingFindings"].append("missing_savefig")
+if "savefig" in full_code_string and "legend_contract_report = enforce_figure_legend_contract(" not in full_code_string:
+    codeReview["blockingFindings"].append("savefig_without_legend_contract")
 
 if codeReview["blockingFindings"]:
     raise RuntimeError(f"Phase 3 code review failed: {codeReview['blockingFindings']}")
@@ -2249,8 +2363,8 @@ styledCode = {
 > 2. The active memory contains the full protocol, not sentinel-only content
 > 3. Generated code includes output directory creation, source-data hooks, and metadata writing
 > 4. Panel labels, legends, and colorbars are resolved once at figure scope where possible
-> 5. `codeReview.blockingFindings` is empty after syntax/import drift, missing generator coverage, forbidden `loc="best"`, source-data/metadata hooks, reference visual grammar gates, and panelBlueprint checks
-> 6. `full_code_string` embeds helper source from `phases/code-gen/helpers.py` and multi-panel source from `phases/code-gen/generators-multipanel.py`, keeps `crowdingPlan` and `visualContentPlan` attached to `chartPlan`, passes `ax` and `col_map` to generators, runs `apply_visual_content_pass(...)` before `apply_crowding_management(...)`, tracks `visualGrammarMotifsApplied`, `templateMotifsApplied`, `metricTableCount`, `referenceLineCount`, `densityHaloCount`, `marginalAxesCount`, and `densityColorEncodingCount`, and writes `savefig` calls for all `workflowPreferences["exportFormats"]`, using `workflowPreferences["rasterDpi"]` for raster outputs
+> 5. `codeReview.blockingFindings` is empty after syntax/import drift, missing generator coverage, forbidden `loc="best"`, missing embedded helper source, custom legend finalizer, negative axes text/table slots, poster-scale font sizes, source-data/metadata hooks, reference visual grammar gates, and panelBlueprint checks
+> 6. `full_code_string` embeds helper source from `phases/code-gen/helpers.py` and multi-panel source from `phases/code-gen/generators-multipanel.py`, keeps `crowdingPlan` and `visualContentPlan` attached to `chartPlan`, passes `ax` and `col_map` to generators, runs `apply_visual_content_pass(...)` before `enforce_figure_legend_contract(...)`, tracks `legendContractEnforced`, `layoutContractEnforced`, `layoutContractFailures`, `axisLegendRemainingCount`, `visualGrammarMotifsApplied`, `templateMotifsApplied`, `metricTableCount`, `referenceLineCount`, `densityHaloCount`, `marginalAxesCount`, and `densityColorEncodingCount`, and writes `savefig` calls for all `workflowPreferences["exportFormats"]`, using `workflowPreferences["rasterDpi"]` for raster outputs
 
 
 > **Generator code**: Read [code-gen/generators-distribution.md](code-gen/generators-distribution.md) for distribution chart generators (violin_paired, violin_split, dot_strip, histogram, density, ecdf, joyplot, ridge, and 40+ additional chart types across genomics, engineering, ecology, and more).

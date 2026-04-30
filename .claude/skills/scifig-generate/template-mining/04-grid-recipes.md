@@ -297,10 +297,10 @@ Anchor: `期刊配图复现 _ Matplotlib 挑战"多面板+三Y轴"组合图`.
 
 | Rule | Frequency | Notes |
 |---|---|---|
-| Panel labels A/B/C/D bold, 14pt, at `(-0.12, 1.05)` axes fraction | most multi-panel cases | `ax.text(-0.12, 1.05, 'a', transform=ax.transAxes, fontweight='bold', fontsize=14)` |
+| Panel labels A/B/C/D bold, 8-10 pt, at `(-0.12, 1.05)` axes fraction | most multi-panel cases | `ax.text(-0.12, 1.05, 'a', transform=ax.transAxes, fontweight='bold', fontsize=8)` |
 | Outer-only tick labels in shared-axis grids | n×n, 1×N | use `sharex/sharey` or hide via `tick_params(labelbottom/left=False)` |
 | Colorbar `shrink=0.6`, `pad=0.04`, beside heatmap panels | all heatmap cases | never inside the data rectangle |
-| Legend outside the data rectangle (bottom-center → top-center → outside-right) | all multi-condition cases | `bbox_to_anchor=(0.5, -0.10), loc='upper center', ncol=…` |
+| Legend outside the data rectangle (bottom-center or top-center only) | all multi-condition cases | `bbox_to_anchor=(0.5, 0.01), loc='lower center'` with reserved bottom margin; outside-right is forbidden in final output |
 | `hspace=0.30`, `wspace=0.25` defaults for 2×N grids | majority | tighten to 0.10 when sharing axis, loosen to 0.40 when polar |
 
 ## Helpers contract

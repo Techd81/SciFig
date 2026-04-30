@@ -26,7 +26,7 @@ import pandas as pd
 plt.rcParams.update({
     'font.family':      ['Times New Roman', 'Arial'],
     'mathtext.fontset': 'stix',
-    'font.size':        13,
+    'font.size':        6.5,
     'axes.linewidth':   1.5,
     'xtick.direction':  'in',
     'ytick.direction':  'in',

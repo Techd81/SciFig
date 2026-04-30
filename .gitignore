@@ -165,3 +165,5 @@ tests/
 # CCW temp
 .ccw/
 template
+.claude/scheduled_tasks.json
+.claude/scheduled_tasks.lock

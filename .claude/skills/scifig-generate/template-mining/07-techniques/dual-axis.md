@@ -29,7 +29,7 @@ from scipy.interpolate import make_interp_spline
 plt.rcParams.update({
     'font.family':       ['Times New Roman', 'Arial', 'DejaVu Sans'],
     'mathtext.fontset':  'stix',
-    'font.size':         16,
+    'font.size':         7.0,
     'axes.linewidth':    1.5,
     'xtick.direction':   'in',
     'ytick.direction':   'in',
@@ -85,13 +85,13 @@ ax1.spines['left'].set_color(BAR_EDGE);   ax1.spines['left'].set_linewidth(2)
 ax1.spines['top'].set_visible(False)
 ax1.spines['right'].set_visible(False)
 ax1.tick_params(axis='y', colors=BAR_EDGE)
-ax1.set_ylabel('Porosity (%)', color=BAR_EDGE, fontsize=14)
+ax1.set_ylabel('Porosity (%)', color=BAR_EDGE, fontsize=7)
 
 ax2.spines['right'].set_color(LINE_COLOR); ax2.spines['right'].set_linewidth(2)
 ax2.spines['top'].set_visible(False)
 ax2.spines['left'].set_visible(False)
 ax2.tick_params(axis='y', colors=LINE_COLOR)
-ax2.set_ylabel('Strength (MPa)', color=LINE_COLOR, fontsize=14)
+ax2.set_ylabel('Strength (MPa)', color=LINE_COLOR, fontsize=7)
 
 # === Group labels above the dividers ===
 group_centers = [(0+1+2)/3, (3+4+5)/3, (6+7+8)/3]

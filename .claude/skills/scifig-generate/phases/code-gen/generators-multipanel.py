@@ -92,7 +92,7 @@ def gen_multipanel(chartPlan, journalProfile, colorSystem, dataProfile, rcParams
 
     apply_visual_content_pass(fig, axes, chartPlan, dataProfile, journalProfile,
                               colorSystem, col_map=col_map)
-    crowding_result = apply_crowding_management(fig, axes, chartPlan, journalProfile)
+    crowding_result = enforce_figure_legend_contract(fig, axes, chartPlan, journalProfile)
     chartPlan["crowdingResult"] = crowding_result
 
     for panel in panels:

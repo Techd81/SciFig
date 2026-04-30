@@ -457,12 +457,7 @@ def build_crowding_plan(primaryChart, secondaryCharts, dataProfile, workflowPref
         point_density_mode = "summary_or_thin_points"
 
     if panelBlueprint.get("sharedLegend", False):
-        if panelBlueprint.get("sharedColorbar", False):
-            legend_mode = "bottom_center"
-        elif n_groups <= scale_policy["legend_bottom_group_max"]:
-            legend_mode = "bottom_center"
-        else:
-            legend_mode = "outside_right"
+        legend_mode = "bottom_center"
     else:
         legend_mode = "bottom_center"
 
@@ -487,6 +482,7 @@ def build_crowding_plan(primaryChart, secondaryCharts, dataProfile, workflowPref
         simplifications.append(f"layout_fallback:{panelBlueprint.get('requestedLayout')}->{panelBlueprint.get('finalLayout')}")
     if panelBlueprint.get("sharedLegend", False):
         simplifications.append("figure_level_shared_legend")
+        simplifications.append("framed_shared_legend")
         simplifications.append("no_in_axes_legend")
     if panelBlueprint.get("sharedColorbar", False):
         simplifications.append("shared_colorbar")
@@ -502,9 +498,20 @@ def build_crowding_plan(primaryChart, secondaryCharts, dataProfile, workflowPref
         "layoutFallbacks": layout_fallbacks,
         "legendScope": "figure",
         "legendMode": legend_mode,
-        "legendPlacementPriority": ["bottom_center", "top_center", "outside_right"],
+        "legendPlacementPriority": ["bottom_center", "top_center"],
+        "legendAllowedModes": ["bottom_center", "top_center"],
         "legendLabelMaxChars": 32,
         "maxLegendColumns": 6,
+        "legendFrame": True,
+        "legendFrameStyle": {
+            "facecolor": "#FFFFFF",
+            "edgecolor": "#222222",
+            "linewidth": 0.55,
+            "alpha": 0.96,
+            "pad": 0.28,
+        },
+        "legendCenterPlacementOnly": True,
+        "forbidOutsideRightLegend": True,
         "forbidInAxesLegend": True,
         "colorbarMode": panelBlueprint.get("colorbarMode", "none"),
         "maxDirectLabelsHero": 8 if policy == "preserve_information" else 5,
@@ -717,6 +724,7 @@ def build_visual_content_plan(primaryChart, secondaryCharts, dataProfile, workfl
     reference_motifs = infer_reference_visual_motifs(charts, dataProfile)
     template_motif_plan = infer_template_visual_motifs(charts, dataProfile)
     template_motifs = template_motif_plan["motifs"]
+    template_density_bonus = min(2, len(template_motifs))
 
     return {
         "mode": mode,
@@ -726,7 +734,7 @@ def build_visual_content_plan(primaryChart, secondaryCharts, dataProfile, workfl
         "maxCalloutsSupport": 4,
         "maxInlineStats": 4,
         "minEnhancementsPerPanel": 2,
-        "minTotalEnhancements": max(4, len(charts) * 2),
+        "minTotalEnhancements": max(4, len(charts) * 2 + template_density_bonus),
         "referenceMotifsRequired": True,
         "minReferenceMotifsPerFigure": min(max(1, len(reference_motifs)), max(2, min(3, len(charts) + 1))),
         "visualGrammarMotifs": reference_motifs,
@@ -735,7 +743,7 @@ def build_visual_content_plan(primaryChart, secondaryCharts, dataProfile, workfl
         "templateMotifs": template_motifs,
         "templateMotifsApplied": [],
         "templateMotifCount": 0,
-        "minTemplateMotifsPerFigure": 1 if template_motifs else 0,
+        "minTemplateMotifsPerFigure": template_density_bonus,
         "layoutIntents": template_motifs,
         "provenanceRequirements": template_motif_plan["provenanceRequirements"],
         "requireInPlotExplanatoryLabels": True,

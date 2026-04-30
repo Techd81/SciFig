@@ -50,6 +50,22 @@ except SyntaxError as exc:
 
 # 3. Must contain at least one savefig call (figure was requested)
 assert "savefig" in source, "Generated code has no savefig call -- no figure will be produced"
+assert "legend_contract_report = enforce_figure_legend_contract(" in source, (
+    "Generated code saves figures without enforcing the final legend contract"
+)
+assert "audit_figure_layout_contract" in source and "layoutContractFailures" in source, (
+    "Generated code missing rendered layout contract checks"
+)
+assert "exec(aaa, globals())" in source, "Generated code missing embedded skill helper execution"
+assert source.count("def enforce_figure_legend_contract(") == 1, (
+    "Generated code defines a custom or duplicate legend contract helper"
+)
+assert "bbox_to_anchor=(0.5, -" not in source and "bbox_to_anchor = (0.5, -" not in source, (
+    "Generated code places the shared legend with a negative figure anchor"
+)
+assert "risk_table_y = -" not in source and "table_y = -" not in source, (
+    "Generated code draws table text with negative axes coordinates instead of a reserved slot"
+)
 
 # 4. Must import matplotlib (core dependency)
 assert "import matplotlib" in source, "Generated code missing matplotlib import"
@@ -71,7 +87,7 @@ If execution fails:
 
 > **CHECKPOINT**: After Step 4.2:
 > 1. `output/generate_figure.py` exists, is non-empty, and parses as valid Python
-> 2. The script contains at least one `savefig` call and imports `matplotlib`
+> 2. The script contains at least one `savefig` call, imports `matplotlib`, and calls `enforce_figure_legend_contract(...)` before export
 > 3. Execution produced figure files in `output/`
 
 ### Step 4.3: Validate Required Outputs
@@ -100,9 +116,23 @@ After execution and required-output checks, inspect the rendered artifacts befor
 ```python
 render_qa = {
     "legendOutsidePlotArea": chartPlan.get("crowdingPlan", {}).get("legendOutsidePlotArea", True),
+    "legendContractEnforced": chartPlan.get("crowdingPlan", {}).get("legendContractEnforced", False),
+    "legendContractFailures": chartPlan.get("crowdingPlan", {}).get("legendContractFailures", []),
+    "layoutContractEnforced": chartPlan.get("crowdingPlan", {}).get("layoutContractEnforced", False),
+    "layoutContractFailures": chartPlan.get("crowdingPlan", {}).get("layoutContractFailures", []),
+    "crossPanelOverlapIssues": chartPlan.get("crowdingPlan", {}).get("crossPanelOverlapIssues", []),
+    "negativeAxesTextCount": chartPlan.get("crowdingPlan", {}).get("negativeAxesTextCount", 0),
+    "oversizedTextCount": chartPlan.get("crowdingPlan", {}).get("oversizedTextCount", 0),
+    "figureWhitespaceFraction": chartPlan.get("crowdingPlan", {}).get("figureWhitespaceFraction", 0),
     "axisLegendRemovedCount": chartPlan.get("crowdingPlan", {}).get("axisLegendRemovedCount", 0),
     "axisLegendRemainingCount": chartPlan.get("crowdingPlan", {}).get("axisLegendRemainingCount", 0),
+    "figureLegendCount": chartPlan.get("crowdingPlan", {}).get("figureLegendCount", 0),
     "legendModeUsed": chartPlan.get("crowdingPlan", {}).get("legendModeUsed", "none"),
+    "legendAllowedModes": chartPlan.get("crowdingPlan", {}).get("legendAllowedModes", ["bottom_center", "top_center"]),
+    "legendCenterPlacementOnly": chartPlan.get("crowdingPlan", {}).get("legendCenterPlacementOnly", True),
+    "legendFrameApplied": chartPlan.get("crowdingPlan", {}).get("legendFrameApplied", False),
+    "legendFrameStyle": chartPlan.get("crowdingPlan", {}).get("legendFrameStyle", {}),
+    "forbidOutsideRightLegend": chartPlan.get("crowdingPlan", {}).get("forbidOutsideRightLegend", True),
     "sharedColorbarApplied": chartPlan.get("crowdingPlan", {}).get("sharedColorbarApplied", False),
     "visualEnhancementCount": len(chartPlan.get("visualContentPlan", {}).get("appliedEnhancements", [])),
     "minVisualEnhancementCount": chartPlan.get("visualContentPlan", {}).get("minTotalEnhancements", 0),
@@ -145,8 +175,42 @@ for item in expected:
 if not render_qa["legendOutsidePlotArea"]:
     render_qa["overlapFailures"].append("legend_overlaps_plot_area")
 
+if not render_qa["legendContractEnforced"]:
+    render_qa["overlapFailures"].append("legend_contract_not_enforced")
+
+if render_qa["legendContractFailures"]:
+    render_qa["overlapFailures"].append("legend_contract_failed")
+
+if not render_qa["layoutContractEnforced"]:
+    render_qa["overlapFailures"].append("layout_contract_not_enforced")
+
+if render_qa["layoutContractFailures"]:
+    render_qa["overlapFailures"].append("layout_contract_failed")
+
+if render_qa["crossPanelOverlapIssues"]:
+    render_qa["overlapFailures"].append("cross_panel_text_or_table_overlap")
+
+if render_qa["negativeAxesTextCount"] > 0:
+    render_qa["overlapFailures"].append("negative_axes_text_without_reserved_slot")
+
+if render_qa["oversizedTextCount"] > 0:
+    render_qa["overlapFailures"].append("poster_scale_fontsize")
+
 if render_qa["axisLegendRemainingCount"] > 0:
     render_qa["overlapFailures"].append("axis_legend_remaining")
+
+legend_exists = render_qa["legendModeUsed"] != "none" or render_qa["figureLegendCount"] > 0
+if legend_exists and render_qa["figureLegendCount"] != 1:
+    render_qa["overlapFailures"].append("figure_legend_count_invalid")
+
+if legend_exists and render_qa["legendModeUsed"] not in render_qa["legendAllowedModes"]:
+    render_qa["overlapFailures"].append("legend_not_bottom_or_top_center")
+
+if legend_exists and not render_qa["legendFrameApplied"]:
+    render_qa["overlapFailures"].append("legend_frame_missing")
+
+if render_qa["forbidOutsideRightLegend"] and render_qa["legendModeUsed"] == "outside_right":
+    render_qa["overlapFailures"].append("outside_right_legend_forbidden")
 
 if render_qa["visualEnhancementCount"] < render_qa["minVisualEnhancementCount"]:
     render_qa["contentDensityFailures"].append("visual_enhancement_count_below_minimum")
@@ -202,13 +266,21 @@ if render_qa["impactScore"] < 20:
 Hard failures:
 
 - legend, colorbar, metric boxes, panel labels, or direct labels overlap plotted data
+- generated code saves a figure without `enforce_figure_legend_contract(...)`
+- `legendContractEnforced` is false or `legendContractFailures` is non-empty
+- `layoutContractEnforced` is false or `layoutContractFailures` is non-empty
+- risk tables, footnotes, or outside summaries are drawn with negative axes coordinates instead of a reserved GridSpec/subfigure slot
+- generated typography is poster-scale (`font.size >= 12`, `fontsize >= 13`, or panel labels above 12 pt)
+- any title, risk table, text box, or statistical bracket overlaps another panel's rendered layout box
 - any axis-level legend remains after crowding management
+- any final legend is outside `bottom_center` / `top_center`, missing its rectangular frame, or placed outside-right
 - visual content is under-dense: too few data-derived enhancements or no in-plot explanatory labels
 - required reference visual grammar is missing: too few data-supported motif layers such as metric tables, perfect-fit/reference lines, density halos, matrix labels, p-value stars, sample-shape overlays, or dual-axis error bars
 - required template visual grammar is missing: planned motif layers such as joint marginal axes, density-colored scatter, prediction diagnostic matrix, correlation evidence matrix, interval band, or dual-axis error sidecar were not applied
 - output artifact is missing, blank, or implausibly small
 - requested vector text is not editable in SVG/PDF
 - `legendOutsidePlotArea` is false
+- `figureLegendCount` is not exactly 1 when a legend exists
 - inline statistical callouts have no provenance in `statPlan`, input columns, or `visualContentPlan.statProvenance`
 
 ### Step 4.5: Generate `requirements.txt`
@@ -268,7 +340,16 @@ metadata = {
     "simplificationsApplied": chartPlan.get("crowdingPlan", {}).get("simplificationsApplied", []),
     "droppedDirectLabelCount": chartPlan.get("crowdingPlan", {}).get("droppedDirectLabelCount", 0),
     "legendModeUsed": chartPlan.get("crowdingPlan", {}).get("legendModeUsed", "none"),
+    "legendAllowedModes": chartPlan.get("crowdingPlan", {}).get("legendAllowedModes", ["bottom_center", "top_center"]),
+    "legendFrameApplied": chartPlan.get("crowdingPlan", {}).get("legendFrameApplied", False),
+    "legendContractEnforced": chartPlan.get("crowdingPlan", {}).get("legendContractEnforced", False),
+    "legendContractFailures": chartPlan.get("crowdingPlan", {}).get("legendContractFailures", []),
+    "layoutContractEnforced": chartPlan.get("crowdingPlan", {}).get("layoutContractEnforced", False),
+    "layoutContractFailures": chartPlan.get("crowdingPlan", {}).get("layoutContractFailures", []),
+    "negativeAxesTextCount": chartPlan.get("crowdingPlan", {}).get("negativeAxesTextCount", 0),
+    "oversizedTextCount": chartPlan.get("crowdingPlan", {}).get("oversizedTextCount", 0),
     "axisLegendRemovedCount": chartPlan.get("crowdingPlan", {}).get("axisLegendRemovedCount", 0),
+    "figureLegendCount": chartPlan.get("crowdingPlan", {}).get("figureLegendCount", 0),
     "legendOutsidePlotArea": chartPlan.get("crowdingPlan", {}).get("legendOutsidePlotArea", True),
     "sharedColorbarApplied": chartPlan.get("crowdingPlan", {}).get("sharedColorbarApplied", False),
     "visualContentPlan": chartPlan.get("visualContentPlan", {}),

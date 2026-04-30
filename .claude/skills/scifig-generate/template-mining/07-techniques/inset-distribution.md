@@ -29,7 +29,7 @@ from scipy.stats import gaussian_kde
 plt.rcParams.update({
     'font.family':      ['Times New Roman', 'Arial', 'DejaVu Sans'],
     'mathtext.fontset': 'stix',
-    'font.size':        14,
+    'font.size':        6.5,
     'axes.linewidth':   1.5,
     'xtick.direction':  'in',
     'ytick.direction':  'in',
@@ -56,8 +56,8 @@ ax.plot(x, y_pred, color=GREEN,  marker='o', markersize=7,
 ax.fill_between(x, y_true, y_pred,
                 color='#888888', alpha=0.15, linewidth=0, zorder=2,
                 label='Residual band')
-ax.set_xlabel('Sample index', fontsize=13)
-ax.set_ylabel('Value', fontsize=13)
+ax.set_xlabel('Sample index', fontsize=7)
+ax.set_ylabel('Value', fontsize=7)
 ax.legend(loc='upper left', frameon=False, fontsize=11)
 ax.spines['top'].set_visible(False)
 ax.spines['right'].set_visible(False)

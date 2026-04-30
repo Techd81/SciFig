@@ -25,7 +25,7 @@ import numpy as np
 plt.rcParams.update({
     'font.family':      ['Arial', 'Times New Roman'],
     'mathtext.fontset': 'stix',
-    'font.size':        13,
+    'font.size':        6.5,
     'axes.linewidth':   1.2,
     'xtick.direction':  'in',
     'ytick.direction':  'in',

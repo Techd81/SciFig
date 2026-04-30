@@ -33,7 +33,7 @@ import matplotlib.cm as cm
 plt.rcParams.update({
     'font.family':      ['Arial', 'Times New Roman', 'DejaVu Sans'],
     'mathtext.fontset': 'stix',
-    'font.size':        12,
+    'font.size':        6.5,
     'axes.linewidth':   1.2,
     'xtick.direction':  'in',
     'ytick.direction':  'in',
@@ -73,7 +73,7 @@ for i in range(n):
             stars = '***' if p < 0.001 else '**' if p < 0.01 else '*' if p < 0.05 else ''
             ax.text(0.5, 0.5, f'{r:.2f}{stars}',
                     ha='center', va='center', transform=ax.transAxes,
-                    fontsize=14, fontweight='bold',
+                    fontsize=8, fontweight='bold',
                     color='white' if abs(r) > 0.5 else 'black',
                     zorder=10)
             for s in ax.spines.values():

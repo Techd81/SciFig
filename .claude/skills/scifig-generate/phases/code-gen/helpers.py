@@ -41,9 +41,20 @@ VISUAL_CONTENT_DEFAULTS = {
 CROWDING_DEFAULTS = {
     "legendScope": "figure",
     "legendMode": "bottom_center",
-    "legendPlacementPriority": ["bottom_center", "top_center", "outside_right"],
+    "legendPlacementPriority": ["bottom_center", "top_center"],
+    "legendAllowedModes": ["bottom_center", "top_center"],
     "legendLabelMaxChars": 32,
     "maxLegendColumns": 6,
+    "legendFrame": True,
+    "legendFrameStyle": {
+        "facecolor": "#FFFFFF",
+        "edgecolor": "#222222",
+        "linewidth": 0.55,
+        "alpha": 0.96,
+        "pad": 0.28,
+    },
+    "legendCenterPlacementOnly": True,
+    "forbidOutsideRightLegend": True,
     "forbidInAxesLegend": True,
     "colorbarMode": "none",
     "maxDirectLabelsHero": 5,
@@ -55,6 +66,10 @@ CROWDING_DEFAULTS = {
     "layoutReflowRequiredOnOverlap": True,
     "legendExternalHardLimit": True,
     "axisLegendHardFail": True,
+    "layoutContractRequired": True,
+    "maxTextFontSizePt": 12,
+    "maxPanelLabelFontSizePt": 12,
+    "forbidNegativeAxesText": True,
     "legendReflowStrategy": ["margin_adjust", "height_increase", "entry_reduction"],
     "legendMaxHeightMultiplier": 1.3,
     "simplificationsApplied": [],
@@ -397,7 +412,7 @@ def build_visual_content_plan(primaryChart, secondaryCharts=None, dataProfile=No
             existing_template_motifs.append(motif)
     plan["templateMotifs"] = existing_template_motifs
     plan["templateMotifsRequired"] = bool(existing_template_motifs)
-    plan["minTemplateMotifsPerFigure"] = 1 if existing_template_motifs else 0
+    plan["minTemplateMotifsPerFigure"] = min(2, len(existing_template_motifs)) if existing_template_motifs else 0
     if "joint_marginal_grid" in existing_template_motifs:
         plan["useMarginalAxes"] = True
     if "density_encoded_scatter" in existing_template_motifs:
@@ -405,9 +420,10 @@ def build_visual_content_plan(primaryChart, secondaryCharts=None, dataProfile=No
     if "dual_axis_error_sidecar" in existing_template_motifs:
         plan["requiresMultiAxisEncoding"] = True
     panel_count = max(1, len(charts))
+    template_density_bonus = min(2, len(existing_template_motifs))
     plan["minTotalEnhancements"] = max(
         plan.get("minTotalEnhancements", 4),
-        panel_count * plan.get("minEnhancementsPerPanel", 2),
+        panel_count * plan.get("minEnhancementsPerPanel", 2) + template_density_bonus,
     )
     plan["minReferenceMotifsPerFigure"] = min(
         max(1, len(plan.get("visualGrammarMotifs", []))),
@@ -1419,7 +1435,11 @@ def apply_visual_content_pass(fig, axes, chartPlan, dataProfile, journalProfile,
         return {"appliedEnhancementCount": 0, "families": {}}
 
     actual_panel_count = max(1, len(axes))
-    visualPlan["minTotalEnhancements"] = actual_panel_count * visualPlan.get("minEnhancementsPerPanel", 2)
+    template_density_bonus = min(2, len(visualPlan.get("templateMotifs", [])))
+    visualPlan["minTotalEnhancements"] = max(
+        visualPlan.get("minTotalEnhancements", 0),
+        actual_panel_count * visualPlan.get("minEnhancementsPerPanel", 2) + template_density_bonus,
+    )
     if visualPlan.get("requireInPlotExplanatoryLabels", True):
         visualPlan["minInPlotLabelsPerFigure"] = max(
             1,
@@ -1531,6 +1551,47 @@ def collect_legend_entries(axes):
     return dedupe_handles_labels(handles, labels)
 
 
+def collect_figure_legend_entries(fig):
+    handles = []
+    labels = []
+    for legend in list(getattr(fig, "legends", [])):
+        legend_handles = getattr(legend, "legend_handles", None)
+        if legend_handles is None:
+            legend_handles = getattr(legend, "legendHandles", [])
+        legend_labels = [text.get_text() for text in legend.get_texts()]
+        handles.extend(legend_handles)
+        labels.extend(legend_labels)
+    return dedupe_handles_labels(handles, labels)
+
+
+def _panel_id_from_index(index):
+    if index < 26:
+        return chr(65 + index)
+    return f"P{index + 1}"
+
+
+def normalize_axes_map(fig, axes=None):
+    if isinstance(axes, dict):
+        return dict(axes)
+    if axes is None:
+        raw_axes = [ax for ax in fig.axes if ax.get_visible()]
+    elif hasattr(axes, "ravel"):
+        raw_axes = list(axes.ravel())
+    elif isinstance(axes, (list, tuple, set)):
+        raw_axes = list(axes)
+    else:
+        raw_axes = [axes]
+
+    axes_map = {}
+    for idx, ax in enumerate(raw_axes):
+        if ax is None:
+            continue
+        if str(getattr(ax, "get_label", lambda: "")()) == "<colorbar>" and ax.get_legend() is None:
+            continue
+        axes_map[_panel_id_from_index(len(axes_map))] = ax
+    return axes_map
+
+
 def remove_axis_legends(axes):
     removed = 0
     for ax in axes.values():
@@ -1624,10 +1685,20 @@ def _bbox_in_figure_coords(fig, artist):
     return artist.get_window_extent(renderer=renderer).transformed(fig.transFigure.inverted())
 
 
+def _axis_layout_bbox(ax, renderer):
+    try:
+        tight = ax.get_tightbbox(renderer)
+        if tight is not None:
+            return tight
+    except Exception:
+        pass
+    return ax.get_window_extent(renderer=renderer)
+
+
 def legend_overlaps_axes(fig, legend, axes):
     renderer = get_cached_renderer(fig)
     legend_box = legend.get_window_extent(renderer=renderer)
-    return any(legend_box.overlaps(ax.get_window_extent(renderer=renderer)) for ax in axes)
+    return any(legend_box.overlaps(_axis_layout_bbox(ax, renderer)) for ax in axes)
 
 
 def elements_overlap_axes(fig, axes):
@@ -1648,6 +1719,140 @@ def elements_overlap_axes(fig, axes):
     return issues
 
 
+def _iter_layout_artists(axes):
+    for panel_id, ax in axes.items():
+        seen = set()
+        candidates = list(getattr(ax, "texts", []))
+        candidates.extend([ax.title, ax.xaxis.label, ax.yaxis.label])
+        candidates.extend(list(getattr(ax, "tables", [])))
+        for artist in candidates:
+            if artist is None or id(artist) in seen:
+                continue
+            seen.add(id(artist))
+            if hasattr(artist, "get_visible") and not artist.get_visible():
+                continue
+            if hasattr(artist, "get_text") and not str(artist.get_text()).strip():
+                continue
+            yield panel_id, artist
+
+
+def _bbox_outside(inner, outer, tol=2.0):
+    return (
+        inner.x0 < outer.x0 - tol or
+        inner.y0 < outer.y0 - tol or
+        inner.x1 > outer.x1 + tol or
+        inner.y1 > outer.y1 + tol
+    )
+
+
+def _bbox_union(boxes):
+    if not boxes:
+        return None
+    x0 = min(box.x0 for box in boxes)
+    y0 = min(box.y0 for box in boxes)
+    x1 = max(box.x1 for box in boxes)
+    y1 = max(box.y1 for box in boxes)
+    return x0, y0, x1, y1
+
+
+def _bbox_area(box):
+    if box is None:
+        return 0.0
+    if isinstance(box, tuple):
+        return max(0.0, box[2] - box[0]) * max(0.0, box[3] - box[1])
+    return max(0.0, box.width) * max(0.0, box.height)
+
+
+def audit_figure_layout_contract(fig, axes=None, chartPlan=None, journalProfile=None, strict=False):
+    """Check final multi-panel layout for cross-panel text, off-canvas text, and poster-scale typography."""
+    axes_map = normalize_axes_map(fig, axes)
+    plan = chartPlan if isinstance(chartPlan, dict) else {}
+    crowdingPlan = {**default_crowding_plan(), **plan.get("crowdingPlan", {})}
+    profile = journalProfile or {}
+    max_text_size = crowdingPlan.get(
+        "maxTextFontSizePt",
+        profile.get("max_text_font_size_pt", max(12, profile.get("font_size_panel_label_pt", 8) + 4)),
+    )
+    max_panel_label_size = crowdingPlan.get(
+        "maxPanelLabelFontSizePt",
+        profile.get("max_panel_label_font_size_pt", max_text_size),
+    )
+
+    renderer = get_cached_renderer(fig, force=True)
+    fig_box = fig.bbox
+    axes_boxes = {pid: _axis_layout_bbox(ax, renderer) for pid, ax in axes_map.items()}
+    cross_panel_overlaps = []
+    off_canvas_artists = []
+    oversized_text = []
+    negative_axes_text = []
+
+    for panel_id, artist in _iter_layout_artists(axes_map):
+        try:
+            artist_box = artist.get_window_extent(renderer=renderer)
+        except Exception:
+            continue
+        raw_text = str(getattr(artist, "get_text", lambda: type(artist).__name__)()).strip()
+        font_size = float(getattr(artist, "get_fontsize", lambda: 0.0)() or 0.0)
+        is_panel_label = raw_text in [chr(code) for code in range(65, 91)] and font_size >= max_text_size
+        if is_panel_label and font_size > max_panel_label_size:
+            oversized_text.append({"panel": panel_id, "text": raw_text, "fontsize": font_size, "limit": max_panel_label_size})
+        elif font_size > max_text_size:
+            oversized_text.append({"panel": panel_id, "text": raw_text[:32], "fontsize": font_size, "limit": max_text_size})
+
+        if _bbox_outside(artist_box, fig_box):
+            off_canvas_artists.append({"panel": panel_id, "text": raw_text[:32]})
+
+        if crowdingPlan.get("forbidNegativeAxesText", True) and hasattr(artist, "get_position"):
+            transform = getattr(artist, "get_transform", lambda: None)()
+            try:
+                x_pos, y_pos = artist.get_position()
+            except Exception:
+                x_pos, y_pos = None, None
+            if transform is axes_map[panel_id].transAxes and y_pos is not None and (y_pos < -0.02 or y_pos > 1.08):
+                negative_axes_text.append({"panel": panel_id, "text": raw_text[:32], "position": [float(x_pos), float(y_pos)]})
+
+        for other_id, other_box in axes_boxes.items():
+            if other_id != panel_id and artist_box.overlaps(other_box):
+                cross_panel_overlaps.append({
+                    "element": "text_or_table",
+                    "host_panel": panel_id,
+                    "conflict_panel": other_id,
+                    "text": raw_text[:32],
+                })
+
+    axes_union = _bbox_union(list(axes_boxes.values()))
+    whitespace_fraction = 1.0
+    if axes_union is not None and _bbox_area(fig_box):
+        whitespace_fraction = 1.0 - min(1.0, _bbox_area(axes_union) / _bbox_area(fig_box))
+
+    failures = []
+    if cross_panel_overlaps:
+        failures.append("cross_panel_text_or_table_overlap")
+    if off_canvas_artists:
+        failures.append("off_canvas_text_or_table")
+    if oversized_text:
+        failures.append("poster_scale_fontsize")
+    if negative_axes_text:
+        failures.append("negative_axes_text_without_reserved_slot")
+
+    report = {
+        "layoutContractEnforced": True,
+        "layoutContractFailures": failures,
+        "crossPanelOverlapIssues": cross_panel_overlaps,
+        "offCanvasArtistCount": len(off_canvas_artists),
+        "offCanvasArtists": off_canvas_artists,
+        "oversizedTextCount": len(oversized_text),
+        "oversizedText": oversized_text,
+        "negativeAxesTextCount": len(negative_axes_text),
+        "negativeAxesText": negative_axes_text,
+        "figureWhitespaceFraction": whitespace_fraction,
+    }
+    plan.setdefault("crowdingPlan", {}).update(report)
+    if strict and failures:
+        raise RuntimeError("Figure layout contract failed: " + ", ".join(failures))
+    return report
+
+
 def _reflow_legend_with_height_increase(fig, handles, labels, legend_labels, occupied_axes,
                                         crowdingPlan, journalProfile, fontsize):
     max_mult = crowdingPlan.get("legendMaxHeightMultiplier", 1.3)
@@ -1658,10 +1863,18 @@ def _reflow_legend_with_height_increase(fig, handles, labels, legend_labels, occ
         fig.set_figheight(base_height * mult)
         invalidate_layout_cache(fig)
         get_cached_renderer(fig, force=True)
-        for mode in ["outside_right", "bottom_center", "top_center"]:
+        for mode in _center_legend_modes(crowdingPlan.get("legendPlacementPriority")):
             for existing in list(fig.legends):
                 existing.remove()
-            legend = create_figure_legend(fig, handles, legend_labels, mode, fontsize, ncol=1)
+            legend = create_figure_legend(
+                fig,
+                handles,
+                legend_labels,
+                mode,
+                fontsize,
+                ncol=1,
+                frame_style=crowdingPlan.get("legendFrameStyle"),
+            )
             ok = enforce_non_overlapping_legend(fig, legend, mode, occupied_axes, retry_limit=3)
             if ok:
                 return legend, mode
@@ -1684,11 +1897,9 @@ def apply_subplot_margins(fig, legend_mode, has_colorbar=False, legend=None):
     if legend is not None:
         legend_box = _bbox_in_figure_coords(fig, legend)
         if legend_mode == "bottom_center":
-            bottom = max(bottom, min(0.74, legend_box.y1 + 0.035))
+            bottom = max(bottom, min(0.74, legend_box.y1 + 0.055))
         elif legend_mode == "top_center":
-            top = min(top, max(0.26, legend_box.y0 - 0.035))
-        elif legend_mode == "outside_right":
-            right = min(right, max(0.30, legend_box.x0 - 0.035))
+            top = min(top, max(0.26, legend_box.y0 - 0.055))
 
     if right <= left + 0.12:
         right = left + 0.12
@@ -1701,13 +1912,10 @@ def apply_subplot_margins(fig, legend_mode, has_colorbar=False, legend=None):
     if legend is not None:
         renderer = get_cached_renderer(fig)
         legend_box = legend.get_window_extent(renderer=renderer).transformed(fig.transFigure.inverted())
-        if legend_mode == "outside_right" and legend_box.x1 > 0.99:
-            needed_right = max(0.20, legend_box.x0 - 0.02)
-            right = min(right, needed_right)
-        elif legend_mode == "bottom_center":
-            bottom = max(bottom, min(0.74, legend_box.y1 + 0.035))
+        if legend_mode == "bottom_center":
+            bottom = max(bottom, min(0.74, legend_box.y1 + 0.055))
         elif legend_mode == "top_center":
-            top = min(top, max(0.26, legend_box.y0 - 0.035))
+            top = min(top, max(0.26, legend_box.y0 - 0.055))
 
     fig.subplots_adjust(top=top, bottom=bottom, left=left, right=right)
     invalidate_layout_cache(fig)
@@ -1721,9 +1929,25 @@ def _unique_modes(modes):
     return out
 
 
+def _normalize_legend_mode(mode):
+    if mode in ("top_center", "bottom_center"):
+        return mode
+    return "bottom_center"
+
+
+def _center_legend_modes(modes=None):
+    normalized = []
+    for mode in list(modes or []):
+        mode = _normalize_legend_mode(mode)
+        if mode not in normalized:
+            normalized.append(mode)
+    for mode in ("bottom_center", "top_center"):
+        if mode not in normalized:
+            normalized.append(mode)
+    return normalized
+
+
 def _legend_column_options(label_count, legend_mode, max_columns):
-    if legend_mode == "outside_right":
-        return [1]
     candidates = [
         min(label_count, max_columns),
         min(label_count, 4),
@@ -1734,26 +1958,51 @@ def _legend_column_options(label_count, legend_mode, max_columns):
     return [n for n in dict.fromkeys(candidates) if n >= 1]
 
 
-def create_figure_legend(fig, handles, labels, legend_mode, fontsize, ncol=1):
+def _apply_legend_frame_style(legend, frame_style=None):
+    style = {
+        "facecolor": "#FFFFFF",
+        "edgecolor": "#222222",
+        "linewidth": 0.55,
+        "alpha": 0.96,
+        "pad": 0.28,
+    }
+    style.update(frame_style or {})
+    frame = legend.get_frame()
+    frame.set_visible(True)
+    frame.set_facecolor(style["facecolor"])
+    frame.set_edgecolor(style["edgecolor"])
+    frame.set_linewidth(style["linewidth"])
+    frame.set_alpha(style["alpha"])
+    if hasattr(frame, "set_boxstyle"):
+        frame.set_boxstyle(f"square,pad={style['pad']}")
+    legend.set_gid("scifig_shared_legend")
+    legend.set_zorder(1000)
+    return True
+
+
+def create_figure_legend(fig, handles, labels, legend_mode, fontsize, ncol=1, frame_style=None):
     invalidate_layout_cache(fig)
+    legend_mode = _normalize_legend_mode(legend_mode)
     common = {
         "ncol": ncol,
-        "frameon": False,
+        "frameon": True,
+        "fancybox": False,
         "fontsize": fontsize,
         "borderaxespad": 0.0,
+        "borderpad": 0.35,
         "handlelength": 1.2,
         "handletextpad": 0.4,
         "labelspacing": 0.35,
         "columnspacing": 0.8,
     }
-    if legend_mode == "outside_right":
-        return fig.legend(handles, labels, loc="center left",
-                          bbox_to_anchor=(0.80, 0.5), **common)
     if legend_mode == "top_center":
-        return fig.legend(handles, labels, loc="upper center",
-                          bbox_to_anchor=(0.5, 0.99), **common)
-    return fig.legend(handles, labels, loc="lower center",
-                      bbox_to_anchor=(0.5, 0.01), **common)
+        legend = fig.legend(handles, labels, loc="upper center",
+                            bbox_to_anchor=(0.5, 0.99), **common)
+    else:
+        legend = fig.legend(handles, labels, loc="lower center",
+                            bbox_to_anchor=(0.5, 0.01), **common)
+    _apply_legend_frame_style(legend, frame_style)
+    return legend
 
 
 def enforce_non_overlapping_legend(fig, legend, legend_mode, occupied_axes, has_colorbar=False, retry_limit=5):
@@ -1769,9 +2018,6 @@ def enforce_non_overlapping_legend(fig, legend, legend_mode, occupied_axes, has_
         elif legend_mode == "top_center":
             next_top = max(subplotpars.bottom + 0.12, subplotpars.top - 0.04)
             fig.subplots_adjust(top=next_top)
-        elif legend_mode == "outside_right":
-            next_right = max(0.28, subplotpars.right - 0.04)
-            fig.subplots_adjust(right=next_right)
         invalidate_layout_cache(fig)
 
     if not legend_overlaps_axes(fig, legend, occupied_axes):
@@ -1790,24 +2036,33 @@ def place_shared_legend(fig, axes, occupied_axes, crowdingPlan, journalProfile, 
         "legendLabelsShortened": False,
         "legendNColumns": 0,
         "legendOutsidePlotArea": True,
+        "legendAllowedModes": ["bottom_center", "top_center"],
+        "legendCenterPlacementOnly": True,
+        "legendFrameApplied": False,
+        "forbidOutsideRightLegend": True,
     }
     if not handles:
-        return None, crowdingPlan.get("legendMode", "bottom_center"), empty_info
+        return None, _normalize_legend_mode(crowdingPlan.get("legendMode", "bottom_center")), empty_info
 
-    requested_mode = crowdingPlan.get("legendMode", "bottom_center")
-    if requested_mode == "shared_auto":
-        requested_mode = "bottom_center"
-    priority = crowdingPlan.get("legendPlacementPriority") or ["bottom_center", "top_center", "outside_right"]
-    candidate_modes = _unique_modes(priority + [requested_mode, "bottom_center", "top_center", "outside_right"])
+    requested_mode = _normalize_legend_mode(crowdingPlan.get("legendMode", "bottom_center"))
+    priority = crowdingPlan.get("legendPlacementPriority") or ["bottom_center", "top_center"]
+    allowed_modes = _center_legend_modes(crowdingPlan.get("legendAllowedModes"))
+    candidate_modes = _center_legend_modes(priority + [requested_mode] + allowed_modes)
     fontsize = journalProfile.get("font_size_small_pt", 5)
     max_label_chars = crowdingPlan.get("legendLabelMaxChars", 32)
     max_columns = crowdingPlan.get("maxLegendColumns", 6)
+    frame_style = crowdingPlan.get("legendFrameStyle")
     legend_labels, labels_shortened = shorten_legend_labels(labels, max_label_chars)
     info = {
         "legendScope": "figure",
         "legendLabelsShortened": labels_shortened,
         "legendNColumns": 0,
         "legendOutsidePlotArea": False,
+        "legendAllowedModes": allowed_modes,
+        "legendCenterPlacementOnly": True,
+        "legendFrameApplied": False,
+        "legendFrameStyle": frame_style or CROWDING_DEFAULTS["legendFrameStyle"],
+        "forbidOutsideRightLegend": True,
     }
 
     for mode in candidate_modes:
@@ -1815,7 +2070,15 @@ def place_shared_legend(fig, axes, occupied_axes, crowdingPlan, journalProfile, 
             for existing in list(fig.legends):
                 existing.remove()
             invalidate_layout_cache(fig)
-            legend = create_figure_legend(fig, handles, legend_labels, mode, fontsize, ncol=ncol)
+            legend = create_figure_legend(
+                fig,
+                handles,
+                legend_labels,
+                mode,
+                fontsize,
+                ncol=ncol,
+                frame_style=frame_style,
+            )
             ok = enforce_non_overlapping_legend(
                 fig,
                 legend,
@@ -1827,26 +2090,19 @@ def place_shared_legend(fig, axes, occupied_axes, crowdingPlan, journalProfile, 
             if ok:
                 info["legendNColumns"] = ncol
                 info["legendOutsidePlotArea"] = True
+                info["legendFrameApplied"] = legend.get_frame().get_visible()
                 return legend, mode, info
 
     for existing in list(fig.legends):
         existing.remove()
     invalidate_layout_cache(fig)
-    fallback_mode = "outside_right"
-    legend = create_figure_legend(fig, handles, legend_labels, fallback_mode, fontsize, ncol=1)
-    apply_subplot_margins(fig, fallback_mode, has_colorbar=has_colorbar, legend=legend)
-    if legend_overlaps_axes(fig, legend, occupied_axes):
-        legend.remove()
-        invalidate_layout_cache(fig)
-        info["legendOutsidePlotArea"] = False
-        info["layoutReflowNeeded"] = True
-        return None, fallback_mode, info
-    info["legendNColumns"] = 1
-    info["legendOutsidePlotArea"] = True
-    return legend, fallback_mode, info
+    info["legendOutsidePlotArea"] = False
+    info["layoutReflowNeeded"] = True
+    return None, requested_mode, info
 
 
 def apply_crowding_management(fig, axes, chartPlan, journalProfile):
+    axes = normalize_axes_map(fig, axes)
     crowdingPlan = {**default_crowding_plan(), **chartPlan.get("crowdingPlan", {})}
     panelBlueprint = chartPlan.get("panelBlueprint", {})
 
@@ -1859,6 +2115,10 @@ def apply_crowding_management(fig, axes, chartPlan, journalProfile):
         trim_pvalue_annotations(ax, crowdingPlan.get("maxBracketGroups", 2))
 
     handles, labels = collect_legend_entries(axes)
+    figure_handles, figure_labels = collect_figure_legend_entries(fig)
+    handles, labels = dedupe_handles_labels(handles + figure_handles, labels + figure_labels)
+    for existing in list(fig.legends):
+        existing.remove()
     removed_axis_legends = remove_axis_legends(axes)
     remaining_axis_legends = count_axis_legends(axes)
     legend = None
@@ -1868,6 +2128,11 @@ def apply_crowding_management(fig, axes, chartPlan, journalProfile):
         "legendLabelsShortened": False,
         "legendNColumns": 0,
         "legendOutsidePlotArea": True,
+        "legendAllowedModes": ["bottom_center", "top_center"],
+        "legendCenterPlacementOnly": True,
+        "legendFrameApplied": False,
+        "legendFrameStyle": crowdingPlan.get("legendFrameStyle", CROWDING_DEFAULTS["legendFrameStyle"]),
+        "forbidOutsideRightLegend": True,
     }
     shared_colorbar_applied = False
     if panelBlueprint.get("sharedColorbar", False):
@@ -1910,6 +2175,7 @@ def apply_crowding_management(fig, axes, chartPlan, journalProfile):
             legend_info["legendOutsidePlotArea"] = True
             legend_info["layoutReflowNeeded"] = False
             legend_info["heightIncreased"] = True
+            legend_info["legendFrameApplied"] = legend.get_frame().get_visible()
         else:
             legend_info["legendOutsidePlotArea"] = False
 
@@ -1917,13 +2183,33 @@ def apply_crowding_management(fig, axes, chartPlan, journalProfile):
     if chartPlan.get("visualContentPlan", {}).get("outsideLayoutElements"):
         fig.subplots_adjust(right=min(fig.subplotpars.right, 0.78))
 
+    final_legend_overlap = False
+    if legend is not None:
+        occupied_axes = list(axes.values()) + get_non_panel_axes(fig, axes)
+        invalidate_layout_cache(fig)
+        if legend_overlaps_axes(fig, legend, occupied_axes):
+            ok = enforce_non_overlapping_legend(
+                fig,
+                legend,
+                legend_mode_used,
+                occupied_axes,
+                has_colorbar=shared_colorbar_applied,
+                retry_limit=crowdingPlan.get("renderRetryLimit", 5),
+            )
+            final_legend_overlap = not ok
+            legend_info["legendOutsidePlotArea"] = ok
+
     if remaining_axis_legends:
         removed_axis_legends += remove_axis_legends(axes)
     remaining_axis_legends = count_axis_legends(axes)
     get_cached_renderer(fig, force=True)
     overlap_issues = elements_overlap_axes(fig, axes)
+    if final_legend_overlap:
+        overlap_issues.append({"element": "scifig_shared_legend", "host_panel": "figure", "conflict_panel": "plot_area"})
     if overlap_issues:
         for issue in overlap_issues:
+            if issue.get("host_panel") not in axes:
+                continue
             for child in list(axes[issue["host_panel"]].get_children()):
                 gid = getattr(child, "get_gid", lambda: None)()
                 if gid == issue["element"]:
@@ -1937,14 +2223,23 @@ def apply_crowding_management(fig, axes, chartPlan, journalProfile):
     crowdingPlan["droppedDirectLabelCount"] = dropped_direct_labels
     crowdingPlan["legendScope"] = "figure"
     crowdingPlan["legendModeUsed"] = legend_mode_used
+    crowdingPlan["legendAllowedModes"] = ["bottom_center", "top_center"]
+    crowdingPlan["legendPlacementPriority"] = _center_legend_modes(crowdingPlan.get("legendPlacementPriority"))
+    crowdingPlan["legendCenterPlacementOnly"] = True
+    crowdingPlan["forbidOutsideRightLegend"] = True
+    crowdingPlan["legendFrame"] = True
+    crowdingPlan["legendFrameApplied"] = legend_info.get("legendFrameApplied", False)
+    crowdingPlan["legendFrameStyle"] = legend_info.get("legendFrameStyle", CROWDING_DEFAULTS["legendFrameStyle"])
     crowdingPlan["axisLegendRemovedCount"] = removed_axis_legends
     crowdingPlan["axisLegendRemainingCount"] = remaining_axis_legends
+    crowdingPlan["figureLegendCount"] = len(fig.legends)
     crowdingPlan["legendNColumns"] = legend_info.get("legendNColumns", 0)
     crowdingPlan["legendLabelsShortened"] = legend_info.get("legendLabelsShortened", False)
     crowdingPlan["legendOutsidePlotArea"] = legend_info.get("legendOutsidePlotArea", True)
     simplifications = list(crowdingPlan.get("simplificationsApplied", []))
     if legend is not None:
         simplifications.append("figure_level_shared_legend")
+        simplifications.append("framed_shared_legend")
     if removed_axis_legends:
         simplifications.append(f"axis_legends_removed:{removed_axis_legends}")
     if remaining_axis_legends:
@@ -1965,9 +2260,75 @@ def apply_crowding_management(fig, axes, chartPlan, journalProfile):
         "hasFigureLegend": legend is not None,
         "axisLegendRemovedCount": removed_axis_legends,
         "axisLegendRemainingCount": remaining_axis_legends,
+        "figureLegendCount": len(fig.legends),
         "legendOutsidePlotArea": legend_info.get("legendOutsidePlotArea", True),
         "legendLabelsShortened": legend_info.get("legendLabelsShortened", False),
+        "legendAllowedModes": crowdingPlan["legendAllowedModes"],
+        "legendCenterPlacementOnly": crowdingPlan["legendCenterPlacementOnly"],
+        "legendFrameApplied": crowdingPlan["legendFrameApplied"],
+        "forbidOutsideRightLegend": crowdingPlan["forbidOutsideRightLegend"],
         "layoutReflowApplied": legend_info.get("layoutReflowNeeded", False) is False and legend_info.get("heightIncreased", False),
         "overlapIssues": overlap_issues,
     }
+
+
+def _default_panel_blueprint_for_axes(axes):
+    panel_ids = list(axes.keys()) or ["A"]
+    recipe = "single" if len(panel_ids) == 1 else f"auto_{len(panel_ids)}_panel"
+    return {
+        "layout": {"recipe": recipe, "grid": recipe},
+        "panels": [{"id": panel_id, "role": "panel", "chart": "auto"} for panel_id in panel_ids],
+        "requestedLayout": recipe,
+        "finalLayout": recipe,
+        "sharedLegend": True,
+        "sharedColorbar": False,
+    }
+
+
+def enforce_figure_legend_contract(fig, axes=None, chartPlan=None, journalProfile=None, crowdingPlan=None, strict=True):
+    """Promote all axis/figure legends into one framed external legend before saving."""
+    axes_map = normalize_axes_map(fig, axes)
+    plan = chartPlan if isinstance(chartPlan, dict) else {}
+    plan.setdefault("panelBlueprint", _default_panel_blueprint_for_axes(axes_map))
+    plan.setdefault("crowdingPlan", {})
+    if crowdingPlan:
+        plan["crowdingPlan"].update(crowdingPlan)
+    plan["crowdingPlan"]["legendContractRequired"] = True
+    plan["crowdingPlan"]["legendMode"] = _normalize_legend_mode(plan["crowdingPlan"].get("legendMode", "bottom_center"))
+    plan["crowdingPlan"]["legendPlacementPriority"] = ["bottom_center", "top_center"]
+    plan["crowdingPlan"]["legendAllowedModes"] = ["bottom_center", "top_center"]
+    plan["crowdingPlan"]["legendFrame"] = True
+    plan["crowdingPlan"]["forbidOutsideRightLegend"] = True
+    plan["crowdingPlan"]["forbidInAxesLegend"] = True
+
+    profile = journalProfile or {"font_size_small_pt": 5}
+    report = apply_crowding_management(fig, axes_map, plan, profile)
+    failures = []
+    legend_exists = bool(report.get("hasFigureLegend")) or len(fig.legends) > 0
+    if report.get("axisLegendRemainingCount", 0) > 0:
+        failures.append("axis_legend_remaining")
+    if legend_exists and len(fig.legends) != 1:
+        failures.append("figure_legend_count_not_one")
+    if legend_exists and report.get("legendModeUsed") not in ("bottom_center", "top_center"):
+        failures.append("legend_not_centered_top_or_bottom")
+    if legend_exists and not report.get("legendFrameApplied"):
+        failures.append("legend_frame_missing")
+    if legend_exists and not report.get("legendOutsidePlotArea", False):
+        failures.append("legend_overlaps_plot_area")
+    if report.get("overlapIssues"):
+        if any(issue.get("element") == "scifig_shared_legend" for issue in report["overlapIssues"]):
+            failures.append("legend_overlap_issue_recorded")
+
+    layout_report = audit_figure_layout_contract(fig, axes_map, plan, profile, strict=False)
+    if layout_report.get("layoutContractFailures"):
+        failures.extend(layout_report["layoutContractFailures"])
+
+    plan["crowdingPlan"]["legendContractEnforced"] = True
+    plan["crowdingPlan"]["legendContractFailures"] = failures
+    report["legendContractEnforced"] = True
+    report["legendContractFailures"] = failures
+    report.update(layout_report)
+    if strict and failures:
+        raise RuntimeError("Figure contract failed: " + ", ".join(failures))
+    return report
 ```

@@ -50,25 +50,25 @@ from matplotlib.gridspec import GridSpec
 _KERNEL_BASE = {
     "font.family":       ["Times New Roman", "Arial", "DejaVu Sans"],
     "mathtext.fontset":  "stix",
-    "font.size":         14,
-    "axes.linewidth":    1.2,
+    "font.size":         6.5,
+    "axes.linewidth":    0.65,
     "xtick.direction":   "in",
     "ytick.direction":   "in",
-    "xtick.major.width": 1.0,
-    "ytick.major.width": 1.0,
-    "lines.linewidth":   1.5,
-    "lines.markersize":  6,
+    "xtick.major.width": 0.6,
+    "ytick.major.width": 0.6,
+    "lines.linewidth":   0.9,
+    "lines.markersize":  3.5,
     "savefig.bbox":      "tight",
     "savefig.dpi":       600,
 }
 
 _VARIANTS = {
     "default": {},
-    "hero":    {"font.size": 16, "axes.linewidth": 1.5, "lines.linewidth": 2.0},
+    "hero":    {"font.size": 7.5, "axes.linewidth": 0.75, "lines.linewidth": 1.2},
     "compact": {"font.family": ["Arial", "Times New Roman", "DejaVu Sans"],
-                "font.size": 14, "axes.linewidth": 1.2,
-                "lines.linewidth": 1.5, "lines.markersize": 6},
-    "polar":   {"font.size": 16, "axes.linewidth": 1.5,
+                "font.size": 6.5, "axes.linewidth": 0.65,
+                "lines.linewidth": 0.9, "lines.markersize": 3.5},
+    "polar":   {"font.size": 7.0, "axes.linewidth": 0.75,
                 "grid.linestyle": "--", "grid.alpha": 0.5},
 }
 
@@ -183,8 +183,8 @@ def role_color(role: str, palette: list[str] | None = None) -> str:
 # ============================================================================
 
 def add_metric_box(ax: Axes, metrics: dict[str, str | float], *,
-                   loc: str = "top_left", fontsize: int = 11,
-                   pad: float = 0.4, lw: float = 0.8) -> None:
+                   loc: str = "top_left", fontsize: int = 6,
+                   pad: float = 0.28, lw: float = 0.45) -> None:
     """Place a metric text box with white fill + thin black border (idiom I1).
 
     metrics: dict mapping label → value. Values formatted with default precision.
@@ -263,12 +263,12 @@ def add_group_dividers(ax: Axes,
                         split_indices: Sequence[float], *,
                         group_labels: Sequence[str] | None = None,
                         group_centers: Sequence[float] | None = None,
-                        color: str = "gray", lw: float = 1.5,
+                        color: str = "gray", lw: float = 0.7,
                         alpha: float = 0.6,
                         label_position: str = "above",
                         label_y_frac: float | None = None,
                         label_color: str = "#444",
-                        label_fontsize: int = 11) -> None:
+                        label_fontsize: int = 6) -> None:
     """Draw dashed vertical group dividers and optional group labels (idiom I3).
 
     label_position: 'above' (default, outside chart at y=1.02 axes coords) |
@@ -293,7 +293,7 @@ def add_group_dividers(ax: Axes,
 
 def add_panel_label(ax: Axes, label: str, *,
                      x: float = -0.12, y: float = 1.05,
-                     fontsize: int = 14) -> None:
+                     fontsize: int = 8) -> None:
     """Bold panel label (a/b/c) outside the data rectangle (idiom I13)."""
     ax.text(x, y, label, transform=ax.transAxes,
             fontweight="bold", fontsize=fontsize, va="top", ha="right")
@@ -389,7 +389,7 @@ def density_color_scatter(ax: Axes, x: np.ndarray, y: np.ndarray, *,
                     rasterized=rasterized, zorder=zorder)
     if with_colorbar:
         cbar = ax.figure.colorbar(sc, ax=ax, shrink=0.6, pad=0.04)
-        cbar.set_label(colorbar_label, fontsize=11)
+        cbar.set_label(colorbar_label, fontsize=6)
     return sc
 
 
@@ -414,7 +414,7 @@ def add_polygon_polar_grid(ax: Axes, angles: Sequence[float],
 
 
 def set_polar_title(ax: Axes, title: str, *,
-                     fontsize: int = 13,
+                     fontsize: int = 8,
                      fontweight: str = "bold",
                      y: float = 1.18) -> None:
     """Place title above polar axis without colliding with the topmost angle label.
@@ -795,7 +795,7 @@ def add_forest_panel(ax, hrs, lower, upper, labels, *,
                 annotation_format.format(hr=hr, lo=lo, hi=hi),
                 transform=ax.get_yaxis_transform(),
                 ha='right', va='center',
-                fontsize=9, color='#222',
+                fontsize=6, color='#222',
                 family='monospace', zorder=15,
                 bbox=dict(boxstyle='round,pad=0.15',
                           fc='white', ec='none', alpha=0.85))
@@ -810,11 +810,11 @@ def add_forest_panel(ax, hrs, lower, upper, labels, *,
 
     ax.set_yticks(y_pos)
     if show_yticklabels:
-        ax.set_yticklabels(labels, fontsize=10)
+        ax.set_yticklabels(labels, fontsize=6)
     else:
         ax.set_yticklabels([])
     ax.invert_yaxis()
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
     if title:
-        ax.set_title(title, color=color, fontsize=12, fontweight='bold')
+        ax.set_title(title, color=color, fontsize=8, fontweight='bold')

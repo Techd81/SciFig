@@ -223,18 +223,19 @@ Blocking agent findings must route back to the owning phase before advancing. Ne
 3. Do not mix unrelated semantic color mappings across panels of the same figure.
 4. Do not use rainbow colormaps unless the variable is cyclic and the legend explicitly justifies it.
 5. Keep all figure text editable, sans serif, and legible at final print size.
-6. Treat multi-panel legends as figure-level layout elements, not as axes annotations. When panels share group, color, marker, or line semantics, keep one shared `fig.legend` outside every plotting area; prefer bottom-center, then top-center, then outside-right. Never use `loc="best"` for publication output.
-7. If legend space is tight, adjust columns, shorten labels, reduce spacing, increase margins, or reflow panels before allowing any legend to overlap curves, bars, points, error bars, confidence bands, grids, or heatmap cells.
-8. Use shared legends or shared colorbars when panels encode the same semantics.
-9. Multi-panel figures must have an explicit panel blueprint before code generation.
-10. For implemented single-panel charts, increase Nature/Cell-style information density through data-derived summaries, in-plot explanatory labels, reference lines, callouts, insets, sample-size labels, metric tables, prediction diagnostics, marginal distributions, density-colored points, density halos, matrix labels, and effect-size context before adding new chart types.
-11. Treat `specs/template-visual-motifs.md` as the grammar for learning from reference examples. Add motifs to `visualContentPlan.templateMotifs` and render them through existing generators/helpers; do not register a new chart key until a real generator exists and passes QA.
-12. Do not invent statistics for visual impact. Every p-value, AUC, effect size, threshold count, or fitted parameter must come from the supplied data or a documented upstream result.
-13. Prefer vector export and generate source-data friendly artifacts for quantitative panels.
-14. If domain inference is weak, fall back to general biomedical rules instead of overfitting to a guessed specialty.
-15. If statistical assumptions are uncertain, downgrade to a conservative or descriptive choice and explain why.
-16. If rendered QA reports overlap, blank/tiny output, any remaining in-axes legend, too few visual enhancements, missing template/reference visual grammar motifs, missing in-plot explanatory labels, non-editable vector text, or missing formats, return to Phase 3 or Phase 2 before declaring completion.
-17. Use `specs/workflow-policies.md` for thresholds and budgets; do not add new magic numbers in phase logic without naming the policy.
+6. Treat every legend as a figure-level layout element in final output, not as an axes annotation. When panels share group, color, marker, or line semantics, keep one shared framed `fig.legend` outside every plotting area; allowed positions are bottom-center first, then top-center. Never use `loc="best"` or outside-right for publication output.
+7. Every generated script must call `enforce_figure_legend_contract(...)` immediately before the first `savefig` for each figure. Direct `ax.legend(...)` calls are temporary handle sources only; if the finalizer is missing, or if any axis legend remains after the finalizer, return to Phase 3.
+8. Do not hand-write replacement runtime helpers when the skill already provides them. Generated code must embed and execute the helper source from `phases/code-gen/helpers.py`, so `legendContractEnforced`, `layoutContractEnforced`, overlap checks, and typography gates are real runtime results rather than local approximations.
+9. Use shared legends or shared colorbars when panels encode the same semantics.
+10. Multi-panel figures must have an explicit panel blueprint before code generation.
+11. For implemented single-panel charts, increase Nature/Cell-style information density through data-derived summaries, in-plot explanatory labels, reference lines, callouts, insets, sample-size labels, metric tables, prediction diagnostics, marginal distributions, density-colored points, density halos, matrix labels, and effect-size context before adding new chart types.
+12. Treat `specs/template-visual-motifs.md` as the grammar for learning from reference examples. Add motifs to `visualContentPlan.templateMotifs` and render them through existing generators/helpers; do not register a new chart key until a real generator exists and passes QA.
+13. Do not invent statistics for visual impact. Every p-value, AUC, effect size, threshold count, or fitted parameter must come from the supplied data or a documented upstream result.
+14. Prefer vector export and generate source-data friendly artifacts for quantitative panels.
+15. If domain inference is weak, fall back to general biomedical rules instead of overfitting to a guessed specialty.
+16. If statistical assumptions are uncertain, downgrade to a conservative or descriptive choice and explain why.
+17. If rendered QA reports overlap, cross-panel title/table/text collision, negative axes text without a reserved slot, poster-scale font sizes, blank/tiny output, missing `legendContractEnforced`, missing `layoutContractEnforced`, any remaining in-axes legend, too few visual enhancements, missing template/reference visual grammar motifs, missing in-plot explanatory labels, non-editable vector text, or missing formats, return to Phase 3 or Phase 2 before declaring completion.
+18. Use `specs/workflow-policies.md` for thresholds and budgets; do not add new magic numbers in phase logic without naming the policy.
 
 ## Input Processing
 
@@ -365,7 +366,7 @@ Collapse completed sub-tasks back to phase-level summaries before the next phase
 - Before Phase 3, ensure the panel blueprint and palette plan are explicit.
 - Before Phase 3, resolve blocking chart/stat/layout/palette agent findings.
 - Before Phase 4, ensure code generation includes source-data, render-QA, and metadata hooks.
-- Before completion, require `renderQa.hardFail == false`, `legendOutsidePlotArea == true`, `axisLegendRemainingCount == 0`, and enough data-derived visual content to satisfy `visualContentPlan.minTotalEnhancements` and `visualContentPlan.minInPlotLabelsPerFigure`.
+- Before completion, require `renderQa.hardFail == false`, `legendContractEnforced == true`, `layoutContractEnforced == true`, `legendOutsidePlotArea == true`, `axisLegendRemainingCount == 0`, `layoutContractFailures == []`, `legendModeUsed in ["bottom_center", "top_center", "none"]`, exactly one framed shared legend when a legend exists, and enough data-derived visual content to satisfy `visualContentPlan.minTotalEnhancements` and `visualContentPlan.minInPlotLabelsPerFigure`.
 
 ## Related Commands
 
