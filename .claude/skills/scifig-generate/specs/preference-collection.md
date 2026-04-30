@@ -47,6 +47,12 @@ def infer_domain_family_from_text(domain_family, custom_domain_text):
         return "immunology_cell_biology"
     if any(k in text for k in ("neuro", "behavior", "behaviour", "brain")):
         return "neuroscience_behavior"
+    if any(k in text for k in (
+        "computer", "machine learning", "deep learning", "artificial intelligence", "ai", "ml",
+        "random forest", "randomforest", "rf", "rfr", "xgboost", "lightgbm", "gbdt",
+        "model benchmark", "model performance", "classifier", "regressor", "algorithm"
+    )):
+        return "computer_ai_ml"
     if any(k in text for k in ("material", "polymer", "alloy", "engineering")):
         return "materials_engineering"
     if any(k in text for k in ("ecology", "environment", "biodiversity", "climate", "marine")):
@@ -69,6 +75,14 @@ Journal-style options are AI-generated after the user selects a domain. The user
 
 ```python
 _DOMAIN_TOP_JOURNAL_SEEDS = {
+    "computer_ai_ml": [
+        {"en": ("NeurIPS / ICML / ICLR-style (Recommended)", "Machine-learning benchmark, ablation, feature-importance, and model-diagnostic figures with compact technical density", "field_compact"),
+         "zh": ("NeurIPS / ICML / ICLR 风格（推荐）", "适合机器学习 benchmark、消融、特征重要性和模型诊断图；强调紧凑技术密度", "field_compact")},
+        {"en": ("IEEE TPAMI / TNNLS-style", "Algorithm comparison, classifier/regressor validation, and quantitative model-performance figures", "field_methods"),
+         "zh": ("IEEE TPAMI / TNNLS 风格", "适合算法对比、分类/回归验证和定量模型性能图", "field_methods")},
+        {"en": ("Nature Machine Intelligence-style", "AI-for-science stories that combine prediction accuracy, stability, and interpretability", "field_dense"),
+         "zh": ("Nature Machine Intelligence 风格", "适合 AI for Science；组合预测精度、稳定性和可解释性", "field_dense")},
+    ],
     "signal_processing_acoustics": [
         {"en": ("IEEE/ACM TASLP-style (Recommended)", "Audio, speech, and acoustic signal-processing figures with compact spectra, waveform, and model-comparison panels", "field_compact"),
          "zh": ("IEEE/ACM TASLP 风格（推荐）", "适合音频、语音和声学信号处理；强调频谱、波形、模型对比和紧凑多 panel", "field_compact")},
@@ -122,7 +136,9 @@ def infer_journal_style_fallback_options(domain_family, custom_domain_text, lang
     effective_domain = infer_domain_family_from_text(domain_family, custom_domain_text)
     lang = language if language in ("zh", "en") else "en"
 
-    if effective_domain == "signal_processing_acoustics":
+    if effective_domain == "computer_ai_ml":
+        entries = _DOMAIN_TOP_JOURNAL_SEEDS["computer_ai_ml"]
+    elif effective_domain == "signal_processing_acoustics":
         entries = _DOMAIN_TOP_JOURNAL_SEEDS["signal_processing_acoustics"]
     elif effective_domain == "clinical_diagnostics_survival":
         entries = _DOMAIN_TOP_JOURNAL_SEEDS["clinical_diagnostics_survival"]
@@ -184,6 +200,14 @@ def infer_journal_style_options(domain_family, custom_domain_text, language, con
 
 ```python
 _BUNDLE_BY_DOMAIN = {
+    "computer_ai_ml": [
+        {"en": ("ML model-performance set (Recommended)", "Model benchmark, train/test metrics, predicted-vs-actual, residual, and feature-importance panels"),
+         "zh": ("机器学习模型性能图表集（推荐）", "模型 benchmark、训练/测试指标、预测-真实、残差和特征重要性面板")},
+        {"en": ("Explainability / SHAP set", "Feature importance, SHAP-style contribution, dependence, and interaction panels"),
+         "zh": ("可解释性 / SHAP 图表集", "特征重要性、SHAP 风格贡献、依赖和交互作用面板")},
+        {"en": ("Classifier validation set", "ROC, PR, calibration, threshold, and confusion-oriented validation panels"),
+         "zh": ("分类器验证图表集", "ROC、PR、校准、阈值和混淆矩阵导向验证面板")},
+    ],
     "genomics_transcriptomics": [
         {"en": ("Omics discovery set (Recommended)", "Differential analysis, heatmap, enrichment, PCA/UMAP"),
          "zh": ("组学发现图表集（推荐）", "差异分析、热图、富集、PCA/UMAP")},
@@ -216,7 +240,9 @@ def infer_synthetic_bundle_options(domain_family, custom_domain_text, language):
     effective = infer_domain_family_from_text(domain_family, custom_domain_text)
     lang = language if language in ("zh", "en") else "en"
 
-    if effective == "genomics_transcriptomics":
+    if effective == "computer_ai_ml":
+        entries = _BUNDLE_BY_DOMAIN["computer_ai_ml"]
+    elif effective == "genomics_transcriptomics":
         entries = _BUNDLE_BY_DOMAIN["genomics_transcriptomics"]
     elif effective == "clinical_diagnostics_survival":
         entries = _BUNDLE_BY_DOMAIN["clinical_diagnostics_survival"]
@@ -236,6 +262,53 @@ For real-file interactive runs, ask it after Phase 1 has inferred the domain and
 
 ```python
 _TEMPLATE_CHART_BUNDLE_SEEDS = {
+    "computer_ai_ml": [
+        {
+            "key": "rf_model_performance_report",
+            "charts": ["grouped_bar", "scatter_regression", "residual_vs_fitted"],
+            "families": ["ml_model_diagnostics", "forest", "scatter_regression", "marginal_joint"],
+            "techniqueRefs": ["template-mining/07-techniques/ml-model-diagnostics.md", "template-mining/07-techniques/marginal-joint.md"],
+            "anchors": ["期刊复现：基于随机森林(RF)的多维模型性能评估与预测残差可视化图谱_1777456409.md"],
+            "en": ("Random-forest model report (Recommended)", "Clone the RF case when model/algorithm, train-test metrics, predicted-vs-actual, or residual columns are present: benchmark bar, parity scatter, residual panel."),
+            "zh": ("随机森林模型报告套餐（推荐）", "当数据含 model/algorithm、训练测试指标、预测-真实值或残差字段时，直接复刻 RF 案例：指标横向柱、1:1 预测散点、残差面板。"),
+        },
+        {
+            "key": "incremental_feature_selection_curve",
+            "charts": ["line", "lollipop_horizontal", "scatter_regression"],
+            "families": ["ml_model_diagnostics", "time_series_pi", "shap_composite"],
+            "techniqueRefs": ["template-mining/07-techniques/ml-model-diagnostics.md", "template-mining/07-techniques/time-series-pi.md", "template-mining/07-techniques/shap-composite.md"],
+            "anchors": ["拒绝默认配色：Python 绘制多模型性能对比图的进阶实战_1777451272.md"],
+            "en": ("Incremental feature-selection benchmark", "Use for feature-count, top-k, ablation, AUC/F1/accuracy, or multi-algorithm curves; preserve the RF-highlighted decision-point style."),
+            "zh": ("增量特征选择 benchmark 套餐", "适合 feature-count、top-k、消融、AUC/F1/accuracy 或多算法曲线；保留 RF 高亮和决策拐点风格。"),
+        },
+        {
+            "key": "rf_feature_importance_shap",
+            "charts": ["lollipop_horizontal", "dotplot", "nested_donut", "heatmap_annotated"],
+            "families": ["ml_model_diagnostics", "shap_composite"],
+            "techniqueRefs": ["template-mining/07-techniques/ml-model-diagnostics.md", "template-mining/07-techniques/shap-composite.md"],
+            "anchors": ["期刊复现：随机森林(RF)模型驱动的EFI特征重要度条形图与SHAP圆环图可视化_1777456510.md"],
+            "en": ("RF feature importance + SHAP package", "Clone the EFI bar plus SHAP donut/composite layout when feature importance, SHAP, permutation, gain, or model interpretability fields appear."),
+            "zh": ("RF 特征重要性 + SHAP 套餐", "当数据含特征重要性、SHAP、permutation、gain 或模型解释字段时，复刻 EFI 条形图 + SHAP 圆环/复合布局。"),
+        },
+        {
+            "key": "pso_shap_optimization_framework",
+            "charts": ["radar", "lollipop_horizontal", "heatmap_triangular", "pareto_chart"],
+            "families": ["radar", "shap_composite", "heatmap_pairwise", "pareto"],
+            "techniqueRefs": ["template-mining/07-techniques/radar.md", "template-mining/07-techniques/shap-composite.md", "template-mining/07-techniques/heatmap-pairwise.md"],
+            "anchors": ["基于PSO多目标优化与SHAP可解释分析的回归预测模型框架_1777461729.md"],
+            "en": ("Optimization + explainability framework", "Use for PSO/NSGA/Pareto/multi-objective workflows that need model metrics, SHAP-style importance, correlation heatmaps, and Pareto panels."),
+            "zh": ("优化 + 可解释框架套餐", "适合 PSO/NSGA/Pareto/多目标流程：模型指标、SHAP 重要性、相关性热图和 Pareto 面板。"),
+        },
+        {
+            "key": "classifier_validation_board",
+            "charts": ["roc", "pr_curve", "calibration", "forest"],
+            "families": ["ml_model_diagnostics", "forest"],
+            "techniqueRefs": ["template-mining/07-techniques/ml-model-diagnostics.md"],
+            "anchors": ["拒绝默认配色：Python 绘制多模型性能对比图的进阶实战_1777451272.md"],
+            "en": ("Classifier validation board", "Use for classifier probability, label, ROC-AUC, F1, precision/recall, calibration, or threshold tuning datasets."),
+            "zh": ("分类器验证板套餐", "适合分类概率、标签、ROC-AUC、F1、precision/recall、校准或阈值调优数据。"),
+        },
+    ],
     "clinical_diagnostics_survival": [
         {
             "key": "clinical_survival_validation",
@@ -360,6 +433,8 @@ _MATERIALS_BUNDLE_DOMAINS = {"materials_engineering", "ecology_environmental", "
 
 def _template_bundle_domain_key(domain_family, custom_domain_text):
     effective = infer_domain_family_from_text(domain_family, custom_domain_text)
+    if effective == "computer_ai_ml":
+        return "computer_ai_ml"
     if effective == "clinical_diagnostics_survival":
         return "clinical_diagnostics_survival"
     if effective in _GENOMICS_BUNDLE_DOMAINS:
@@ -391,11 +466,28 @@ def _template_bundle_profile_tokens(context):
     roles = profile.get("semanticRoles") or {}
     columns = profile.get("columnNames") or profile.get("columns") or []
     patterns = profile.get("specialPatterns") or []
+    selected_bundle = (context or {}).get("selectedChartBundle") or {}
+    domain_hints = (context or {}).get("domainHints") or profile.get("domainHints") or {}
     tokens = [str(profile.get("structure", "")).lower()]
     tokens.extend(str(c).lower() for c in columns)
     tokens.extend(str(k).lower() for k in roles.keys())
     tokens.extend(str(v).lower() for v in roles.values())
     tokens.extend(str(p).lower() for p in patterns)
+    tokens.extend(str((context or {}).get(k, "")).lower() for k in ("customDomainText", "syntheticDomainText", "selectedDomainFamily"))
+    if isinstance(domain_hints, dict):
+        tokens.extend(str(v).lower() for v in domain_hints.values())
+    else:
+        tokens.append(str(domain_hints).lower())
+    if isinstance(selected_bundle, dict):
+        tokens.extend(str(selected_bundle.get(k, "")).lower() for k in ("bundleKey", "label", "description"))
+    df = profile.get("df")
+    for role in ("model", "algorithm", "estimator", "method"):
+        col = roles.get(role)
+        if df is not None and col in getattr(df, "columns", []):
+            try:
+                tokens.extend(str(v).lower() for v in df[col].dropna().astype(str).unique()[:12])
+            except Exception:
+                pass
     return " ".join(tokens)
 
 
@@ -408,9 +500,17 @@ def _score_template_bundle_entry(entry, context):
     if any(t in text for t in ("actual", "predicted", "prediction", "residual", "rmse", "mae", "r2", "r_2")):
         if any(t in key for t in ("prediction", "diagnostic", "stability")):
             score += 30
+    if any(t in text for t in ("rf", "rfr", "random forest", "randomforest", "xgboost", "lightgbm", "gbdt", "knn", "svm", "algorithm", "estimator")):
+        if any(t in key for t in ("rf_", "model_performance", "classifier", "feature_selection")):
+            score += 42
+    if any(t in text for t in ("training", "testing", "train", "test", "validation", "cross_validation", "cv", "auc", "roc_auc", "accuracy", "f1", "precision", "recall")):
+        if any(t in key for t in ("rf_model", "classifier", "feature_selection", "performance")):
+            score += 32
     if any(t in text for t in ("shap", "importance", "feature_importance", "permutation", "explain")):
         if any(t in key for t in ("shap", "explain")):
             score += 35
+        if any(t in key for t in ("rf_feature", "feature_selection")):
+            score += 25
     if any(t in text for t in ("correlation", "corr", "matrix", "pvalue", "p_value", "padj", "fdr", "qvalue")):
         if any(t in key for t in ("pairwise", "matrix", "discovery")):
             score += 28
@@ -632,6 +732,8 @@ MODE_MAP = {
 SYNTHETIC_DOMAIN_MAP = {
     "肿瘤/癌症研究（推荐）": "clinical_diagnostics_survival",
     "Tumor / cancer research (Recommended)": "clinical_diagnostics_survival",
+    "计算机 / AI / 机器学习": "computer_ai_ml",
+    "Computer / AI / machine learning": "computer_ai_ml",
     "组学/单细胞": "genomics_transcriptomics",
     "Omics / single-cell": "genomics_transcriptomics",
     "工程/生态/其他科学": "materials_engineering",
@@ -641,6 +743,8 @@ SYNTHETIC_DOMAIN_MAP = {
 DOMAIN_MAP = {
     "通用生物医学（推荐）": "general_biomedical",
     "General biomedical (Recommended)": "general_biomedical",
+    "计算机 / AI / 机器学习": "computer_ai_ml",
+    "Computer / AI / machine learning": "computer_ai_ml",
     "组学/单细胞": "genomics_transcriptomics",
     "Omics / single-cell": "genomics_transcriptomics",
     "工程/生态/其他科学": "materials_engineering",
@@ -661,6 +765,8 @@ Each card's options are generated with language-aware labels. Use `preferredQues
 DOMAIN_OPTIONS_TEMPLATE = [
     {"en": ("Tumor / cancer research (Recommended)", "Supports differential analysis, survival, response, and cohort-style figures"),
      "zh": ("肿瘤/癌症研究（推荐）", "支持差异分析、生存、疗效和队列类图表")},
+    {"en": ("Computer / AI / machine learning", "Model performance, benchmark, SHAP, feature importance, algorithm comparison, and classifier/regressor validation"),
+     "zh": ("计算机 / AI / 机器学习", "模型性能、benchmark、SHAP、特征重要性、算法对比和分类/回归验证")},
     {"en": ("Omics / single-cell", "Expression matrices, embeddings, abundance, pathway context"),
      "zh": ("组学/单细胞", "表达矩阵、embedding、丰度和通路背景")},
     {"en": ("Engineering / ecology / other sciences", "Materials, environment, agriculture, psychology, behavior, or any other non-medical domain; use Other for a precise field"),

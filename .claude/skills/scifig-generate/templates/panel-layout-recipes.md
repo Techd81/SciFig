@@ -269,6 +269,24 @@ cbar.set_label("Value", fontsize=5)
 - Optional upper/lower triangular mask, stars only from supplied p-values, small cell labels only for compact matrices
 - Any dendrogram or clustering sidecar must come from supplied linkage/order data
 
+## Recipe 17: RF / ML Model Diagnostic Triptych
+
+**When to use**
+- `templateLayoutIntents` contains `ml_model_performance_triptych`.
+- Data contain `model` / `algorithm` plus train/test, validation, cross-validation, R2, RMSE, MAE, AUC, F1, precision, recall, actual/predicted, or residual fields.
+- User selected an AI/ML/computer domain or explicitly mentioned Random Forest/RF/RFR, XGBoost, LightGBM, GBDT, SVM, or KNN.
+
+**Layout**
+- `2 x 2` with top row spanning both columns.
+- A = horizontal grouped model benchmark; sort by test/validation metric and highlight RF/RFR if present.
+- B = predicted-vs-actual parity scatter with 1:1 dashed reference and train/test marker encoding when available.
+- C = residual-vs-predicted diagnostic with zero reference line in deep red.
+
+**Rules**
+- Clone the RF anchor case before generic grouped-bar styling.
+- Use `ml_model_performance_10` for model colors and keep train/test colors stable.
+- If actual/predicted or residual fields are absent, keep panel A and replace B/C with feature-selection or importance support panels; do not invent residuals.
+
 ## Composition Rules
 
 1. Share legends whenever the same categorical mapping appears in multiple panels, and keep them outside the data region.

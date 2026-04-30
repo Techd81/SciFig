@@ -14,6 +14,7 @@ Domain playbooks bias charting, statistics, panel stories, and color semantics.
 | `immunology_cell_biology` | group, marker, condition, stimulation, replicate | `raincloud`, `beeswarm`, `line_ci` | `paired_lines`, `heatmap_pure`, `composition_dotplot` | Welch, paired tests, repeated-measures variants |
 | `neuroscience_behavior` | time bins, trials, subject IDs, stimulus levels | `line_ci`, `spaghetti`, `paired_lines` | `beeswarm`, `ridgeline`, `scatter_regression` | Mixed or paired comparisons, correlations |
 | `clinical_diagnostics_survival` | survival time, event, risk score, cohort | `km`, `forest`, `roc`, `pr_curve`, `calibration` | `waterfall`, `box+strip` | Log-rank, Cox, AUC/CI, calibration |
+| `computer_ai_ml` | model, algorithm, train/test split, R2/RMSE/MAE/AUC/F1, SHAP, feature importance, residuals | `grouped_bar`, `scatter_regression`, `residual_vs_fitted`, `line`, `lollipop_horizontal` | `dotplot`, `heatmap_annotated`, `roc`, `pr_curve`, `calibration` | Cross-validation summaries, residual diagnostics, ROC/PR, calibration |
 | `epidemiology_public_health` | cohorts, strata, incidence, risk ratios | `forest`, `line_ci`, `scatter_regression`, `stacked_bar_comp` | `correlation`, `calibration` | Regression, trend analysis, effect estimates |
 | `materials_engineering` | stress, strain, phase, composition, process params | `stress_strain`, `phase_diagram`, `scatter_regression`, `line_ci` | `heatmap_pure`, `correlation`, `box+strip` | ANOVA, regression, curve fitting |
 | `ecology_environmental` | species, abundance, coordinates, time, diversity indices | `species_abundance`, `shannon_diversity`, `ordination_plot`, `biodiversity_radar` | `heatmap_pure`, `scatter_regression`, `line_ci` | Diversity indices, PERMANOVA, trend analysis |
@@ -43,6 +44,14 @@ Domain playbooks bias charting, statistics, panel stories, and color semantics.
 - Support: `roc` or `pr_curve`
 - Validation: `calibration` or cohort distribution panel
 
+### Computer / AI / Machine Learning
+
+- Hero: `grouped_bar` model benchmark when model and train/test metric columns are present
+- Support: `scatter_regression` predicted-vs-actual parity panel
+- Support: `residual_vs_fitted` or `line` for residuals, cross-validation, or feature-count curves
+- Explainability: `lollipop_horizontal`, `dotplot`, or `heatmap_annotated` for importance / SHAP fields
+- Rule: if RF/Random Forest/RFR appears and schema is compatible, use the RF template anchors before generic prediction charts
+
 ### Pharmacology
 
 - Hero: `dose_response`
@@ -58,6 +67,7 @@ Domain playbooks bias charting, statistics, panel stories, and color semantics.
 - Risk gradient -> sequential neutral-to-accent scale
 - Up / down regulation -> diverging palette centered at zero
 - Cell types / many categories -> muted categorical palette with stable mapping
+- ML model comparison -> `ml_model_performance_10`; keep RF cyan, XGBoost coral, LightGBM teal, train pale orange, test pale blue, residual zero deep red
 
 ## Domain Guardrails
 
@@ -65,3 +75,4 @@ Domain playbooks bias charting, statistics, panel stories, and color semantics.
 2. Do not reuse treatment colors for control categories in support panels.
 3. In clinical panels, prioritize readability and model interpretability over decorative density.
 4. In single-cell and spatial figures, ensure category colors stay stable between embedding, abundance, and expression support panels.
+5. In AI/ML figures, do not collapse model benchmarks into generic grouped bars when a template-backed RF/model diagnostic package matches the schema.

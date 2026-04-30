@@ -353,6 +353,12 @@ def infer_template_motifs(charts, dataProfile=None):
         add("joint_marginal_grid")
         add("density_encoded_scatter")
         add("metric_table_in_panel")
+    if (
+        "model_performance_benchmark" in patterns
+        or "ml_model_family" in patterns
+        or ("model" in roles and any(role in roles for role in ("metric", "score", "rmse", "mae", "residual")))
+    ):
+        add("ml_model_performance_triptych")
     if "model_error_diagnostic" in patterns or any(token in tokens for token in ("rmse", "mae", "percent_error", "percentage_error", "error_pct")):
         add("dual_axis_error_sidecar")
     if "ml_explainability" in patterns or "feature_importance" in patterns or "shap_value" in roles or "importance" in roles:
@@ -525,6 +531,25 @@ def _record_template_motif(plan, motif):
 
 def _template_motif_planned(plan, motif):
     return motif in plan.get("templateMotifs", [])
+
+
+def _add_ml_model_triptych_marker(ax, dataProfile, visualPlan):
+    if not _template_motif_planned(visualPlan, "ml_model_performance_triptych"):
+        return []
+    df = _df_from_profile(dataProfile)
+    model_col = _role(dataProfile, "model", "algorithm")
+    model_count = None
+    if df is not None and model_col in getattr(df, "columns", []):
+        try:
+            model_count = int(df[model_col].dropna().astype(str).nunique())
+        except Exception:
+            model_count = None
+    label = "ML model diagnostic\nRF template route"
+    if model_count:
+        label += f"\nmodels={model_count}"
+    _add_inplot_label(ax, label, visualPlan, loc="upper_right")
+    _record_template_motif(visualPlan, "ml_model_performance_triptych")
+    return ["ml_model_performance_triptych"]
 
 
 def _add_interval_template_summary(ax, dataProfile, visualPlan):
@@ -1184,10 +1209,11 @@ def _enhance_distribution(ax, dataProfile, visualPlan, palette, col_map):
     group_col = _role(dataProfile, "group", "condition")
     value_col = _role(dataProfile, "value", "y")
     values = _numeric_values(df, value_col)
+    ml_enhancements = _add_ml_model_triptych_marker(ax, dataProfile, visualPlan)
     if len(values) == 0:
-        return []
+        return ml_enhancements
 
-    enhancements = ["distribution_summary"]
+    enhancements = ["distribution_summary"] + ml_enhancements
     groups = []
     if group_col and df is not None and group_col in df:
         groups = list(df[group_col].dropna().unique())
@@ -1281,6 +1307,9 @@ def _enhance_scatter(ax, dataProfile, visualPlan, palette, col_map):
         _add_metric_box(ax, [f"n={len(x)}", f"RMSE={rmse:.3g}", f"MAE={mae:.3g}"], visualPlan)
         enhancements = ["perfect_fit_reference", "prediction_metric_table", "density_halo", "inplot_prediction_label"]
         _record_template_motif(visualPlan, "prediction_diagnostic_matrix")
+        if _template_motif_planned(visualPlan, "ml_model_performance_triptych"):
+            _record_template_motif(visualPlan, "ml_model_performance_triptych")
+            enhancements.append("ml_model_performance_triptych")
         if density_encoded is not None:
             enhancements.append("density_encoded_scatter")
         if marginal_axes is not None:

@@ -57,6 +57,30 @@ Reference visual grammar is mandatory when data support it. Use the reference mo
 
 Template-derived motifs are governed by `specs/template-visual-motifs.md`. Phase 2 must store them in `visualContentPlan.templateMotifs` with explicit provenance requirements, and Phase 4 must verify `templateMotifCount` when motifs were planned. Motifs are not chart registry entries; they are overlays or layout intents that enrich implemented charts.
 
+## Template Matching Policy
+
+```python
+TEMPLATE_MATCH_POLICY = {
+    "clone_known_family_first": True,
+    "computer_ai_ml_strong_signals": [
+        "model", "algorithm", "estimator", "random forest", "rf", "rfr",
+        "xgboost", "lightgbm", "gbdt", "svm", "knn", "train", "test",
+        "validation", "cv", "auc", "accuracy", "f1", "precision", "recall",
+        "r2", "rmse", "mae", "residual", "shap", "feature_importance"
+    ],
+    "preferred_ml_bundle_order": [
+        "rf_model_performance_report",
+        "incremental_feature_selection_curve",
+        "rf_feature_importance_shap",
+        "pso_shap_optimization_framework",
+        "classifier_validation_board"
+    ],
+    "rf_anchor_required_when_compatible": True,
+}
+```
+
+If a user-selected or inferred domain contains AI/ML/computer-science signals, Phase 2 must route to `computer_ai_ml` before generic biomedical or engineering defaults. If Random Forest/RF/RFR is present and the schema supports model metrics, actual/predicted, residuals, or feature importance, the RF anchor cases are preferred over generic prediction diagnostics.
+
 ## Crowding And Layout Policy
 
 ```python

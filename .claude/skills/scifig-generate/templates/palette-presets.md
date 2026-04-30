@@ -32,6 +32,25 @@ Stable palette presets for publication-grade scientific figures.
 ]
 ```
 
+### `ml_model_performance_10`
+
+Template-derived AI/ML palette for Random Forest, XGBoost, LightGBM, GBDT, SVM, KNN, train/test splits, and residual diagnostics. Use when `domainHints.primary == "computer_ai_ml"` or the template case plan includes `ml_model_diagnostics`.
+
+```python
+[
+    "#4DBBD5",  # RF / cyan anchor
+    "#E64B35",  # XGBoost / coral
+    "#00A087",  # LightGBM / teal
+    "#3C5488",  # GBDT / steel
+    "#F39B7F",  # SVM / soft orange
+    "#8491B4",  # KNN / lavender gray
+    "#91D1C2",  # support green-cyan
+    "#DC0000",  # residual / warning red
+    "#7E6148",  # secondary model
+    "#333333"   # reference line / text
+]
+```
+
 ## Sequential Presets
 
 ### `seq_cool`

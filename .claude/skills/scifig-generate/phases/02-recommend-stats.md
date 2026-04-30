@@ -137,7 +137,18 @@ def recommend_chart_bundle(dataProfile, workflowPreferences):
                 secondary.append(safe_chart)
         return primary, secondary
 
+    has_prediction_fit = "prediction_diagnostic" in patterns or ("actual" in roles and "predicted" in roles)
+    has_model_performance = (
+        "model_performance_benchmark" in patterns
+        or "ml_model_family" in patterns
+        or ("model" in roles and any(role in roles for role in ("metric", "score", "rmse", "mae", "residual")))
+    )
+
     # Direct pattern matches
+    if has_model_performance and has_prediction_fit:
+        return "grouped_bar", ["scatter_regression", "residual_vs_fitted"]
+    if has_model_performance:
+        return "grouped_bar", ["line", "lollipop_horizontal"]
     if "genomic_association" in patterns:
         return _safe("manhattan"), [_safe("qq"), "forest"]
     if "survival" in patterns:
@@ -311,6 +322,12 @@ def infer_template_layout_intents(dataProfile, primaryChart, secondaryCharts):
     if "prediction_diagnostic" in patterns or ("actual" in roles and "predicted" in roles):
         add("prediction_diagnostic_matrix")
         add("joint_marginal_grid")
+    if (
+        "model_performance_benchmark" in patterns
+        or "ml_model_family" in patterns
+        or ("model" in roles and any(role in roles for role in ("metric", "score", "rmse", "mae", "residual")))
+    ):
+        add("ml_model_performance_triptych")
     if "ml_explainability" in patterns or "feature_importance" in patterns or "shap_value" in roles:
         add("ml_explainability_board")
     if "optimization_tradeoff" in patterns or "pareto_chart" in charts or "pareto_flag" in roles:
@@ -329,7 +346,9 @@ def build_panel_blueprint(primaryChart, secondaryCharts, dataProfile, workflowPr
     story_was_default = "storyMode" not in workflowPreferences
     story = workflowPreferences.get("storyMode", "comparison_pair")
     template_layout_intents = infer_template_layout_intents(dataProfile, primaryChart, secondaryCharts)
-    if (story == "auto" or story_was_default) and "prediction_diagnostic_matrix" in template_layout_intents:
+    if (story == "auto" or story_was_default) and "ml_model_performance_triptych" in template_layout_intents:
+        story = "ml_model_performance_triptych"
+    elif (story == "auto" or story_was_default) and "prediction_diagnostic_matrix" in template_layout_intents:
         story = "prediction_diagnostic_matrix"
     elif (story == "auto" or story_was_default) and "ml_explainability_board" in template_layout_intents:
         story = "ml_explainability_board"
@@ -358,6 +377,7 @@ def build_panel_blueprint(primaryChart, secondaryCharts, dataProfile, workflowPr
         "stacked_pair": 2,
         "hero_plus_triple_support": 4,
         "asymmetric_L": 3,
+        "ml_model_performance_triptych": 3,
         "board_2x3": 6,
         "board_3x3": 9,
         "prediction_diagnostic_matrix": 4,
@@ -389,6 +409,7 @@ def build_panel_blueprint(primaryChart, secondaryCharts, dataProfile, workflowPr
         })
 
     layout_grid_map = {
+        "ml_model_performance_triptych": "2x2-rf-diagnostic",
         "prediction_diagnostic_matrix": "2x2-diagnostic",
         "ml_explainability_board": "2x2-explainability",
     }
@@ -682,6 +703,12 @@ def infer_template_visual_motifs(charts, dataProfile):
         add("joint_marginal_grid", "numeric_actual_predicted_pair")
         add("density_encoded_scatter", "numeric_xy_pair")
         add("metric_table_in_panel", "metrics_computed_from_actual_predicted")
+    if (
+        "model_performance_benchmark" in patterns
+        or "ml_model_family" in patterns
+        or ("model" in roles and any(role in roles for role in ("metric", "score", "rmse", "mae", "residual")))
+    ):
+        add("ml_model_performance_triptych", "model_algorithm_metric_or_split_columns")
     if "model_error_diagnostic" in patterns or any(token in tokens for token in ("rmse", "mae", "percent_error", "percentage_error", "error_pct")):
         add("dual_axis_error_sidecar", "error_metric_column_or_computable_residuals")
     if "ml_explainability" in patterns or "feature_importance" in patterns or "shap_value" in roles or "importance" in roles:
@@ -720,8 +747,11 @@ def resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreference
         "residual_vs_fitted": "marginal_joint",
         "bland_altman": "marginal_joint",
         "histogram": "marginal_joint",
+        "grouped_bar": "ml_model_diagnostics",
+        "line": "ml_model_diagnostics",
         "lollipop_horizontal": "shap_composite",
         "dotplot": "shap_composite",
+        "nested_donut": "shap_composite",
         "heatmap_annotated": "shap_composite",
         "heatmap_triangular": "heatmap_pairwise",
         "heatmap_symmetric": "heatmap_pairwise",
@@ -733,6 +763,7 @@ def resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreference
         "km": "forest",
         "roc": "forest",
         "calibration": "forest",
+        "pareto_chart": "pareto",
         "dose_response": "dual_axis",
         "line_ci": "time_series_pi",
         "xrd_pattern": "dual_axis",
@@ -743,6 +774,7 @@ def resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreference
     technique_by_family = {
         "marginal_joint": "template-mining/07-techniques/marginal-joint.md",
         "density_scatter": "template-mining/07-techniques/marginal-joint.md",
+        "ml_model_diagnostics": "template-mining/07-techniques/ml-model-diagnostics.md",
         "shap_composite": "template-mining/07-techniques/shap-composite.md",
         "heatmap_pairwise": "template-mining/07-techniques/heatmap-pairwise.md",
         "radar": "template-mining/07-techniques/radar.md",
@@ -750,6 +782,19 @@ def resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreference
         "time_series_pi": "template-mining/07-techniques/time-series-pi.md",
         "gradient_box": "template-mining/07-techniques/gradient-box.md",
         "inset_distribution": "template-mining/07-techniques/inset-distribution.md",
+    }
+    anchor_by_family = {
+        "ml_model_diagnostics": [
+            "期刊复现：基于随机森林(RF)的多维模型性能评估与预测残差可视化图谱_1777456409.md",
+            "拒绝默认配色：Python 绘制多模型性能对比图的进阶实战_1777451272.md",
+            "期刊复现：随机森林(RF)模型驱动的EFI特征重要度条形图与SHAP圆环图可视化_1777456510.md",
+        ],
+        "shap_composite": [
+            "复现顶刊 _ 拒绝千篇一律的SHAP图，用Matplotlib手绘一张“蜂群+条形”组合图_1777452577.md",
+        ],
+        "marginal_joint": [
+            "Python 科研绘图：如何优雅地展示“模型精度+稳定性”？顶刊可视化复盘_1777452458.md",
+        ],
     }
 
     families = list(selected_bundle.get("templateFamilies") or [])
@@ -765,6 +810,10 @@ def resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreference
             technique_refs.append(ref)
 
     anchors = list(selected_bundle.get("templateAnchors") or [])
+    for family in families:
+        for anchor in anchor_by_family.get(family, []):
+            if anchor not in anchors:
+                anchors.append(anchor)
     return {
         "selectedByUser": bool(selected_bundle),
         "bundleKey": selected_bundle.get("bundleKey"),
@@ -889,6 +938,7 @@ def build_visual_content_plan(primaryChart, secondaryCharts, dataProfile, workfl
 ```python
 def build_palette_plan(primaryChart, dataProfile, workflowPreferences):
     domain = dataProfile["domainHints"]["primary"]
+    patterns = set(dataProfile.get("specialPatterns", []))
     color_mode = workflowPreferences.get("colorMode", "journal_safe_muted")
 
     plan = {
@@ -922,6 +972,22 @@ def build_palette_plan(primaryChart, dataProfile, workflowPreferences):
     }
 
     if color_mode == "domain_semantic":
+        if domain == "computer_ai_ml" or any(p in patterns for p in ("model_performance_benchmark", "ml_model_family", "ml_explainability", "feature_importance")):
+            plan["categoricalPreset"] = "ml_model_performance_10"
+            plan["sequentialPreset"] = "seq_cool"
+            plan["semanticMap"].update({
+                "rf": "#4DBBD5",
+                "random forest": "#4DBBD5",
+                "rfr": "#4DBBD5",
+                "xgboost": "#E64B35",
+                "lightgbm": "#00A087",
+                "gbdt": "#3C5488",
+                "svm": "#F39B7F",
+                "knn": "#8491B4",
+                "training": "#F6CFA3",
+                "testing": "#9BCBEB",
+                "residual_zero": "#B00000"
+            })
         if domain == "clinical_diagnostics_survival":
             plan["categoricalPreset"] = "clinical_survival"
             plan["sequentialPreset"] = "seq_warm"

@@ -24,6 +24,7 @@ template-mining/
 │   ├── dual-axis.md
 │   ├── heatmap-pairwise.md
 │   ├── marginal-joint.md
+│   ├── ml-model-diagnostics.md
 │   ├── time-series-pi.md
 │   ├── lollipop-bipolar.md
 │   ├── gradient-box.md
@@ -145,6 +146,17 @@ See `06-narrative-arcs.md` for the full decision matrix.
 | `pvalue_stars_overlay` | 7 | `05-annotation-idioms.md § I5` |
 | `colored_marker_edge` | 7 | `05-annotation-idioms.md § I7` |
 | `twin_axes_color_spines` | 6 | `05-annotation-idioms.md § I8` |
+
+## AI / ML Template Routing
+
+Computer, AI, and machine-learning prompts must first check the `ml-model-diagnostics` deep-dive before falling back to generic prediction charts. When user text or `dataProfile` includes Random Forest/RF/RFR, XGBoost, LightGBM, GBDT, classifier/regressor, train/test metrics, AUC/F1/accuracy, RMSE/MAE/R2, SHAP, feature importance, or residual fields, Phase 2 should recommend a template-backed ML bundle and Phase 3 should clone the matching case composition before adapting data labels.
+
+High-value anchors:
+
+- RF triptych: `期刊复现：基于随机森林(RF)的多维模型性能评估与预测残差可视化图谱_1777456409.md`
+- RF EFI + SHAP: `期刊复现：随机森林(RF)模型驱动的EFI特征重要度条形图与SHAP圆环图可视化_1777456510.md`
+- Incremental feature selection: `拒绝默认配色：Python 绘制多模型性能对比图的进阶实战_1777451272.md`
+- PSO + SHAP optimization: `基于PSO多目标优化与SHAP可解释分析的回归预测模型框架_1777461729.md`
 
 ## Style Discipline Rules (consolidated from 77 cases)
 

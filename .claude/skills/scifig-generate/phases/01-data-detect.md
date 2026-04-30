@@ -139,6 +139,18 @@ def detect_special_patterns(columns):
         patterns.add("prediction_diagnostic")
     if any("residual" in c for c in cols) or any("rmse" in c or "mae" in c or "percent_error" in c or "error_pct" in c for c in cols):
         patterns.add("model_error_diagnostic")
+    if any("model" in c or "algorithm" in c or "estimator" in c or "method" in c for c in cols) and any(
+        token in c for c in cols for token in (
+            "train", "test", "testing", "validation", "cv", "r2", "r_2", "auc",
+            "accuracy", "f1", "precision", "recall", "rmse", "mae"
+        )
+    ):
+        patterns.add("model_performance_benchmark")
+    if any(
+        c in ("rf", "rfr") or any(token in c for token in ("random_forest", "randomforest", "xgboost", "lightgbm", "gbdt", "svm", "knn"))
+        for c in cols
+    ):
+        patterns.add("ml_model_family")
     if any("shap" in c for c in cols) or any("ale" in c for c in cols) or any("pdp" in c for c in cols):
         patterns.add("ml_explainability")
     if any("importance" in c or "gain" in c or "permutation" in c for c in cols) and any("feature" in c for c in cols):
@@ -215,6 +227,7 @@ ROLE_KEYWORDS = {
     "residual": ["residual", "error", "prediction_error"],
     "sample": ["sample", "sample_id", "source", "reference", "ref"],
     "model": ["model", "algorithm", "estimator", "method"],
+    "metric": ["metric", "measure", "score_name", "r2", "r_2", "auc", "roc_auc", "accuracy", "f1", "precision", "recall"],
     "effect": ["effect", "estimate", "beta", "hazard_ratio", "odds_ratio"],
     "se": ["se", "std_error", "stderr"],
     "ci_low": ["ci_low", "ci_lower", "lower", "lcl"],
@@ -299,6 +312,7 @@ def infer_domain_hints(df, roles, special_patterns, workflowPreferences):
         "ecology_environmental": 0,
         "agriculture_food_science": 0,
         "psychology_social_science": 0,
+        "computer_ai_ml": 0,
     }
 
     custom_domain = (
@@ -342,6 +356,11 @@ def infer_domain_hints(df, roles, special_patterns, workflowPreferences):
         scores["psychology_social_science"] += 4
     if any(roles.get(r) for r in ("subject_id", "group", "score_pre", "score_post")):
         scores["psychology_social_science"] += 2
+    # Computer science / AI / machine learning
+    if any(k in special_patterns for k in ("prediction_diagnostic", "model_error_diagnostic", "model_performance_benchmark", "ml_model_family", "ml_explainability", "feature_importance", "optimization_tradeoff")):
+        scores["computer_ai_ml"] += 5
+    if any(roles.get(r) for r in ("model", "metric", "actual", "predicted", "residual", "rmse", "mae", "importance", "shap_value", "objective")):
+        scores["computer_ai_ml"] += 3
 
     user_domain = workflowPreferences.get("domainFamily")
     if user_domain in scores:
@@ -360,6 +379,7 @@ def infer_domain_hints(df, roles, special_patterns, workflowPreferences):
         "ecology_environmental": ["ecology", "environment", "environmental", "marine", "biodiversity", "climate", "soil"],
         "agriculture_food_science": ["agriculture", "crop", "plant", "food", "yield", "agronomy"],
         "psychology_social_science": ["psychology", "social science", "education", "survey", "consumer", "behavioral"],
+        "computer_ai_ml": ["computer", "machine learning", "deep learning", "artificial intelligence", "ai", "ml", "random forest", "randomforest", "xgboost", "lightgbm", "gbdt", "classifier", "regressor", "benchmark", "algorithm"],
     }
     for domain_name, keywords in custom_keyword_map.items():
         if any(keyword in custom_domain for keyword in keywords):

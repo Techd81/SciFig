@@ -193,7 +193,7 @@ Blocking agent findings must route back to the owning phase before advancing. Ne
 13. When learning from `template/articles`, promote reusable code into `helpers.py`, `template_mining_helpers.py`, or split generator files before expanding coordinator prose.
 14. Do not invent statistics for visual impact. Every p-value, AUC, effect size, threshold count, or fitted parameter must come from the supplied data or a documented upstream result.
 15. Prefer vector export and generate source-data friendly artifacts for quantitative panels.
-16. If domain inference is weak, fall back to general biomedical rules instead of overfitting to a guessed specialty.
+16. If domain inference is weak, fall back to general rules instead of overfitting to a guessed specialty; however, explicit AI/ML/computer-science signals (`model`, `algorithm`, RF, XGBoost, SHAP, train/test metrics, AUC/F1/RMSE/R2, residuals) are strong domain evidence and must route to the `computer_ai_ml` template packages before biomedical defaults.
 17. If statistical assumptions are uncertain, downgrade to a conservative or descriptive choice and explain why.
 18. If rendered QA reports overlap, cross-panel title/table/text collision, negative axes text without a reserved slot, poster-scale font sizes, blank/tiny output, missing `legendContractEnforced`, missing `layoutContractEnforced`, any remaining in-axes legend, too few visual enhancements, missing template/reference visual grammar motifs, missing in-plot explanatory labels, non-editable vector text, or missing formats, return to Phase 3 or Phase 2 before declaring completion.
 19. Use `specs/workflow-policies.md` for thresholds and budgets; do not add new magic numbers in phase logic without naming the policy.

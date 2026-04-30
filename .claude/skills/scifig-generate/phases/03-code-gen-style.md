@@ -24,6 +24,7 @@ from template_mining_helpers import (
     add_group_dividers, add_panel_label,
     density_sort, density_color_scatter,
     add_polygon_polar_grid, draw_gradient_box,
+    add_forest_panel,
     build_grid, select_narrative_arc, arc_required_motifs,
     arc_default_grid, apply_zorder_recipe, bootstrap_chart,
 )
@@ -59,7 +60,7 @@ required = arc_required_motifs(arc)
 | Narrative arc selection | `template-mining/06-narrative-arcs.md` |
 | Family deep-dive (only if needed) | `template-mining/07-techniques/<family>.md` |
 
-**Anchor cases lookup**: query `template-mining/case-index.json` for ≥3 cases matching the chosen `chart_families` or `narrative_arc`. If `chartPlan.templateCasePlan.templateMatchMode == "clone_when_known"` or `visualContentPlan.exactTemplateReplicationRequired` is true, read every `templateCasePlan.techniqueRefs` file and use `templateCasePlan.anchors` as the primary visual references. For known families (marginal-joint, SHAP composite, heatmap-pairwise, radar, dual-axis, time-series-pi, gradient-box, inset-distribution), copy the template case's layer structure, subplot proportions, palette anchors, z-order stack, annotation idioms, legend/colorbar placement, and sidecar axes layout before tuning to the user's data.
+**Anchor cases lookup**: query `template-mining/case-index.json` for ≥3 cases matching the chosen `chart_families` or `narrative_arc`. If `chartPlan.templateCasePlan.templateMatchMode == "clone_when_known"` or `visualContentPlan.exactTemplateReplicationRequired` is true, read every `templateCasePlan.techniqueRefs` file and use `templateCasePlan.anchors` as the primary visual references. For known families (marginal-joint, SHAP composite, heatmap-pairwise, radar, dual-axis, time-series-pi, gradient-box, inset-distribution, ML model diagnostics), copy the template case's layer structure, subplot proportions, palette anchors, z-order stack, annotation idioms, legend/colorbar placement, and sidecar axes layout before tuning to the user's data. If the selected bundle key is `rf_model_performance_report`, clone the RF triptych first: top-row model train/test benchmark, bottom-left predicted-vs-actual parity scatter, bottom-right residual-vs-predicted diagnostic.
 
 ## Objective
 
@@ -321,6 +322,7 @@ PALETTES = {
     "journal_muted_6": ["#1F4E79", "#4C956C", "#F2A541", "#C8553D", "#7A6C8F", "#6C757D"],
     "wong_8": ["#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7"],
     "okabe_ito_8": ["#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#000000"],
+    "ml_model_performance_10": ["#4DBBD5", "#E64B35", "#00A087", "#3C5488", "#F39B7F", "#8491B4", "#91D1C2", "#DC0000", "#7E6148", "#333333"],
     "genomics_categorical": ["#3B5998", "#C8553D", "#999999", "#4C956C", "#F2A541", "#7A6C8F"],
     "clinical_survival": ["#0072B2", "#C8553D", "#4C956C", "#F2A541"],
     "seq_cool": ["#F7FBFF", "#D6EAF8", "#A9CCE3", "#5DADE2", "#21618C"],

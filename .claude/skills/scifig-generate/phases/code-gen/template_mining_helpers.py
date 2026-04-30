@@ -15,6 +15,7 @@ Module status (n/n implemented):
   - density_color_scatter       ✓
   - add_polygon_polar_grid      ✓
   - draw_gradient_box           ✓
+  - add_forest_panel            ✓
   - build_grid                  ✓ (R0 / R1 / R2 / R3 / R5 / R6 / R8 / R9; R7 / R10 / R11 stubs)
   - select_narrative_arc        ✓
   - arc_required_motifs         ✓
@@ -116,6 +117,9 @@ PALETTES: dict[str, list[str]] = {
                                         "#1A9850", "#FDAE61", "#7570B3"],
     "materials_porosity_terracotta":  ["#CFE2F3", "#9BC2E6", "#F48E66"],
     "npg_4":                          ["#E64B35", "#4DBBD5", "#00A087", "#3C5488"],
+    "ml_model_performance_10":         ["#4DBBD5", "#E64B35", "#00A087", "#3C5488",
+                                        "#F39B7F", "#8491B4", "#91D1C2", "#DC0000",
+                                        "#7E6148", "#333333"],
     "cool_summer_4":                  ["#8DA0CB", "#FC8D62", "#66C2A5", "#FBC15E"],
     "tableau10_classic":              ["#1F77B4", "#FF7F0E", "#2CA02C", "#D62728",
                                         "#9467BD", "#8C564B", "#E377C2", "#7F7F7F",
@@ -136,6 +140,16 @@ PALETTE_ROLE_MAP: dict[str, str] = {
     "vehicle":              "#6C757D",
     "train":                "#4C78A8",
     "test":                 "#E45756",
+    "training":             "#F6CFA3",
+    "testing":              "#9BCBEB",
+    "rf":                   "#4DBBD5",
+    "random forest":        "#4DBBD5",
+    "rfr":                  "#4DBBD5",
+    "xgboost":              "#E64B35",
+    "lightgbm":             "#00A087",
+    "gbdt":                 "#3C5488",
+    "svm":                  "#F39B7F",
+    "knn":                  "#8491B4",
     "actual":               "#1F4E79",
     "observed":             "#1F4E79",
     "experimental":         "#1F4E79",
