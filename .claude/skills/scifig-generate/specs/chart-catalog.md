@@ -197,7 +197,7 @@ Expanded chart taxonomy for `scifig-generate`. Use this as the lookup table duri
 | `mosaic_plot` | ✅ | categorical association | Mosaic plot |
 | `clustered_bar` | ✅ | grouped categories | Clustered bar |
 | `diverging_bar` | ✅ | diverging values | Diverging bar |
-| `grouped_bar` | ✅ | grouped categories, model/algorithm + split + aggregate metrics | Grouped bar or AI/ML benchmark comparison |
+| `grouped_bar` | ✅ | grouped categories, model/algorithm + split + aggregate metrics, or wide AUC/F1/precision/recall columns | Grouped bar or AI/ML benchmark comparison |
 | `heatmap_symmetric` | ✅ | symmetric matrix | Symmetric heatmap |
 | `violin_grouped` | ✅ | multiple groups | Grouped violin |
 | `spatial_feature` | ✅ | spatial coordinates + feature value | Spatial expression map |

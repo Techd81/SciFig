@@ -2393,14 +2393,8 @@ def gen_grouped_bar(df, dataProfile, chartPlan, rcParams, palette, col_map=None,
     subgroup_col = roles.get("subgroup") or roles.get("color") or roles.get("hue")
     value_col = roles.get("value") or roles.get("y")
 
-    if group_col is None or subgroup_col is None or value_col is None:
-        raise ValueError("grouped_bar requires 'group', 'subgroup', and 'value' in semanticRoles")
-
-    categories = df[group_col].dropna().unique().tolist()
-    subgroups = df[subgroup_col].dropna().unique().tolist()
-    n_sub = len(subgroups)
-    colors = palette.get("categorical", ["#1F4E79", "#4C956C", "#F2A541",
-                                          "#C8553D", "#7A6C8F", "#2B6F77"])
+    if group_col is None:
+        raise ValueError("grouped_bar requires 'group' in semanticRoles")
 
     if standalone:
         fig, ax = plt.subplots(figsize=(89 * (1 / 25.4), 60 * (1 / 25.4)),
@@ -2418,6 +2412,46 @@ def gen_grouped_bar(df, dataProfile, chartPlan, rcParams, palette, col_map=None,
         or "ml_model_family" in patterns
         or any(t in tokens for t in ("random forest", "randomforest", "rf", "rfr", "xgboost", "lightgbm", "gbdt", "svm", "knn"))
     )
+    metric_priority = ["auc", "roc_auc", "accuracy", "f1", "precision", "recall", "r2", "rmse", "mae", "mse", "error"]
+
+    def _metric_key(value):
+        return str(value).lower().replace("-", "_").replace(" ", "_")
+
+    metric_cols = [
+        col for col in df.columns
+        if col not in {group_col, subgroup_col, value_col}
+        and pd.api.types.is_numeric_dtype(df[col])
+        and any(metric in _metric_key(col) for metric in metric_priority)
+    ]
+    wide_metric_cols = sorted(
+        metric_cols,
+        key=lambda col: next((idx for idx, metric in enumerate(metric_priority) if metric in _metric_key(col)), len(metric_priority)),
+    )
+    wide_metric_mode = None
+    if is_ml_benchmark and value_col is None and wide_metric_cols:
+        if subgroup_col and subgroup_col in df.columns:
+            value_col = wide_metric_cols[0]
+            wide_metric_mode = "selected_metric_column"
+        else:
+            plot_df = df[[group_col] + wide_metric_cols].melt(
+                id_vars=[group_col],
+                value_vars=wide_metric_cols,
+                var_name="_metric_name",
+                value_name="_metric_value",
+            )
+            df = plot_df
+            subgroup_col = "_metric_name"
+            value_col = "_metric_value"
+            wide_metric_mode = "metrics_as_subgroups"
+
+    if subgroup_col is None or value_col is None:
+        raise ValueError("grouped_bar requires 'subgroup' and 'value' in semanticRoles, or AI/ML wide metric columns")
+
+    categories = df[group_col].dropna().unique().tolist()
+    subgroups = df[subgroup_col].dropna().unique().tolist()
+    n_sub = len(subgroups)
+    colors = palette.get("categorical", ["#1F4E79", "#4C956C", "#F2A541",
+                                          "#C8553D", "#7A6C8F", "#2B6F77"])
 
     if is_ml_benchmark:
         metric_col = roles.get("metric")
@@ -2459,20 +2493,28 @@ def gen_grouped_bar(df, dataProfile, chartPlan, rcParams, palette, col_map=None,
             text = str(value).strip()
             return text if len(text) <= width else text[:max(3, width - 3)].rstrip() + "..."
         if metric_col and metric_col in plot_df:
-            metric_order = ["r2", "auc", "accuracy", "f1", "precision", "recall", "rmse", "mae", "mse", "error"]
             metric_values = plot_df[metric_col].astype(str).str.lower()
-            selected_metric = next((m for m in metric_order if metric_values.str.contains(m, regex=False).any()), None)
+            selected_metric = next((m for m in metric_priority if metric_values.str.contains(m, regex=False).any()), None)
             if selected_metric:
                 plot_df = plot_df[metric_values.str.contains(selected_metric, regex=False)]
                 metric_label = selected_metric.upper()
                 higher_is_better = selected_metric not in {"rmse", "mae", "mse", "error"}
+        elif wide_metric_mode == "selected_metric_column":
+            metric_label = str(value_col).upper()
+            higher_is_better = not any(metric in _metric_key(value_col) for metric in ("rmse", "mae", "mse", "error"))
+        elif wide_metric_mode == "metrics_as_subgroups":
+            metric_label = "Metric score"
+            higher_is_better = True
 
         subgroup_labels = [str(s).lower() for s in subgroups]
         priority_terms = ("test", "valid", "validation", "cv", "external")
-        priority_subgroups = [
-            subgroups[i] for i, label in enumerate(subgroup_labels)
-            if any(term in label for term in priority_terms)
-        ] or subgroups[-1:]
+        if wide_metric_mode == "metrics_as_subgroups":
+            priority_subgroups = subgroups[:1]
+        else:
+            priority_subgroups = [
+                subgroups[i] for i, label in enumerate(subgroup_labels)
+                if any(term in label for term in priority_terms)
+            ] or subgroups[-1:]
 
         score_by_category = {}
         for cat in categories:

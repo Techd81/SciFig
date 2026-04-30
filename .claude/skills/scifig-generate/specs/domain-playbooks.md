@@ -51,7 +51,7 @@ Domain playbooks bias charting, statistics, panel stories, and color semantics.
 - Hero: `model_architecture` when layer/module/component or source-target architecture fields are present without enough metric columns for a board
 - Hero: `rf_classifier_report_board` when RF/Random Forest data include score/probability, label, and feature importance / SHAP / gain fields
 - Hero: `classifier_validation_board` when score/probability plus label or threshold fields are present
-- Hero: `grouped_bar` instead of classifier validation when only aggregate AUC/F1/precision/recall/accuracy metrics are supplied by model and split
+- Hero: `grouped_bar` instead of classifier validation when only aggregate AUC/F1/precision/recall/accuracy metrics are supplied by model and split, including wide metric columns
 - Hero: `training_curve` when epoch/step plus loss, validation loss, accuracy, or learning-rate columns are present
 - Support: `scatter_regression` predicted-vs-actual parity panel
 - Support: `residual_vs_fitted` or `line` for residuals, cross-validation, or feature-count curves

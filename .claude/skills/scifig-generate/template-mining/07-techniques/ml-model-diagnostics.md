@@ -19,7 +19,7 @@ When columns include `model` / `algorithm` plus `Training` / `Testing` / `R2` / 
 3. Bottom-right: residual-vs-predicted scatter. Use zero reference line in deep red (`#B00000`), light grid, and a short in-plot bias note.
 
 Layout intent: `ml_model_performance_triptych` uses a 2x2 grid where the benchmark bar spans the top row and parity/residual diagnostics occupy the bottom row.
-Executable fallback: `grouped_bar` renders the sorted RF-highlighted benchmark, folds very long model names into y-axis labels, expands left/bottom margins for dense model lists, and moves 5+ train/test/validation/external split legends to a bottom-centered figure legend. Standalone `scatter_regression` renders the train/test parity lane as a density-colored marginal joint diagnostic with 1:1 reference and R2/RMSE/MAE box, embedded `scatter_regression` keeps the compact parity lane, and `residual_vs_fitted` renders the residual lane with red zero reference plus bias/SD note.
+Executable fallback: `grouped_bar` renders the sorted RF-highlighted benchmark, accepts both long `metric/value` rows and wide aggregate metric columns (`AUC`, `F1`, `precision`, `recall`, etc.), folds very long model names into y-axis labels, expands left/bottom margins for dense model lists, and moves 5+ train/test/validation/external split legends to a bottom-centered figure legend. Standalone `scatter_regression` renders the train/test parity lane as a density-colored marginal joint diagnostic with 1:1 reference and R2/RMSE/MAE box, embedded `scatter_regression` keeps the compact parity lane, and `residual_vs_fitted` renders the residual lane with red zero reference plus bias/SD note.
 
 ## Neural Architecture Topology
 
@@ -101,7 +101,7 @@ When RF/Random Forest classifier probability and label columns appear together w
 - Prefer `rf_model_performance_report` when both model benchmark metrics and actual/predicted or residual fields exist.
 - Prefer `rf_classifier_validation_report` / `rf_classifier_report_board` when RF classifier score+label data also include feature importance or SHAP-style explanation fields, especially when RF is one competitor among XGBoost/SVM/other classifiers and needs a highlighted manuscript-ready report.
 - Prefer `classifier_validation_board` for multi-model classifier probability tables without feature-importance columns; it must still pick one selected/RF anchor model for the validation curves.
-- Prefer `grouped_bar` over `classifier_validation_board` when the table is already aggregated by model/split/metric with AUC, F1, precision, recall, or accuracy columns but lacks row-level probability/label or threshold fields.
+- Prefer `grouped_bar` over `classifier_validation_board` when the table is already aggregated by model/split/metric with AUC, F1, precision, recall, or accuracy columns but lacks row-level probability/label or threshold fields; wide metric columns are valid and do not need to be reshaped by the user.
 - Prefer `neural_architecture_metric_storyboard` / `model_architecture_board` when architecture fields include latency/FLOPs/memory/throughput/cost/edge metrics.
 - Prefer `neural_architecture_topology` when layer/module/component or source-target architecture fields exist without metric columns.
 - Prefer `neural_training_dynamics` when epoch/step training histories include loss, validation loss, accuracy, or learning-rate fields.

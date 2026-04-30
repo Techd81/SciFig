@@ -142,6 +142,15 @@ def recommend_chart_bundle(dataProfile, workflowPreferences):
         "model_performance_benchmark" in patterns
         or "ml_model_family" in patterns
         or ("model" in roles and any(role in roles for role in ("metric", "score", "rmse", "mae", "residual")))
+        or (
+            "model" in roles
+            and any(token in cols for token in ("auc", "roc_auc", "accuracy", "f1", "precision", "recall", "r2", "rmse", "mae"))
+            and (
+                domain == "computer_ai_ml"
+                or "ml_model_family" in patterns
+                or any(token in cols for token in ("algorithm", "estimator", "split", "train", "test", "validation"))
+            )
+        )
     )
     has_feature_selection_curve = (
         "incremental_feature_selection" in patterns
