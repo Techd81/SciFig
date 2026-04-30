@@ -3173,6 +3173,35 @@ def _is_classifier_validation_board(chartPlan, dataProfile=None):
     )
 
 
+def _place_classifier_validation_legend(ax, standalone=False, ncol=2):
+    handles, labels = ax.get_legend_handles_labels()
+    if not labels:
+        return None
+    if standalone and ax.figure is not None:
+        legend = ax.figure.legend(
+            handles, labels,
+            loc="lower center", bbox_to_anchor=(0.5, 0.02),
+            ncol=min(max(1, ncol), len(labels)), fontsize=5,
+            frameon=True, fancybox=True, borderpad=0.25,
+            handlelength=1.4, columnspacing=0.8,
+        )
+        legend.set_gid("scifig_shared_legend")
+        legend.get_frame().set_linewidth(0.35)
+        legend.get_frame().set_edgecolor("#333333")
+        legend.get_frame().set_alpha(0.94)
+        try:
+            if hasattr(ax.figure, "set_layout_engine"):
+                ax.figure.set_layout_engine(None)
+            else:
+                ax.figure.set_constrained_layout(False)
+        except Exception:
+            pass
+        sp = ax.figure.subplotpars
+        ax.figure.subplots_adjust(left=max(sp.left, 0.20), bottom=max(sp.bottom, 0.32), right=min(sp.right, 0.96))
+        return legend
+    return ax.legend(frameon=False, fontsize=5, loc="best")
+
+
 def gen_roc(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=None):
     """ROC curve with AUC annotation and confidence band."""
     standalone = ax is None
@@ -3205,19 +3234,25 @@ def gen_roc(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=None
         best_idx = int(np.nanargmax(youden))
         best_threshold = thresholds[best_idx]
         if np.isfinite(best_threshold):
+            ax.axvline(fpr[best_idx], color="#444444", lw=0.55, ls="--", alpha=0.55, zorder=1)
+            ax.axhline(tpr[best_idx], color="#444444", lw=0.55, ls="--", alpha=0.55, zorder=1)
             ax.scatter([fpr[best_idx]], [tpr[best_idx]], s=36, color="#B00000",
                        edgecolor="white", linewidth=0.45, zorder=5, label="Best threshold")
+            callout_x = 0.62 if standalone else 0.05
             ax.text(
-                0.62, 0.18,
+                callout_x, 0.18,
                 f"AUC={roc_auc:.3f}\nthr={best_threshold:.2f}\nn={len(y_true)}",
                 transform=ax.transAxes, ha="left", va="bottom", fontsize=5.3,
                 bbox=dict(boxstyle="round,pad=0.22", facecolor="white", edgecolor="#333333", linewidth=0.4, alpha=0.93),
                 zorder=6,
             )
 
-    ax.set_xlabel("False Positive Rate")
-    ax.set_ylabel("True Positive Rate")
-    ax.legend(loc="lower right", frameon=False, fontsize=5)
+    ax.set_xlabel("False Positive Rate" if standalone or not is_classifier_board else "")
+    ax.set_ylabel("True Positive Rate" if standalone or not is_classifier_board else "")
+    if is_classifier_board:
+        _place_classifier_validation_legend(ax, standalone, ncol=3)
+    else:
+        ax.legend(loc="lower right", frameon=False, fontsize=5)
     if standalone:
         apply_chart_polish(ax, "roc")
     return ax
@@ -3239,43 +3274,58 @@ def gen_calibration(df, dataProfile, chartPlan, rcParams, palette, col_map=None,
 
     is_classifier_board = _is_classifier_validation_board(chartPlan, dataProfile)
 
+    pred = pd.to_numeric(df[pred_col], errors="coerce").clip(0, 1)
+    label = pd.to_numeric(df[label_col], errors="coerce")
+    valid_rows = pred.notna() & label.notna()
+    pred = pred[valid_rows]
+    label = label[valid_rows]
+
     # Bin predictions and compute observed fraction
     bins = np.linspace(0, 1, 11)
     bin_centers = (bins[:-1] + bins[1:]) / 2
     observed = []
     counts = []
     for lo, hi in zip(bins[:-1], bins[1:]):
-        mask = (df[pred_col] >= lo) & (df[pred_col] < hi)
+        mask = (pred >= lo) & (pred <= hi if np.isclose(hi, 1.0) else pred < hi)
         counts.append(int(mask.sum()))
         if mask.sum() > 0:
-            observed.append(df.loc[mask, label_col].mean())
+            observed.append(float(label[mask].mean()))
         else:
             observed.append(np.nan)
 
     observed_arr = np.asarray(observed, dtype=float)
     counts_arr = np.asarray(counts, dtype=float)
-    ax.plot(bin_centers, observed, "-", color="#1F4E79" if is_classifier_board else "#0072B2", lw=1)
+    valid = np.isfinite(observed_arr) & (counts_arr > 0)
+    ax.plot(bin_centers[valid], observed_arr[valid], "-", color="#1F4E79" if is_classifier_board else "#0072B2", lw=1)
     if is_classifier_board:
         sizes = 18 + (counts_arr / max(float(np.nanmax(counts_arr)), 1.0)) * 56
         ax.scatter(bin_centers, observed_arr, s=sizes, color="#1F4E79",
                    edgecolor="white", linewidth=0.45, zorder=4, label="Calibration bins")
-        valid = np.isfinite(observed_arr)
         ece = float(np.nansum((counts_arr[valid] / max(counts_arr.sum(), 1.0)) * np.abs(observed_arr[valid] - bin_centers[valid]))) if valid.any() else np.nan
-        ax.fill_between([0, 1], [0, 1], [0.05, 1.05], color="#F6CFA3", alpha=0.18, linewidth=0, label="_nolegend_")
+        band_x = np.linspace(0, 1, 80)
+        ax.fill_between(band_x, np.clip(band_x - 0.05, 0, 1), np.clip(band_x + 0.05, 0, 1),
+                        color="#F6CFA3", alpha=0.18, linewidth=0, label="±0.05 band")
+        if valid.any():
+            calib_error = np.where(valid, np.abs(observed_arr - bin_centers), np.nan)
+            worst_idx = int(np.nanargmax(calib_error))
+            ax.vlines(bin_centers[worst_idx], bin_centers[worst_idx], observed_arr[worst_idx],
+                      color="#B00000", lw=0.75, alpha=0.75, zorder=3)
+            ax.scatter([bin_centers[worst_idx]], [observed_arr[worst_idx]], s=sizes[worst_idx] + 16,
+                       color="#B00000", edgecolor="white", linewidth=0.5, zorder=5, label="Worst bin")
         if np.isfinite(ece):
             ax.text(
-                0.05, 0.88, f"ECE={ece:.3f}\nbins={int(valid.sum())}",
+                0.05, 0.88, f"ECE={ece:.3f}\nbins={int(valid.sum())}\nn={int(counts_arr.sum())}",
                 transform=ax.transAxes, ha="left", va="top", fontsize=5.3,
                 bbox=dict(boxstyle="round,pad=0.22", facecolor="white", edgecolor="#333333", linewidth=0.4, alpha=0.93),
                 zorder=6,
             )
-        ax.legend(frameon=False, fontsize=5, loc="lower right")
+        _place_classifier_validation_legend(ax, standalone, ncol=3)
     else:
         ax.plot(bin_centers, observed, "o-", color="#0072B2", lw=1, markersize=4)
     ax.plot([0, 1], [0, 1], "--", color="#999999", lw=0.5)
 
-    ax.set_xlabel("Predicted probability")
-    ax.set_ylabel("Observed fraction")
+    ax.set_xlabel("Predicted probability" if standalone or not is_classifier_board else "")
+    ax.set_ylabel("Observed fraction" if standalone or not is_classifier_board else "")
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
     if standalone:
@@ -4260,8 +4310,6 @@ def gen_enrichment_dotplot(df, dataProfile, chartPlan, rcParams, palette, col_ma
 def gen_pr_curve(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=None):
     """Precision-Recall curve with AUC annotation."""
     standalone = ax is None
-    if standalone:
-        fig, ax = plt.subplots(figsize=(62 * (1 / 25.4), 62 * (1 / 25.4)), constrained_layout=True)
 
     roles = dataProfile.get("semanticRoles", {})
     score_col = roles.get("score") or roles.get("value")
@@ -4273,6 +4321,9 @@ def gen_pr_curve(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax
     y_true = df[label_col].values
     y_score = df[score_col].values
     is_classifier_board = _is_classifier_validation_board(chartPlan, dataProfile)
+    if standalone:
+        fig_size = (89 * (1 / 25.4), 75 * (1 / 25.4)) if is_classifier_board else (62 * (1 / 25.4), 62 * (1 / 25.4))
+        fig, ax = plt.subplots(figsize=fig_size, constrained_layout=True)
 
     try:
         from sklearn.metrics import precision_recall_curve, average_precision_score
@@ -4289,22 +4340,27 @@ def gen_pr_curve(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax
             f1 = 2 * precision[:-1] * recall[:-1] / np.maximum(precision[:-1] + recall[:-1], 1e-12)
             best_idx = int(np.nanargmax(f1))
             best_threshold = thresholds[best_idx]
+            ax.axvline(recall[best_idx], color="#444444", lw=0.55, ls="--", alpha=0.55, zorder=1)
+            ax.axhline(precision[best_idx], color="#444444", lw=0.55, ls="--", alpha=0.55, zorder=1)
             ax.scatter([recall[best_idx]], [precision[best_idx]], s=36, color="#B00000",
                        edgecolor="white", linewidth=0.45, zorder=5, label="Best F1 threshold")
             ax.text(
                 0.08, 0.18,
-                f"AP={ap:.3f}\nF1={f1[best_idx]:.3f}\nthr={best_threshold:.2f}",
+                f"AP={ap:.3f}\nF1={f1[best_idx]:.3f}\nthr={best_threshold:.2f}\nn={len(y_true)}",
                 transform=ax.transAxes, ha="left", va="bottom", fontsize=5.3,
                 bbox=dict(boxstyle="round,pad=0.22", facecolor="white", edgecolor="#333333", linewidth=0.4, alpha=0.93),
                 zorder=6,
             )
 
-        ax.legend(fontsize=5, frameon=False)
+        if is_classifier_board:
+            _place_classifier_validation_legend(ax, standalone, ncol=3)
+        else:
+            ax.legend(fontsize=5, frameon=False)
     except ImportError:
         ax.text(0.5, 0.5, "scikit-learn required", ha="center", va="center", transform=ax.transAxes)
 
-    ax.set_xlabel("Recall")
-    ax.set_ylabel("Precision")
+    ax.set_xlabel("Recall" if standalone or not is_classifier_board else "")
+    ax.set_ylabel("Precision" if standalone or not is_classifier_board else "")
     ax.set_xlim([0, 1])
     ax.set_ylim([0, 1.05])
     if standalone:

@@ -48,6 +48,7 @@ When columns include `score`, `probability`, `label`, `threshold`, `AUC`, `F1`, 
 - Add data-derived metric boxes for AUC, AP, best threshold, F1, ECE, bin count, and sample count.
 - Mark the selected threshold with a red point and reference guides.
 - Use calibration bin marker size for sample count so imbalanced bins remain visible.
+- Executable fallback: `roc` and `pr_curve` detect `classifier_validation_board`, mark the Youden / best-F1 threshold with red points plus dashed guides, and move standalone legends to bottom center. `calibration` computes ECE, scales bin markers by sample count, shades the +/-0.05 calibration band, marks the worst bin, and reports ECE / bins / n in a compact metric box.
 
 ## Routing Rules
 
