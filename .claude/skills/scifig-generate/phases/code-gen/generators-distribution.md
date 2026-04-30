@@ -3554,16 +3554,52 @@ def gen_correlation(df, dataProfile, chartPlan, rcParams, palette, col_map=None,
 
 
 def gen_scatter_regression(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=None):
-    """Scatter with regression line and r annotation."""
+    """Scatter with regression line, parity diagnostics, or SHAP dependence view."""
     standalone = ax is None
     roles = dataProfile.get("semanticRoles", {})
-    x_col = roles.get("actual") or roles.get("observed") or roles.get("measured") or roles.get("x") or roles.get("dose")
-    y_col = roles.get("predicted") or roles.get("prediction") or roles.get("fitted") or roles.get("y") or roles.get("value")
-    split_col = roles.get("split") or roles.get("sample_type") or roles.get("source") or roles.get("cohort") or roles.get("group")
+    columns_lower = {str(c).lower(): c for c in df.columns}
+
+    def _role_or_column(*names):
+        for name in names:
+            value = roles.get(name)
+            if value in df.columns:
+                return value
+            if isinstance(value, str) and value.lower() in columns_lower:
+                return columns_lower[value.lower()]
+            if name in columns_lower:
+                return columns_lower[name]
+        return None
+
+    x_col = _role_or_column("actual", "observed", "measured", "x", "dose")
+    y_col = _role_or_column("predicted", "prediction", "fitted", "y", "value")
+    split_col = _role_or_column("split", "sample_type", "source", "cohort", "group")
     template_case = (chartPlan.get("templateCasePlan") or chartPlan.get("visualContentPlan", {}).get("templateCasePlan") or {})
     patterns = {str(p).lower() for p in dataProfile.get("specialPatterns", [])}
+    bundle_key = str(template_case.get("bundleKey") or "").lower()
+    feature_value_col = _role_or_column("feature_value", "feature_val", "feature_numeric", "x")
+    shap_value_col = _role_or_column("shap_value", "shap", "shap_impact", "y")
+    interaction_col = _role_or_column("interaction_value", "interaction", "feature_color", "color", "hue")
+    feature_name_col = _role_or_column("feature_id", "feature", "feature_name", "term")
+    is_shap_candidate = (
+        bundle_key in {"rf_feature_importance_shap", "shap_explainability_composite", "template_shap_explainability"}
+        or "shap_composite" in patterns
+        or "ml_explainability" in patterns
+        or "shap_dependence" in patterns
+        or any("shap" in name for name in columns_lower)
+    )
+    is_shap_dependence = (
+        is_shap_candidate
+        and feature_value_col
+        and shap_value_col
+        and feature_value_col in df.columns
+        and shap_value_col in df.columns
+        and feature_value_col != shap_value_col
+    )
+    if is_shap_dependence:
+        x_col = feature_value_col
+        y_col = shap_value_col
     is_prediction_report = (
-        template_case.get("bundleKey") == "rf_model_performance_report"
+        bundle_key == "rf_model_performance_report"
         or "model_performance_benchmark" in patterns
         or "ml_model_family" in patterns
         or "prediction_diagnostic" in patterns
@@ -3577,11 +3613,88 @@ def gen_scatter_regression(df, dataProfile, chartPlan, rcParams, palette, col_ma
         fig, ax = plt.subplots(figsize=(89 * (1 / 25.4), 65 * (1 / 25.4)),
                            constrained_layout=True)
 
-    plot_cols = [x_col, y_col] + ([split_col] if split_col and split_col in df.columns else [])
+    plot_cols = [x_col, y_col]
+    for optional_col in (split_col, interaction_col if is_shap_dependence else None, feature_name_col if is_shap_dependence else None):
+        if optional_col and optional_col in df.columns and optional_col not in plot_cols:
+            plot_cols.append(optional_col)
     plot_df = df[plot_cols].copy()
     plot_df[x_col] = pd.to_numeric(plot_df[x_col], errors="coerce")
     plot_df[y_col] = pd.to_numeric(plot_df[y_col], errors="coerce")
     plot_df = plot_df.dropna(subset=[x_col, y_col])
+
+    if is_shap_dependence:
+        if interaction_col and interaction_col in plot_df.columns:
+            plot_df[interaction_col] = pd.to_numeric(plot_df[interaction_col], errors="coerce")
+            color_values = plot_df[interaction_col]
+        else:
+            color_values = None
+
+        scatter_kwargs = dict(
+            s=18 if standalone else 12,
+            alpha=0.76,
+            edgecolors="white",
+            linewidth=0.28,
+            zorder=4,
+        )
+        if color_values is not None and color_values.notna().any():
+            sc = ax.scatter(
+                plot_df[x_col], plot_df[y_col],
+                c=color_values, cmap="RdYlBu_r", **scatter_kwargs,
+            )
+        else:
+            sc = ax.scatter(
+                plot_df[x_col], plot_df[y_col],
+                color="#1F4E79", **scatter_kwargs,
+            )
+
+        ax.axhline(0, color="black", linewidth=0.8, zorder=3)
+        if plot_df[x_col].nunique() >= 4:
+            for q in np.nanquantile(plot_df[x_col], [0.25, 0.5, 0.75]):
+                ax.axvline(q, color="#8A8A8A", linewidth=0.35, linestyle=":", alpha=0.55, zorder=1)
+
+        if plot_df[x_col].nunique() >= 3 and len(plot_df) >= 5:
+            deg = 2 if plot_df[x_col].nunique() >= 5 else 1
+            z = np.polyfit(plot_df[x_col], plot_df[y_col], deg)
+            p_line = np.poly1d(z)
+            xs = np.linspace(plot_df[x_col].min(), plot_df[x_col].max(), 140)
+            ax.plot(xs, p_line(xs), color="#D55E00", lw=1.05, zorder=5)
+
+        feature_label = None
+        if feature_name_col and feature_name_col in plot_df.columns:
+            values = plot_df[feature_name_col].dropna().astype(str).unique().tolist()
+            if len(values) == 1:
+                feature_label = values[0]
+        mean_abs = float(np.nanmean(np.abs(plot_df[y_col]))) if len(plot_df) else np.nan
+        effect_range = float(np.nanmax(plot_df[y_col]) - np.nanmin(plot_df[y_col])) if len(plot_df) else np.nan
+        label_lines = []
+        if feature_label:
+            label_lines.append(feature_label)
+        label_lines.extend([f"n={len(plot_df)}", f"mean|SHAP|={mean_abs:.3g}", f"range={effect_range:.3g}"])
+        ax.text(
+            0.04, 0.96, "\n".join(label_lines),
+            transform=ax.transAxes, ha="left", va="top", fontsize=5.2,
+            bbox=dict(boxstyle="round,pad=0.22", facecolor="white", edgecolor="#333333", linewidth=0.35, alpha=0.92),
+            zorder=7,
+        )
+        if feature_label and not standalone:
+            ax.set_title(feature_label, fontsize=6, pad=2)
+        if standalone and color_values is not None and color_values.notna().any():
+            cbar = ax.figure.colorbar(sc, ax=ax, fraction=0.045, pad=0.025)
+            cbar.set_label("Interaction value", fontsize=6)
+            cbar.ax.tick_params(labelsize=5, length=2)
+        ax.set_xlabel(display_label(x_col, col_map) if (standalone and col_map) else ("Feature value" if standalone else ""))
+        ax.set_ylabel("")
+        if standalone:
+            ax.text(
+                0.015, 0.52, "SHAP value",
+                transform=ax.transAxes, rotation=90, ha="left", va="center",
+                fontsize=6, color="#222222",
+                bbox=dict(boxstyle="round,pad=0.12", facecolor="white", edgecolor="none", alpha=0.72),
+                zorder=8,
+            )
+        if standalone:
+            apply_chart_polish(ax, "scatter_regression")
+        return ax
 
     if is_prediction_report:
         split_styles = {

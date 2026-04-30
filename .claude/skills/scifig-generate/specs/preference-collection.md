@@ -283,12 +283,12 @@ _TEMPLATE_CHART_BUNDLE_SEEDS = {
         },
         {
             "key": "rf_feature_importance_shap",
-            "charts": ["lollipop_horizontal", "dotplot", "nested_donut", "heatmap_annotated"],
+            "charts": ["lollipop_horizontal", "dotplot", "scatter_regression", "nested_donut", "heatmap_annotated"],
             "families": ["ml_model_diagnostics", "shap_composite"],
             "techniqueRefs": ["template-mining/07-techniques/ml-model-diagnostics.md", "template-mining/07-techniques/shap-composite.md"],
             "anchors": ["期刊复现：随机森林(RF)模型驱动的EFI特征重要度条形图与SHAP圆环图可视化_1777456510.md"],
-            "en": ("RF feature importance + SHAP package", "Clone the EFI bar plus SHAP donut/composite layout when feature importance, SHAP, permutation, gain, or model interpretability fields appear."),
-            "zh": ("RF 特征重要性 + SHAP 套餐", "当数据含特征重要性、SHAP、permutation、gain 或模型解释字段时，复刻 EFI 条形图 + SHAP 圆环/复合布局。"),
+            "en": ("RF feature importance + SHAP package", "Clone the EFI bar plus SHAP donut/composite/dependence layout when feature importance, SHAP, feature-value dependence, permutation, gain, or model interpretability fields appear."),
+            "zh": ("RF 特征重要性 + SHAP 套餐", "当数据含特征重要性、SHAP、feature-value dependence、permutation、gain 或模型解释字段时，复刻 EFI 条形图 + SHAP 圆环/依赖复合布局。"),
         },
         {
             "key": "pso_shap_optimization_framework",
@@ -350,12 +350,12 @@ _TEMPLATE_CHART_BUNDLE_SEEDS = {
         },
         {
             "key": "shap_explainability_composite",
-            "charts": ["lollipop_horizontal", "dotplot", "heatmap_annotated", "correlation"],
+            "charts": ["lollipop_horizontal", "dotplot", "scatter_regression", "heatmap_annotated", "correlation"],
             "families": ["shap_composite", "heatmap_pairwise"],
             "techniqueRefs": ["template-mining/07-techniques/shap-composite.md", "template-mining/07-techniques/heatmap-pairwise.md"],
             "anchors": ["复现顶刊 _ 拒绝千篇一律的SHAP图，用Matplotlib手绘一张“蜂群+条形”组合图_1777452577.md"],
-            "en": ("SHAP explainability composite", "Bar/lollipop importance, beeswarm-like feature effects, annotated heatmap, and correlation context."),
-            "zh": ("SHAP 解释复合套餐", "重要性条形/棒棒糖、蜂群式特征贡献、注释热图和相关性背景，优先按模板案例复刻。"),
+            "en": ("SHAP explainability composite", "Bar/lollipop importance, beeswarm-like feature effects, dependence scatter, annotated heatmap, and correlation context."),
+            "zh": ("SHAP 解释复合套餐", "重要性条形/棒棒糖、蜂群式特征贡献、依赖散点、注释热图和相关性背景，优先按模板案例复刻。"),
         },
         {
             "key": "pairwise_correlation_matrix",
@@ -408,12 +408,12 @@ _TEMPLATE_CHART_BUNDLE_SEEDS = {
         },
         {
             "key": "template_shap_explainability",
-            "charts": ["lollipop_horizontal", "dotplot", "heatmap_annotated", "correlation"],
+            "charts": ["lollipop_horizontal", "dotplot", "scatter_regression", "heatmap_annotated", "correlation"],
             "families": ["shap_composite", "heatmap_pairwise"],
             "techniqueRefs": ["template-mining/07-techniques/shap-composite.md"],
             "anchors": ["复现顶刊 _ 拒绝千篇一律的SHAP图，用Matplotlib手绘一张“蜂群+条形”组合图_1777452577.md"],
-            "en": ("Template SHAP/explainability package", "Use when columns imply feature importance, SHAP values, or model interpretability."),
-            "zh": ("模板 SHAP/解释性套餐", "当数据包含特征重要性、SHAP 或模型解释字段时使用。"),
+            "en": ("Template SHAP/explainability package", "Use when columns imply feature importance, SHAP values, feature-value dependence, or model interpretability."),
+            "zh": ("模板 SHAP/解释性套餐", "当数据包含特征重要性、SHAP、feature-value dependence 或模型解释字段时使用。"),
         },
         {
             "key": "template_pairwise_matrix",

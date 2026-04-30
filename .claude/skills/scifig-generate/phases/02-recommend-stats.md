@@ -166,6 +166,13 @@ def recommend_chart_bundle(dataProfile, workflowPreferences):
             )
         )
     )
+    has_shap_dependence = (
+        "shap_dependence" in patterns
+        or (
+            ("feature_value" in roles or "x" in roles or any(token in cols for token in ("feature_value", "feature_val")))
+            and ("shap_value" in roles or any(token in cols for token in ("shap_value", "shap")))
+        )
+    )
 
     # Direct pattern matches
     if has_feature_selection_curve:
@@ -186,10 +193,12 @@ def recommend_chart_bundle(dataProfile, workflowPreferences):
         return "km", ["forest", "roc", "calibration"]
     if "dose_response" in patterns:
         return "dose_response", ["waterfall", "paired_lines"]
+    if has_shap_dependence:
+        return "scatter_regression", ["lollipop_horizontal", "dotplot", "heatmap_annotated"]
     if "prediction_diagnostic" in patterns or ("actual" in roles and "predicted" in roles):
         return "scatter_regression", ["residual_vs_fitted", "bland_altman", "histogram"]
     if "ml_explainability" in patterns or "feature_importance" in patterns or ("feature_id" in roles and ("importance" in roles or "shap_value" in roles)):
-        return "lollipop_horizontal", ["dotplot", "heatmap_annotated", "correlation"]
+        return "lollipop_horizontal", ["dotplot", "scatter_regression", "heatmap_annotated", "correlation"]
     if "optimization_tradeoff" in patterns or "pareto_flag" in roles or "objective" in roles:
         return "pareto_chart", ["scatter_regression", "parallel_coordinates"]
     if "embedding" in patterns:
@@ -872,7 +881,7 @@ def resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreference
             inferred_bundle_key = "incremental_feature_selection_curve"
         elif "ml_model_diagnostics" in families and {"grouped_bar", "scatter_regression", "residual_vs_fitted"} & chart_set:
             inferred_bundle_key = "rf_model_performance_report"
-        elif "shap_composite" in families and {"lollipop_horizontal", "dotplot", "heatmap_annotated"} & chart_set:
+        elif "shap_composite" in families and {"lollipop_horizontal", "dotplot", "scatter_regression", "heatmap_annotated"} & chart_set:
             inferred_bundle_key = "rf_feature_importance_shap"
         elif {"roc", "pr_curve", "calibration"} & chart_set:
             inferred_bundle_key = "classifier_validation_board"

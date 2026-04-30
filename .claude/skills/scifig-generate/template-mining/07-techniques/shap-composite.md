@@ -141,6 +141,8 @@ for k, feat_idx in enumerate(order[:6]):
 
 Anchor: `期刊图表复现：多面板SHAP依赖图展示分子特征对自由基反应速率的非线性影响`.
 
+Executable mapping: `scatter_regression` switches into SHAP dependence mode when the data carries `feature_value` + `shap_value` plus optional `interaction_value`. It must draw the zero contribution line, feature-value color encoding, a compact effect summary, and an outside colorbar only for standalone figures so composite panels stay render-QA safe.
+
 ## Discipline rules (universal across the 26 cases)
 
 | Rule | Why |
