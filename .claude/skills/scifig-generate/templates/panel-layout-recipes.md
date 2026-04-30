@@ -65,7 +65,7 @@ Reusable layout blueprints for multi-panel scientific figures.
 - Shared y-axis: align ticks across panels in same row
 - Shared x-axis: align ticks across panels in same column
 - Colorbar: `shrink=0.6`, positioned right of heatmap panels
-- Legend: treat as a figure-level layout element, never as a panel annotation. If panels share group, color, marker, or line semantics, keep one shared rounded-frame legend at figure top center, outside every plotting area. Outside-right, bottom, and in-axes legends are forbidden.
+- Legend: treat as a figure-level layout element, never as a panel annotation. If panels share group, color, marker, or line semantics, keep one shared rounded-frame legend at figure bottom center, outside every plotting area and below the panels. Outside-right, top-center, and in-axes legends are forbidden.
 - Legend collision policy: never use `loc="best"` or any in-axes legend for publication output. If space is tight, adjust legend columns, shorten labels, reduce handle/text spacing, increase figure margins, or reflow panels before allowing the legend to overlap curves, bars, points, error bars, confidence intervals, grids, or heatmap cells.
 
 ## Layout Scoring

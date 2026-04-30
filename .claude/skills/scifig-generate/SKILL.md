@@ -183,7 +183,7 @@ Blocking agent findings must route back to the owning phase before advancing. Ne
 3. Do not mix unrelated semantic color mappings across panels of the same figure.
 4. Do not use rainbow colormaps unless the variable is cyclic and the legend explicitly justifies it.
 5. Keep all figure text editable, sans serif, and legible at final print size.
-6. Treat every legend as a figure-level layout element in final output, not as an axes annotation. When panels share group, color, marker, or line semantics, keep one shared rounded-frame `fig.legend` at the figure top center, outside every plotting area. Never use `loc="best"`, in-axes, bottom, or outside-right legends for publication output.
+6. Treat every legend as a figure-level layout element in final output, not as an axes annotation. When panels share group, color, marker, or line semantics, keep one shared rounded-frame `fig.legend` at the figure bottom center, outside every plotting area and below the panels so it cannot collide with the title. Never use `loc="best"`, in-axes, top-center, or outside-right legends for publication output.
 7. Every generated script must call `enforce_figure_legend_contract(...)` immediately before the first `savefig` for each figure. Direct `ax.legend(...)` calls are temporary handle sources only; if the finalizer is missing, or if any axis legend remains after the finalizer, return to Phase 3.
 8. Do not hand-write replacement runtime helpers when the skill already provides them. Generated code must embed and execute the helper source from `phases/code-gen/helpers.py`, so `legendContractEnforced`, `layoutContractEnforced`, overlap checks, and typography gates are real runtime results rather than local approximations.
 9. Use shared legends or shared colorbars when panels encode the same semantics.
@@ -254,7 +254,7 @@ Keep exactly one active phase. Expand the active phase into concrete sub-tasks, 
 - Before Phase 3, ensure the panel blueprint and palette plan are explicit.
 - Before Phase 3, resolve blocking chart/stat/layout/palette agent findings.
 - Before Phase 4, ensure code generation includes source-data, render-QA, and metadata hooks.
-- Before completion, require `renderQa.hardFail == false`, `legendContractEnforced == true`, `layoutContractEnforced == true`, `legendOutsidePlotArea == true`, `axisLegendRemainingCount == 0`, `layoutContractFailures == []`, `legendModeUsed in ["top_center", "none"]`, exactly one rounded-frame shared top-center legend when a legend exists, and enough data-derived visual content to satisfy `visualContentPlan.minTotalEnhancements` and `visualContentPlan.minInPlotLabelsPerFigure`.
+- Before completion, require `renderQa.hardFail == false`, `legendContractEnforced == true`, `layoutContractEnforced == true`, `legendOutsidePlotArea == true`, `axisLegendRemainingCount == 0`, `layoutContractFailures == []`, `legendModeUsed in ["bottom_center", "none"]`, exactly one rounded-frame shared bottom-center legend when a legend exists, and enough data-derived visual content to satisfy `visualContentPlan.minTotalEnhancements` and `visualContentPlan.minInPlotLabelsPerFigure`.
 
 ## Related Commands
 

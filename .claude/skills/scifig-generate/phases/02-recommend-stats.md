@@ -487,7 +487,7 @@ def build_crowding_plan(primaryChart, secondaryCharts, dataProfile, workflowPref
     else:
         point_density_mode = "summary_or_thin_points"
 
-    legend_mode = "top_center"
+    legend_mode = "bottom_center"
 
     layout_fallbacks = {
         "story_board_2x2": ["hero_plus_stacked_support", "comparison_pair", "single"],
@@ -526,8 +526,8 @@ def build_crowding_plan(primaryChart, secondaryCharts, dataProfile, workflowPref
         "layoutFallbacks": layout_fallbacks,
         "legendScope": "figure",
         "legendMode": legend_mode,
-        "legendPlacementPriority": ["top_center"],
-        "legendAllowedModes": ["top_center"],
+        "legendPlacementPriority": ["bottom_center"],
+        "legendAllowedModes": ["bottom_center"],
         "legendLabelMaxChars": 32,
         "maxLegendColumns": 6,
         "legendFrame": True,

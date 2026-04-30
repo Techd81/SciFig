@@ -645,7 +645,7 @@ Use `panelBlueprint` as the source of truth and embed the canonical source from 
 Composition rules that must remain true:
 
 - Shared legends/colorbars are external layout elements, not plotted-area annotations.
-- Top-center rounded framed shared legend is mandatory for final composites. Outside-right, bottom, in-axes, and `loc="best"` publication legends are forbidden.
+- Bottom-center rounded framed shared legend is mandatory for final composites. Outside-right, top-center, in-axes, and `loc="best"` publication legends are forbidden.
 - Risk tables, side summaries, and footnotes need reserved GridSpec/subfigure slots; no negative `ax.transAxes` text unless a slot is reserved.
 - Print-scale typography only: body 5-7 pt, axes labels 6-8 pt, panel labels 8-10 pt, compact titles 7-9 pt.
 - Panel labels use consistent anchor/font/offset, and axis link groups are used only when scales are semantically identical.

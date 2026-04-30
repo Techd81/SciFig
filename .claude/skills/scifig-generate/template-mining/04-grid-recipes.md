@@ -149,7 +149,7 @@ Rules:
 - Top panel spans both columns and carries the algorithm-selection argument.
 - Bottom panels must share diagnostic scale semantics where possible.
 - Use `ml_model_performance_10`; RF/RFR should remain visually prominent when present.
-- Keep figure legend top-center after the final legend contract pass, not inside any panel.
+- Keep figure legend bottom-center after the final legend contract pass, not inside any panel.
 
 ---
 
@@ -323,7 +323,7 @@ Anchor: `期刊配图复现 _ Matplotlib 挑战"多面板+三Y轴"组合图`.
 | Panel labels A/B/C/D bold, 8-10 pt, at `(-0.12, 1.05)` axes fraction | most multi-panel cases | `ax.text(-0.12, 1.05, 'a', transform=ax.transAxes, fontweight='bold', fontsize=8)` |
 | Outer-only tick labels in shared-axis grids | n×n, 1×N | use `sharex/sharey` or hide via `tick_params(labelbottom/left=False)` |
 | Colorbar `shrink=0.6`, `pad=0.04`, beside heatmap panels | all heatmap cases | never inside the data rectangle |
-| Legend outside the data rectangle (top-center only) | all multi-condition cases | `bbox_to_anchor=(0.5, 0.99), loc='upper center'` with reserved top margin and a rounded frame; outside-right, bottom, and in-axes legends are forbidden in final output |
+| Legend outside the data rectangle (bottom-center only) | all multi-condition cases | `bbox_to_anchor=(0.5, 0.01), loc='lower center'` with reserved bottom margin and a rounded frame; outside-right, top-center, and in-axes legends are forbidden in final output |
 | `hspace=0.30`, `wspace=0.25` defaults for 2×N grids | majority | tighten to 0.10 when sharing axis, loosen to 0.40 when polar |
 
 ## Helpers contract

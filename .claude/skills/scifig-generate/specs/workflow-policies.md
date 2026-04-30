@@ -86,8 +86,8 @@ If a user-selected or inferred domain contains AI/ML/computer-science signals, P
 ```python
 CROWDING_POLICY = {
     "legend_scope": "figure",
-    "legend_priority": ["top_center"],
-    "legend_allowed_modes": ["top_center"],
+    "legend_priority": ["bottom_center"],
+    "legend_allowed_modes": ["bottom_center"],
     "legend_label_max_chars": 32,
     "max_legend_columns": 6,
     "legend_frame": True,
@@ -131,7 +131,7 @@ LAYOUT_SCORE_WEIGHTS = {
 }
 ```
 
-Before Phase 3 locks the plan, score each candidate layout for group count, label length, legend burden, colorbar need, panel count, and chart aspect ratio. Prefer a lower-scoring layout even when it has fewer panels. In composite figures, every panel-level legend is only a temporary handle source: the final output must have one framed figure-level legend centered at the bottom or top. `outside_right`, `loc="best"`, and any in-axes legend are forbidden in final publication output. Every saved figure must pass through the skill helper `enforce_figure_legend_contract(...)` immediately before `savefig`; missing embedded helper source, custom replacement helpers, missing `legendContractEnforced`, remaining axis legend, unframed final legend, or final legend overlap is a hard failure. Risk tables, footnotes, and outside summaries require a reserved GridSpec/subfigure/table slot; negative `ax.transAxes` text coordinates such as `y=-0.18` are forbidden because they can collide with lower panels. Print-scale typography is mandatory: body 5-7 pt, axis labels 6-8 pt, panel labels 8-10 pt, titles 7-9 pt, and any generated `font.size >= 12`, `fontsize >= 13`, or panel label >12 pt is a hard failure. If a rendered legend, colorbar, title, table, risk table, or direct label overlaps another panel's layout box, reflow before export.
+Before Phase 3 locks the plan, score each candidate layout for group count, label length, legend burden, colorbar need, panel count, and chart aspect ratio. Prefer a lower-scoring layout even when it has fewer panels. In composite figures, every panel-level legend is only a temporary handle source: the final output must have one framed figure-level legend centered at the bottom, below every plotting panel, so it cannot collide with the figure title. `outside_right`, top-center, `loc="best"`, and any in-axes legend are forbidden in final publication output. Every saved figure must pass through the skill helper `enforce_figure_legend_contract(...)` immediately before `savefig`; missing embedded helper source, custom replacement helpers, missing `legendContractEnforced`, remaining axis legend, unframed final legend, or final legend overlap is a hard failure. Risk tables, footnotes, and outside summaries require a reserved GridSpec/subfigure/table slot; negative `ax.transAxes` text coordinates such as `y=-0.18` are forbidden because they can collide with lower panels. Print-scale typography is mandatory: body 5-7 pt, axis labels 6-8 pt, panel labels 8-10 pt, titles 7-9 pt, and any generated `font.size >= 12`, `fontsize >= 13`, or panel label >12 pt is a hard failure. If a rendered legend, colorbar, title, table, risk table, or direct label overlaps another panel's layout box, reflow before export.
 
 ## Performance Policy
 
@@ -219,4 +219,4 @@ Phase 4 must produce `render_qa.json` with:
 - `statProvenanceWarnings`
 - `impactScore` (0-100 from visual-impact-scorer agent)
 
-Any hard failure returns to Phase 3 for styling/layout/code or Phase 2 for an overpacked plan. `legendContractEnforced != true`, non-empty `legendContractFailures`, `layoutContractEnforced != true`, non-empty `layoutContractFailures`, `axisLegendRemainingCount > 0`, `legendOutsidePlotArea == false`, `figureLegendCount != 1` when a legend exists, `legendModeUsed != "top_center"` when a legend exists, `legendFrameApplied == false` when a legend exists, negative axes text without a reserved slot, poster-scale font sizes, cross-panel table/title/text overlap, missing in-plot explanatory labels, missing required reference motifs, or `visualEnhancementCount < visualContentPlan.minTotalEnhancements` are hard failures. `impactScore < 20` is a hard fail; `impactScore < 40` is a warning.
+Any hard failure returns to Phase 3 for styling/layout/code or Phase 2 for an overpacked plan. `legendContractEnforced != true`, non-empty `legendContractFailures`, `layoutContractEnforced != true`, non-empty `layoutContractFailures`, `axisLegendRemainingCount > 0`, `legendOutsidePlotArea == false`, `figureLegendCount != 1` when a legend exists, `legendModeUsed != "bottom_center"` when a legend exists, `legendFrameApplied == false` when a legend exists, negative axes text without a reserved slot, poster-scale font sizes, cross-panel table/title/text overlap, missing in-plot explanatory labels, missing required reference motifs, or `visualEnhancementCount < visualContentPlan.minTotalEnhancements` are hard failures. `impactScore < 20` is a hard fail; `impactScore < 40` is a warning.
