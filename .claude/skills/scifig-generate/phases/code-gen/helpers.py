@@ -165,6 +165,8 @@ def _extract_colors(palette, categories):
 
 
 def display_label(sanitized_name, col_map):
+    if not col_map:
+        return sanitized_name
     return col_map.get(sanitized_name, sanitized_name)
 
 
@@ -1652,26 +1654,37 @@ def apply_visual_content_pass(fig, axes, chartPlan, dataProfile, journalProfile,
         chart_type = panel_lookup.get(panel_id) or chartPlan.get("primaryChart")
         family = infer_chart_family(chart_type)
         families[panel_id] = family
-        if family == "distribution":
-            enhancements = _enhance_distribution(ax, dataProfile, visualPlan, palette, col_map)
-        elif family == "scatter_embedding":
-            enhancements = _enhance_scatter(ax, dataProfile, visualPlan, palette, col_map)
-        elif family == "matrix_heatmap":
-            enhancements = _enhance_matrix(ax, dataProfile, visualPlan, palette, col_map)
-        elif family == "time_series":
-            enhancements = _enhance_time_series(ax, dataProfile, visualPlan, palette, col_map)
-        elif family == "clinical_diagnostic":
-            enhancements = _enhance_clinical(ax, dataProfile, visualPlan, palette, col_map, str(chart_type or ""))
-        elif family == "genomics_enrichment":
-            enhancements = _enhance_genomics(ax, dataProfile, visualPlan, palette, col_map, str(chart_type or ""))
-        elif family == "engineering_spectra":
-            enhancements = _enhance_engineering(ax, dataProfile, visualPlan, palette, col_map)
-        elif family == "composition_flow":
-            enhancements = _enhance_composition(ax, dataProfile, visualPlan, palette, col_map)
-        elif family == "psych_ecology":
-            enhancements = _enhance_psych_ecology(ax, dataProfile, visualPlan, palette, col_map)
-        else:
-            enhancements = _enhance_generic(ax, dataProfile, visualPlan, palette, col_map)
+        try:
+            if family == "distribution":
+                enhancements = _enhance_distribution(ax, dataProfile, visualPlan, palette, col_map)
+            elif family == "scatter_embedding":
+                enhancements = _enhance_scatter(ax, dataProfile, visualPlan, palette, col_map)
+            elif family == "matrix_heatmap":
+                enhancements = _enhance_matrix(ax, dataProfile, visualPlan, palette, col_map)
+            elif family == "time_series":
+                enhancements = _enhance_time_series(ax, dataProfile, visualPlan, palette, col_map)
+            elif family == "clinical_diagnostic":
+                enhancements = _enhance_clinical(ax, dataProfile, visualPlan, palette, col_map, str(chart_type or ""))
+            elif family == "genomics_enrichment":
+                enhancements = _enhance_genomics(ax, dataProfile, visualPlan, palette, col_map, str(chart_type or ""))
+            elif family == "engineering_spectra":
+                enhancements = _enhance_engineering(ax, dataProfile, visualPlan, palette, col_map)
+            elif family == "composition_flow":
+                enhancements = _enhance_composition(ax, dataProfile, visualPlan, palette, col_map)
+            elif family == "psych_ecology":
+                enhancements = _enhance_psych_ecology(ax, dataProfile, visualPlan, palette, col_map)
+            else:
+                enhancements = _enhance_generic(ax, dataProfile, visualPlan, palette, col_map)
+        except Exception as exc:
+            visualPlan.setdefault("enhancementWarnings", []).append({
+                "panel": panel_id,
+                "family": family,
+                "error": f"{type(exc).__name__}: {str(exc)[:120]}",
+            })
+            try:
+                enhancements = _enhance_generic(ax, dataProfile, visualPlan, palette, col_map)
+            except Exception:
+                enhancements = []
 
         fallback_label = _ensure_panel_explanatory_label(ax, visualPlan, family)
         if fallback_label is not None:

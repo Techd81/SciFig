@@ -506,8 +506,23 @@ def gen_line(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=Non
     x_col = roles.get("x") or roles.get("time") or roles.get("dose") or roles.get("condition")
     y_col = roles.get("value") or roles.get("y") or roles.get("response")
     group_col = roles.get("group")
+    columns_lower = {str(c).lower(): c for c in df.columns}
+    patterns = {str(p).lower() for p in dataProfile.get("specialPatterns", [])}
+    template_case = (chartPlan.get("templateCasePlan") or chartPlan.get("visualContentPlan", {}).get("templateCasePlan") or {})
+    is_incremental_ml = (
+        template_case.get("bundleKey") == "incremental_feature_selection_curve"
+        or "incremental_feature_selection" in patterns
+        or "feature_selection" in patterns
+        or any(token in columns_lower for token in ("n_features", "top_k", "feature_count", "ablation"))
+    )
 
     numeric_cols = df.select_dtypes(include="number").columns.tolist()
+    if is_incremental_ml:
+        x_candidates = ["n_features", "top_k", "feature_count", "ablation"]
+        metric_candidates = ["auc", "accuracy", "f1", "r2", "score", "mae", "rmse", "mse", "error"]
+        x_col = x_col or next((columns_lower[c] for c in x_candidates if c in columns_lower), None)
+        y_col = y_col or next((columns_lower[c] for c in metric_candidates if c in columns_lower), None)
+        group_col = group_col or roles.get("model") or roles.get("algorithm") or columns_lower.get("model") or columns_lower.get("algorithm")
     if y_col is None:
         y_col = numeric_cols[-1] if numeric_cols else None
     if y_col is None:
@@ -518,7 +533,63 @@ def gen_line(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=Non
                            constrained_layout=True)
 
     fallback = palette.get("categorical", ["#1F4E79", "#C8553D", "#4C956C", "#F2A541"])
-    if x_col is None:
+    if is_incremental_ml and x_col and x_col in df.columns:
+        score_name = str(y_col).lower()
+        lower_is_better = any(token in score_name for token in ("rmse", "mae", "mse", "error", "loss"))
+        color_map = _extract_colors(palette, df[group_col].dropna().unique()) if group_col and group_col in df.columns else {}
+        groups = [(None, df)] if not group_col or group_col not in df.columns else list(df.groupby(group_col))
+
+        def _final_score(item):
+            _, grp = item
+            ordered = grp.sort_values(x_col)
+            vals = pd.to_numeric(ordered[y_col], errors="coerce").dropna()
+            return vals.iloc[-1] if len(vals) else np.nan
+
+        groups = sorted(groups, key=_final_score, reverse=not lower_is_better)
+        for i, (name, grp) in enumerate(groups):
+            ordered = grp.sort_values(x_col)
+            label = "feature path" if name is None else str(name)
+            is_rf = any(token in label.lower() for token in ("random forest", "rf", "rfr"))
+            ax.plot(
+                ordered[x_col], ordered[y_col],
+                marker="o" if is_rf else "s",
+                markersize=4 if is_rf else 3,
+                lw=1.7 if is_rf else 0.9,
+                alpha=1.0 if is_rf else 0.74,
+                color=color_map.get(name, fallback[i % len(fallback)]),
+                label=label,
+                zorder=4 if is_rf else 2,
+            )
+        metric_values = pd.to_numeric(df[y_col], errors="coerce")
+        if metric_values.notna().any():
+            best_idx = metric_values.idxmin() if lower_is_better else metric_values.idxmax()
+            best_x = df.loc[best_idx, x_col]
+            best_y = df.loc[best_idx, y_col]
+            ax.axvline(best_x, color="#444444", lw=0.65, ls="--", alpha=0.65, zorder=1)
+            ax.axhline(best_y, color="#444444", lw=0.65, ls="--", alpha=0.45, zorder=1)
+            ax.scatter([best_x], [best_y], s=34, color="#B00000", edgecolor="white", linewidth=0.5, zorder=5)
+            ax.text(
+                best_x, best_y, f"best {x_col}={best_x}\n{y_col}={best_y:.3g}",
+                ha="left", va="bottom", fontsize=5.2, color="#111111",
+                bbox=dict(boxstyle="round,pad=0.22", facecolor="white", edgecolor="#333333", linewidth=0.45, alpha=0.92),
+                zorder=6,
+            )
+        ax.set_xlabel(_display_col(x_col, col_map))
+        ax.set_ylabel(_display_col(y_col, col_map))
+        handles, labels = ax.get_legend_handles_labels()
+        if labels:
+            ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.24), ncol=min(4, len(labels)),
+                      frameon=False, fontsize=5)
+            if standalone:
+                try:
+                    if hasattr(ax.figure, "set_layout_engine"):
+                        ax.figure.set_layout_engine(None)
+                    else:
+                        ax.figure.set_constrained_layout(False)
+                except Exception:
+                    pass
+                ax.figure.subplots_adjust(bottom=max(ax.figure.subplotpars.bottom, 0.28))
+    elif x_col is None:
         x_vals = np.arange(len(df))
         if group_col and group_col in df.columns:
             color_map = _extract_colors(palette, df[group_col].dropna().unique())

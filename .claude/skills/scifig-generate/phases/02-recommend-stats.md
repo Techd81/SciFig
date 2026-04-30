@@ -143,8 +143,20 @@ def recommend_chart_bundle(dataProfile, workflowPreferences):
         or "ml_model_family" in patterns
         or ("model" in roles and any(role in roles for role in ("metric", "score", "rmse", "mae", "residual")))
     )
+    has_feature_selection_curve = (
+        "incremental_feature_selection" in patterns
+        or "feature_selection" in patterns
+        or "ablation_curve" in patterns
+        or any(token in cols for token in ("n_features", "top_k", "feature_count", "ablation"))
+    ) and (
+        domain == "computer_ai_ml"
+        or has_model_performance
+        or any(token in cols for token in ("auc", "accuracy", "f1", "r2", "rmse", "mae"))
+    )
 
     # Direct pattern matches
+    if has_feature_selection_curve:
+        return "line", ["grouped_bar", "lollipop_horizontal"]
     if has_model_performance and has_prediction_fit:
         return "grouped_bar", ["scatter_regression", "residual_vs_fitted"]
     if has_model_performance:
@@ -737,11 +749,27 @@ def infer_template_visual_motifs(charts, dataProfile):
     }
 
 
-def resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreferences):
+def resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreferences, dataProfile=None):
     """Bind selected or detected chart families to template-mining cases and technique refs."""
     selected_bundle = workflowPreferences.get("selectedChartBundle") or {}
     charts = [primaryChart] + list(secondaryCharts or [])
     normalized = {str(chart or "").replace("+", "_").lower() for chart in charts if chart}
+    profile = dataProfile or {}
+    roles = profile.get("semanticRoles", {}) or {}
+    cols = {str(c).lower() for c in profile.get("columnNames", [])}
+    patterns = {str(p).lower() for p in profile.get("specialPatterns", [])}
+    domain_hint = str((profile.get("domainHints") or {}).get("primary", "")).lower()
+    profile_tokens = set(cols) | {str(k).lower() for k in roles} | {str(v).lower() for v in roles.values()} | patterns
+    ml_tokens = {
+        "model", "algorithm", "estimator", "random forest", "rf", "rfr",
+        "xgboost", "lightgbm", "gbdt", "svm", "knn", "train", "training",
+        "test", "testing", "validation", "cv", "auc", "accuracy", "f1",
+        "precision", "recall", "r2", "rmse", "mae", "residual", "shap",
+        "feature_importance",
+    }
+    feature_selection_tokens = {"n_features", "top_k", "feature_count", "ablation", "feature_selection", "incremental_feature_selection"}
+    has_ml_signal = domain_hint == "computer_ai_ml" or bool(profile_tokens & ml_tokens)
+    has_feature_selection_signal = bool(profile_tokens & feature_selection_tokens)
     family_map = {
         "scatter_regression": "marginal_joint",
         "residual_vs_fitted": "marginal_joint",
@@ -800,6 +828,8 @@ def resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreference
     families = list(selected_bundle.get("templateFamilies") or [])
     for chart in sorted(normalized):
         family = family_map.get(chart)
+        if family == "ml_model_diagnostics" and chart in {"line", "grouped_bar"} and not (selected_bundle or has_ml_signal or has_feature_selection_signal):
+            continue
         if family and family not in families:
             families.append(family)
 
@@ -817,10 +847,10 @@ def resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreference
     inferred_bundle_key = selected_bundle.get("bundleKey")
     if not inferred_bundle_key:
         chart_set = set(normalized)
-        if "ml_model_diagnostics" in families and {"grouped_bar", "scatter_regression", "residual_vs_fitted"} & chart_set:
-            inferred_bundle_key = "rf_model_performance_report"
-        elif "ml_model_diagnostics" in families and "line" in chart_set:
+        if "ml_model_diagnostics" in families and "line" in chart_set and has_feature_selection_signal:
             inferred_bundle_key = "incremental_feature_selection_curve"
+        elif "ml_model_diagnostics" in families and {"grouped_bar", "scatter_regression", "residual_vs_fitted"} & chart_set:
+            inferred_bundle_key = "rf_model_performance_report"
         elif "shap_composite" in families and {"lollipop_horizontal", "dotplot", "heatmap_annotated"} & chart_set:
             inferred_bundle_key = "rf_feature_importance_shap"
         elif {"roc", "pr_curve", "calibration"} & chart_set:
@@ -845,6 +875,7 @@ def resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreference
             "preserve_template_chart_composition_before_data_specific_adaptation",
             "use_template_palette_layering_annotation_idioms_when_supported",
             "when_bundleKey_is_inferred_follow_the_same_template_case_as_user_selected_bundle",
+            "when_feature_count_or_ablation_columns_exist_clone_incremental_feature_selection_curve",
         ],
     }
 
@@ -870,7 +901,7 @@ def build_visual_content_plan(primaryChart, secondaryCharts, dataProfile, workfl
         point_annotation_mode = "direct_when_legible"
     reference_motifs = infer_reference_visual_motifs(charts, dataProfile)
     template_motif_plan = infer_template_visual_motifs(charts, dataProfile)
-    template_case_plan = resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreferences)
+    template_case_plan = resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreferences, dataProfile)
     template_motifs = template_motif_plan["motifs"]
     template_density_bonus = min(2, len(template_motifs))
 
@@ -1027,7 +1058,7 @@ annotations = configure_annotations(dataProfile, primaryChart, statPlan)
 panelBlueprint = build_panel_blueprint(primaryChart, secondaryCharts, dataProfile, workflowPreferences)
 crowdingPlan = build_crowding_plan(primaryChart, secondaryCharts, dataProfile, workflowPreferences, panelBlueprint)
 visualContentPlan = build_visual_content_plan(primaryChart, secondaryCharts, dataProfile, workflowPreferences)
-templateCasePlan = visualContentPlan.get("templateCasePlan", resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreferences))
+templateCasePlan = visualContentPlan.get("templateCasePlan", resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreferences, dataProfile))
 palettePlan = build_palette_plan(primaryChart, dataProfile, workflowPreferences)
 
 delegationReports = {

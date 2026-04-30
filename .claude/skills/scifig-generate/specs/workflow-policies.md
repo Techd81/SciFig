@@ -85,7 +85,7 @@ If a user-selected or inferred domain contains AI/ML/computer-science signals, P
 
 ```python
 AUTONOMOUS_DISTILLATION_POLICY = {
-    "cycle_minutes": 30,
+    "cycle_minutes": 5,
     "smoke_output_root": "output/autonomous_distill",
     "smoke_domains": [
         "computer_ai_ml",
