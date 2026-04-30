@@ -752,3 +752,69 @@ def bootstrap_chart(arc: str, *,
     fig, axes = build_grid(recipe, figsize=figsize)
     pal = resolve_palette(palette, journalProfile=journalProfile)
     return fig, axes, pal
+
+
+# ============================================================================
+# 8. FOREST PLOT (cycle 2 addition)
+# ============================================================================
+
+def add_forest_panel(ax, hrs, lower, upper, labels, *,
+                      color="#3C5488",
+                      reference_line=1.0,
+                      log_scale=True,
+                      show_yticklabels=True,
+                      annotation_format="{hr:.2f} ({lo:.2f}-{hi:.2f})",
+                      title=None):
+    """One-call forest panel: dashed reference line + HR markers with asymmetric
+    CI whiskers + per-row HR(CI) annotation column at right edge.
+
+    Anchor cases: HR multi-cohort forest (Nature Comms), risk-ratio caterpillar.
+    Annotation is positioned via axes-fraction (x=0.99) so it never collides
+    with the marker positions on log scale.
+    """
+    n = len(hrs)
+    y_pos = np.arange(n)
+    hrs = np.asarray(hrs, dtype=float)
+    lower = np.asarray(lower, dtype=float)
+    upper = np.asarray(upper, dtype=float)
+
+    ax.xaxis.grid(True, linestyle=':', color='#E0E0E0',
+                  linewidth=0.6, zorder=0)
+    ax.set_axisbelow(True)
+    ax.axvline(reference_line, color='#888888', linestyle='--',
+               linewidth=1.0, zorder=1)
+
+    xerr = [hrs - lower, upper - hrs]
+    ax.errorbar(hrs, y_pos, xerr=xerr, fmt='o',
+                color=color, ecolor=color, elinewidth=2, capsize=4,
+                markersize=9, markeredgecolor='white', markeredgewidth=0.6,
+                zorder=10)
+
+    for i, (hr, lo, hi) in enumerate(zip(hrs, lower, upper)):
+        ax.text(0.99, y_pos[i],
+                annotation_format.format(hr=hr, lo=lo, hi=hi),
+                transform=ax.get_yaxis_transform(),
+                ha='right', va='center',
+                fontsize=9, color='#222',
+                family='monospace', zorder=15,
+                bbox=dict(boxstyle='round,pad=0.15',
+                          fc='white', ec='none', alpha=0.85))
+
+    if log_scale:
+        ax.set_xscale('log')
+        from matplotlib.ticker import LogLocator, ScalarFormatter
+        ax.xaxis.set_major_locator(LogLocator(base=10.0, subs=(1.0,), numticks=5))
+        formatter = ScalarFormatter()
+        formatter.set_scientific(False)
+        ax.xaxis.set_major_formatter(formatter)
+
+    ax.set_yticks(y_pos)
+    if show_yticklabels:
+        ax.set_yticklabels(labels, fontsize=10)
+    else:
+        ax.set_yticklabels([])
+    ax.invert_yaxis()
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    if title:
+        ax.set_title(title, color=color, fontsize=12, fontweight='bold')
