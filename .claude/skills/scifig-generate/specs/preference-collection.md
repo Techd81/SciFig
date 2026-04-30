@@ -278,7 +278,7 @@ _TEMPLATE_CHART_BUNDLE_SEEDS = {
             "families": ["ml_model_diagnostics", "shap_composite"],
             "techniqueRefs": ["template-mining/07-techniques/ml-model-diagnostics.md", "template-mining/07-techniques/shap-composite.md"],
             "anchors": ["鎷掔粷榛樿閰嶈壊锛歅ython 缁樺埗澶氭ā鍨嬫€ц兘瀵规瘮鍥剧殑杩涢樁瀹炴垬_1777451272.md", "鏈熷垔澶嶇幇锛氶殢鏈烘．鏋?RF)妯″瀷椹卞姩鐨凟FI鐗瑰緛閲嶈搴︽潯褰㈠浘涓嶴HAP鍦嗙幆鍥惧彲瑙嗗寲_1777456510.md"],
-            "en": ("RF classifier validation + importance board", "Use when RF/Random Forest classifier probability and label fields appear with feature importance, SHAP, gain, or permutation fields; render validation and explanation together."),
+            "en": ("RF classifier validation + importance board", "Use when RF/Random Forest classifier probability and label fields appear with feature importance, SHAP, gain, or permutation fields; render validation and explanation together, with RF highlighted when competing against XGBoost/SVM/other classifiers."),
             "zh": ("RF 分类验证 + 重要性板", "当 RF/Random Forest 分类概率、标签和特征重要性/SHAP/gain/permutation 字段同时出现时，同图展示验证与解释。"),
         },
         {

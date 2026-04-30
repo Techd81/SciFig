@@ -88,14 +88,16 @@ When RF/Random Forest classifier probability and label columns appear together w
 - Keep the classifier validation board as the visual hero, then add a ranked RF feature-importance lane.
 - Use the feature importance values supplied by the data; do not fabricate importances from labels alone.
 - Accept stacked long tables that separate prediction rows from feature-importance rows using `table_type`, `record_type`, `row_type`, or similar source columns.
+- When multiple classifier models appear in the same table (RF, XGBoost, SVM, etc.), select the explicit `selected_model` / `is_selected` model when supplied, otherwise prefer RF as the report anchor; never mix probability rows from competing models in the validation sub-board.
+- Use a compact model-competition strip and bottom-centered figure legend to keep model colors/selection semantics outside the plotting area.
 - Wrap long feature names into compact two-line labels before truncating so dense importance lanes remain legible.
 - Add a compact model summary with n, positive count, best threshold, best F1, and number of ranked features.
-- Executable fallback: `rf_classifier_report_board` splits validation rows from importance rows when a source/type column exists, embeds `classifier_validation_board`, draws a top-12 relative importance lane with wrapped feature labels, and records both classifier-validation and explainability motifs for render QA.
+- Executable fallback: `rf_classifier_report_board` splits validation rows from importance rows when a source/type column exists, filters the validation board to the selected/RF model in multi-model tables, embeds `classifier_validation_board`, draws a top-12 relative importance lane with wrapped feature labels, adds model-competition semantics, and records both classifier-validation and explainability motifs for render QA.
 
 ## Routing Rules
 
 - Prefer `rf_model_performance_report` when both model benchmark metrics and actual/predicted or residual fields exist.
-- Prefer `rf_classifier_validation_report` / `rf_classifier_report_board` when RF classifier score+label data also include feature importance or SHAP-style explanation fields.
+- Prefer `rf_classifier_validation_report` / `rf_classifier_report_board` when RF classifier score+label data also include feature importance or SHAP-style explanation fields, especially when RF is one competitor among XGBoost/SVM/other classifiers and needs a highlighted manuscript-ready report.
 - Prefer `neural_architecture_metric_storyboard` / `model_architecture_board` when architecture fields include latency/FLOPs/memory/throughput/cost/edge metrics.
 - Prefer `neural_architecture_topology` when layer/module/component or source-target architecture fields exist without metric columns.
 - Prefer `neural_training_dynamics` when epoch/step training histories include loss, validation loss, accuracy, or learning-rate fields.

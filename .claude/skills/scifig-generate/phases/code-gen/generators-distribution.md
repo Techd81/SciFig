@@ -4375,7 +4375,8 @@ def gen_classifier_validation_board(df, dataProfile, chartPlan, rcParams, palett
     axes["thr"].text(0.98, 0.08, sidecar, transform=axes["thr"].transAxes, fontsize=4.9,
                      ha="right", va="bottom",
                      bbox=dict(boxstyle="round,pad=0.24", facecolor="white", edgecolor=gray, linewidth=0.45, alpha=0.95))
-    _polish_subaxis(axes["thr"], "D. Threshold + confusion sidecar")
+    threshold_title = "D. Threshold sweep" if chartPlan.get("suppressBoardTitle") else "D. Threshold + confusion sidecar"
+    _polish_subaxis(axes["thr"], threshold_title)
 
     if standalone:
         fig.subplots_adjust(left=0.05, right=0.98, top=0.93, bottom=0.09)
@@ -4417,6 +4418,8 @@ def gen_rf_classifier_report_board(df, dataProfile, chartPlan, rcParams, palette
         contains=("importance", "mean_abs_shap", "gain", "permutation", "shap")
     )
     model_col = _role_or_col("model", "algorithm", "estimator", contains=("model", "algorithm", "estimator"))
+    selected_col = _role_or_col("selected_model", "focus_model", "is_selected", "selected", "highlight", "winner",
+                                contains=("selected", "focus", "winner"))
     if score_col is None or label_col is None:
         raise ValueError("rf_classifier_report_board requires score/probability and binary label columns")
 
@@ -4436,6 +4439,61 @@ def gen_rf_classifier_report_board(df, dataProfile, chartPlan, rcParams, palette
             if importance_mask.any() or feature_mask.any():
                 importance_source_df = df[importance_mask | feature_mask].copy()
 
+    def _is_rf_model(value):
+        label = str(value).lower().replace("-", " ").replace("_", " ")
+        collapsed = label.replace(" ", "")
+        return "random forest" in label or collapsed in {"rf", "rfr", "randomforest"} or collapsed.startswith("rf")
+
+    def _truthy(value):
+        return str(value).strip().lower() in {"1", "true", "yes", "y", "selected", "focus", "winner", "best"}
+
+    def _compact_model_label(value, width=17):
+        text = str(value).strip()
+        if len(text) <= width:
+            return text
+        return text[:max(3, width - 3)].rstrip() + "..."
+
+    def _ordered_models(source_df):
+        if not model_col or model_col not in source_df.columns:
+            return []
+        return [str(value) for value in source_df[model_col].dropna().drop_duplicates().tolist()]
+
+    def _choose_selected_model(model_values, source_df):
+        requested = None
+        if isinstance(chartPlan, dict):
+            requested = (
+                chartPlan.get("selectedModel")
+                or chartPlan.get("focusModel")
+                or chartPlan.get("highlightModel")
+                or chartPlan.get("referenceModel")
+            )
+        if requested:
+            requested_text = str(requested).lower()
+            for model in model_values:
+                if str(model).lower() == requested_text or requested_text in str(model).lower():
+                    return model
+        if selected_col and selected_col in source_df.columns and model_col in source_df.columns:
+            selected_values = source_df[selected_col].dropna().astype(str).tolist()
+            for value in selected_values:
+                for model in model_values:
+                    if value.lower() == str(model).lower() or value.lower() in str(model).lower():
+                        return model
+            truth_mask = source_df[selected_col].apply(_truthy)
+            if truth_mask.any():
+                return str(source_df.loc[truth_mask, model_col].dropna().iloc[0])
+        for model in model_values:
+            if _is_rf_model(model):
+                return model
+        return model_values[0] if model_values else None
+
+    model_values = _ordered_models(prediction_df)
+    selected_model = _choose_selected_model(model_values, prediction_df) if model_values else None
+    selected_prediction_df = prediction_df
+    if selected_model and len(model_values) > 1 and model_col in prediction_df.columns:
+        model_mask = prediction_df[model_col].astype(str).eq(str(selected_model))
+        if model_mask.any():
+            selected_prediction_df = prediction_df[model_mask].copy()
+
     if standalone:
         fig, ax = plt.subplots(figsize=(183 / 25.4, 128 / 25.4), constrained_layout=False)
     fig = ax.figure
@@ -4453,22 +4511,28 @@ def gen_rf_classifier_report_board(df, dataProfile, chartPlan, rcParams, palette
         _visual_count(visual_plan, "metricBoxCount")
         _visual_count(visual_plan, "panelLabelCount")
 
-    validation_ax = ax.inset_axes([0.025, 0.060, 0.645, 0.855])
-    importance_ax = ax.inset_axes([0.725, 0.325, 0.245, 0.535])
-    summary_ax = ax.inset_axes([0.725, 0.080, 0.245, 0.155])
+    validation_ax = ax.inset_axes([0.025, 0.075, 0.645, 0.840])
+    importance_ax = ax.inset_axes([0.725, 0.415, 0.245, 0.445])
+    model_ax = ax.inset_axes([0.725, 0.235, 0.245, 0.095])
+    summary_ax = ax.inset_axes([0.725, 0.075, 0.245, 0.120])
 
     validation_plan = dict(chartPlan or {})
     validation_plan["primaryChart"] = "classifier_validation_board"
     validation_plan["suppressBoardTitle"] = True
     validation_plan["templateCasePlan"] = {"bundleKey": "classifier_validation_board"}
     validation_profile = dict(dataProfile)
-    validation_profile["df"] = prediction_df
-    validation_profile["nObservations"] = len(prediction_df)
-    gen_classifier_validation_board(prediction_df, validation_profile, validation_plan, rcParams, palette, col_map=col_map, ax=validation_ax)
+    validation_profile["df"] = selected_prediction_df
+    validation_profile["nObservations"] = len(selected_prediction_df)
+    gen_classifier_validation_board(selected_prediction_df, validation_profile, validation_plan, rcParams, palette, col_map=col_map, ax=validation_ax)
 
     colors = palette.get("categorical", ["#1F4E79", "#D55E00", "#009E73", "#7A6C8F"])
-    if feature_col and importance_col and feature_col in importance_source_df.columns and importance_col in importance_source_df.columns:
-        feature_df = importance_source_df[[feature_col, importance_col]].dropna().copy()
+    importance_model_df = importance_source_df
+    if selected_model and model_col and model_col in importance_source_df.columns:
+        importance_model_mask = importance_source_df[model_col].astype(str).eq(str(selected_model))
+        if importance_model_mask.any():
+            importance_model_df = importance_source_df[importance_model_mask].copy()
+    if feature_col and importance_col and feature_col in importance_model_df.columns and importance_col in importance_model_df.columns:
+        feature_df = importance_model_df[[feature_col, importance_col]].dropna().copy()
         feature_df[importance_col] = pd.to_numeric(feature_df[importance_col], errors="coerce")
         feature_df = feature_df.dropna(subset=[importance_col])
         if not feature_df.empty:
@@ -4495,6 +4559,89 @@ def gen_rf_classifier_report_board(df, dataProfile, chartPlan, rcParams, palette
             wrapped[-1] = wrapped[-1][:max(3, width - 3)].rstrip() + "..."
         return "\n".join(wrapped)
 
+    def _score_label_arrays(source_df):
+        if score_col not in source_df.columns or label_col not in source_df.columns:
+            return np.array([]), np.array([])
+        score_series = pd.to_numeric(source_df[score_col], errors="coerce").astype(float).clip(0, 1)
+        raw_label_series = source_df[label_col]
+        if pd.api.types.is_numeric_dtype(raw_label_series):
+            label_series = pd.to_numeric(raw_label_series, errors="coerce")
+            unique_values = sorted([v for v in label_series.dropna().unique().tolist()], key=lambda value: str(value))
+            positive_value = unique_values[-1] if unique_values else 1
+            y_series = (label_series == positive_value).astype(int)
+            valid_mask = score_series.notna() & label_series.notna()
+        else:
+            unique_values = sorted(raw_label_series.dropna().astype(str).unique().tolist())
+            positive_value = unique_values[-1] if unique_values else "positive"
+            y_series = raw_label_series.astype(str).eq(str(positive_value)).astype(int)
+            valid_mask = score_series.notna() & raw_label_series.notna()
+        return score_series[valid_mask].to_numpy(), y_series[valid_mask].to_numpy()
+
+    def _auc_for_frame(source_df):
+        scores, labels = _score_label_arrays(source_df)
+        if len(scores) == 0 or len(np.unique(labels)) < 2:
+            return np.nan
+        positives = float(np.sum(labels == 1))
+        negatives = float(np.sum(labels == 0))
+        if positives == 0 or negatives == 0:
+            return np.nan
+        order = np.argsort(scores)
+        ranks = np.empty_like(order, dtype=float)
+        ranks[order] = np.arange(1, len(scores) + 1, dtype=float)
+        positive_rank_sum = float(np.sum(ranks[labels == 1]))
+        return (positive_rank_sum - positives * (positives + 1.0) / 2.0) / max(positives * negatives, 1.0)
+
+    def _model_color(model, index):
+        label = str(model).lower()
+        if _is_rf_model(model):
+            return colors[0 % len(colors)]
+        if any(token in label for token in ("xgboost", "xgb", "lightgbm", "gbdt")):
+            return colors[1 % len(colors)]
+        if "svm" in label or "support vector" in label:
+            return colors[2 % len(colors)]
+        return colors[(index + 3) % len(colors)]
+
+    display_models = []
+    if selected_model:
+        display_models.append(selected_model)
+    display_models.extend([model for model in model_values if str(model) != str(selected_model)])
+    display_models = display_models[:4]
+    model_entries = []
+    if model_col and model_col in prediction_df.columns:
+        for idx, model in enumerate(display_models):
+            model_frame = prediction_df[prediction_df[model_col].astype(str).eq(str(model))]
+            model_entries.append({
+                "model": model,
+                "label": _compact_model_label(model),
+                "color": _model_color(model, idx),
+                "selected": selected_model is not None and str(model) == str(selected_model),
+                "auc": _auc_for_frame(model_frame),
+                "n": int(len(model_frame)),
+            })
+
+    model_ax.set_axis_off()
+    if len(model_entries) > 1:
+        model_ax.text(0.00, 0.98, "F. model competition", transform=model_ax.transAxes,
+                      ha="left", va="top", fontsize=6.0, fontweight="bold")
+        ys = np.linspace(0.62, 0.12, len(model_entries))
+        for y_pos, entry in zip(ys, model_entries):
+            marker = "D" if entry["selected"] else "o"
+            model_ax.scatter([0.055], [y_pos], s=22 if entry["selected"] else 16, marker=marker,
+                             color=entry["color"], edgecolor="#111111" if entry["selected"] else "white",
+                             linewidth=0.45, transform=model_ax.transAxes, zorder=4)
+            model_ax.text(0.13, y_pos, entry["label"], transform=model_ax.transAxes, ha="left", va="center",
+                          fontsize=4.65, fontweight="bold" if entry["selected"] else "normal",
+                          color="#111111" if entry["selected"] else "#333333")
+            metric = f"AUC {entry['auc']:.2f}" if np.isfinite(entry["auc"]) else f"n={entry['n']}"
+            model_ax.text(0.99, y_pos, metric, transform=model_ax.transAxes, ha="right", va="center",
+                          fontsize=4.45, color="#111111" if entry["selected"] else "#555555")
+    elif selected_model:
+        model_ax.text(0.00, 0.72, "F. selected model", transform=model_ax.transAxes,
+                      ha="left", va="top", fontsize=6.0, fontweight="bold")
+        model_ax.text(0.00, 0.32, _compact_model_label(selected_model, width=24),
+                      transform=model_ax.transAxes, ha="left", va="center",
+                      fontsize=5.0, fontweight="bold", color="#111111")
+
     importance_ax.set_title("E. RF feature importance", loc="left", fontsize=6.8, fontweight="bold", pad=3)
     if not feature_df.empty:
         values = feature_df[importance_col].astype(float).to_numpy()
@@ -4507,7 +4654,7 @@ def gen_rf_classifier_report_board(df, dataProfile, chartPlan, rcParams, palette
         importance_ax.set_yticks(y)
         importance_ax.set_yticklabels(labels, fontsize=4.9)
         importance_ax.set_xlim(0, 1.10)
-        importance_ax.set_xlabel("Relative importance", fontsize=5.4)
+        importance_ax.set_xlabel("Relative importance", fontsize=5.0, labelpad=0.8)
         importance_ax.tick_params(axis="x", labelsize=4.8, length=2, width=0.35)
         importance_ax.tick_params(axis="y", length=0, pad=1.5)
         for yi, value, frac in zip(y, values, scaled):
@@ -4523,8 +4670,8 @@ def gen_rf_classifier_report_board(df, dataProfile, chartPlan, rcParams, palette
         importance_ax.spines[side].set_linewidth(0.45)
 
     summary_ax.set_axis_off()
-    score = pd.to_numeric(prediction_df[score_col], errors="coerce")
-    raw_label = prediction_df[label_col]
+    score = pd.to_numeric(selected_prediction_df[score_col], errors="coerce")
+    raw_label = selected_prediction_df[label_col]
     if pd.api.types.is_numeric_dtype(raw_label):
         label = pd.to_numeric(raw_label, errors="coerce")
         unique_labels = sorted([v for v in label.dropna().unique().tolist()], key=lambda value: str(value))
@@ -4549,10 +4696,8 @@ def gen_rf_classifier_report_board(df, dataProfile, chartPlan, rcParams, palette
         f1_values.append(2 * precision_t * recall_t / max(precision_t + recall_t, 1e-12))
     best_idx = int(np.nanargmax(f1_values)) if f1_values else 0
     model_name = "Random Forest"
-    if model_col and model_col in df.columns:
-        model_values = [str(value) for value in df[model_col].dropna().unique().tolist()]
-        if model_values:
-            model_name = model_values[0][:22]
+    if selected_model:
+        model_name = "selected: " + _compact_model_label(selected_model, width=16)
     summary_lines = [
         model_name,
         f"n={len(score)}  pos={int(np.sum(y_true == 1))}",
@@ -4560,12 +4705,38 @@ def gen_rf_classifier_report_board(df, dataProfile, chartPlan, rcParams, palette
         f"thr={float(thresholds[best_idx]):.2f}",
         f"features={len(feature_df) if not feature_df.empty else 0}",
     ]
+    if len(model_values) > 1:
+        summary_lines.insert(1, f"compared={len(model_values)} models")
     summary_ax.text(0.02, 0.98, "\n".join(summary_lines), transform=summary_ax.transAxes,
                     ha="left", va="top", fontsize=5.4,
                     bbox=dict(boxstyle="round,pad=0.28", facecolor="white", edgecolor="#333333", linewidth=0.45, alpha=0.96))
 
     if standalone:
-        fig.subplots_adjust(left=0.035, right=0.985, top=0.92, bottom=0.08)
+        if len(model_entries) > 1:
+            handles = [
+                plt.Line2D(
+                    [0], [0], marker="D" if entry["selected"] else "o", linestyle="",
+                    markerfacecolor=entry["color"],
+                    markeredgecolor="#111111" if entry["selected"] else "white",
+                    markeredgewidth=0.55, markersize=4.2,
+                    label=("selected: " if entry["selected"] else "") + entry["label"],
+                )
+                for entry in model_entries
+            ]
+            legend = fig.legend(
+                handles=handles,
+                loc="lower center", bbox_to_anchor=(0.5, 0.018),
+                ncol=min(4, len(handles)), fontsize=5.0,
+                frameon=True, fancybox=True, borderpad=0.25,
+                handlelength=1.2, columnspacing=0.8,
+            )
+            legend.set_gid("scifig_shared_legend")
+            legend.get_frame().set_linewidth(0.35)
+            legend.get_frame().set_edgecolor("#333333")
+            legend.get_frame().set_alpha(0.94)
+            fig.subplots_adjust(left=0.035, right=0.985, top=0.92, bottom=0.145)
+        else:
+            fig.subplots_adjust(left=0.035, right=0.985, top=0.92, bottom=0.08)
     return ax
 
 

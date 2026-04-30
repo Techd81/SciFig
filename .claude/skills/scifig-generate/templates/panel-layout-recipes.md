@@ -88,6 +88,7 @@ Reusable layout blueprints for multi-panel scientific figures.
 - Prefer `rf_classifier_report_board` over separate validation and feature-importance figures when the user asks for one AI/ML manuscript figure.
 - If feature importance is absent, fall back to `classifier_validation_board` rather than inventing feature rankings.
 - If prediction rows and importance rows are stacked in one long table, split them by `table_type`, `record_type`, `row_type`, or the presence of score/label vs feature/importance fields before drawing.
+- If multiple classifier models are present, use the selected/RF model for the validation board, preserve competitors in a compact model strip, and place the shared model legend at bottom center outside all axes.
 - Wrap long feature labels into two compact lines and then truncate; never let feature labels extend outside the right-hand lane.
 
 ## Density & Spacing Rules
