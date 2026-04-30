@@ -19,6 +19,7 @@ When columns include `model` / `algorithm` plus `Training` / `Testing` / `R2` / 
 3. Bottom-right: residual-vs-predicted scatter. Use zero reference line in deep red (`#B00000`), light grid, and a short in-plot bias note.
 
 Layout intent: `ml_model_performance_triptych` uses a 2x2 grid where the benchmark bar spans the top row and parity/residual diagnostics occupy the bottom row.
+Executable fallback: `grouped_bar` renders the sorted RF-highlighted benchmark, `scatter_regression` renders the train/test parity lane with 1:1 reference and R2/RMSE/MAE box, and `residual_vs_fitted` renders the residual lane with red zero reference plus bias/SD note.
 
 ## Incremental Feature Selection
 

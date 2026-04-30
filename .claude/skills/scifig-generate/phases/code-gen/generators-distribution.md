@@ -551,8 +551,24 @@ def gen_residual_vs_fitted(df, dataProfile, chartPlan, rcParams, palette, col_ma
     standalone = ax is None
     plt.rcParams.update(rcParams)
     roles = dataProfile.get("semanticRoles", {})
-    fitted_col = roles.get("fitted") or roles.get("x")
+    fitted_col = roles.get("fitted") or roles.get("predicted") or roles.get("prediction") or roles.get("x")
     resid_col = roles.get("residual") or roles.get("value")
+    actual_col = roles.get("actual") or roles.get("observed") or roles.get("measured")
+    split_col = roles.get("split") or roles.get("sample_type") or roles.get("source") or roles.get("cohort") or roles.get("group")
+    template_case = (chartPlan.get("templateCasePlan") or chartPlan.get("visualContentPlan", {}).get("templateCasePlan") or {})
+    patterns = {str(p).lower() for p in dataProfile.get("specialPatterns", [])}
+    is_rf_report = (
+        template_case.get("bundleKey") == "rf_model_performance_report"
+        or "model_performance_benchmark" in patterns
+        or "ml_model_family" in patterns
+        or "prediction_diagnostic" in patterns
+        or (actual_col and fitted_col)
+    )
+
+    working_df = df.copy()
+    if resid_col is None and actual_col and fitted_col and actual_col in working_df.columns and fitted_col in working_df.columns:
+        resid_col = "_scifig_residual"
+        working_df[resid_col] = pd.to_numeric(working_df[actual_col], errors="coerce") - pd.to_numeric(working_df[fitted_col], errors="coerce")
 
     if fitted_col is None or resid_col is None:
         raise ValueError("residual_vs_fitted requires 'fitted' and 'residual' in semanticRoles")
@@ -561,21 +577,59 @@ def gen_residual_vs_fitted(df, dataProfile, chartPlan, rcParams, palette, col_ma
         fig, ax = plt.subplots(figsize=(89 * (1 / 25.4), 60 * (1 / 25.4)),
                            constrained_layout=True)
 
-    color = palette.get("categorical", ["#0072B2"])[0]
-    ax.scatter(df[fitted_col], df[resid_col], s=10, alpha=0.5, color=color,
-               linewidth=0.3, edgecolor="white", zorder=2)
+    plot_df = working_df[[fitted_col, resid_col] + ([split_col] if split_col and split_col in working_df.columns else [])].copy()
+    plot_df[fitted_col] = pd.to_numeric(plot_df[fitted_col], errors="coerce")
+    plot_df[resid_col] = pd.to_numeric(plot_df[resid_col], errors="coerce")
+    plot_df = plot_df.dropna(subset=[fitted_col, resid_col])
 
-    # Reference line at zero
-    ax.axhline(0, color="black", linewidth=0.6, linestyle="--", zorder=1)
+    if is_rf_report:
+        split_styles = {
+            "train": ("s", "#F6CFA3"),
+            "training": ("s", "#F6CFA3"),
+            "test": ("^", "#9BCBEB"),
+            "testing": ("^", "#9BCBEB"),
+            "valid": ("D", "#CFE8CF"),
+            "validation": ("D", "#CFE8CF"),
+            "external": ("v", "#B7C9E2"),
+        }
+        groups = [(None, plot_df)] if not split_col or split_col not in plot_df.columns else list(plot_df.groupby(split_col))
+        for i, (name, grp) in enumerate(groups):
+            label = "samples" if name is None else str(name)
+            marker, color = split_styles.get(label.lower(), ("o", palette.get("categorical", ["#0072B2"])[i % len(palette.get("categorical", ["#0072B2"]))]))
+            ax.scatter(
+                grp[fitted_col], grp[resid_col], marker=marker, s=20,
+                facecolors="none", edgecolors=color, linewidth=0.75,
+                alpha=0.88, label=label, zorder=3,
+            )
+        ax.axhline(0, color="#B00000", linewidth=0.85, linestyle="--", zorder=2)
+        ax.yaxis.grid(True, linestyle="--", linewidth=0.3, alpha=0.28, zorder=0)
+        bias = float(plot_df[resid_col].mean()) if len(plot_df) else 0.0
+        spread = float(plot_df[resid_col].std()) if len(plot_df) > 1 else 0.0
+        ax.text(
+            0.98, 0.94, f"bias={bias:.3g}\nSD={spread:.3g}\nn={len(plot_df)}",
+            transform=ax.transAxes, ha="right", va="top", fontsize=5.2,
+            bbox=dict(boxstyle="round,pad=0.22", facecolor="white", edgecolor="#333333", linewidth=0.4, alpha=0.92),
+            zorder=6,
+        )
+        handles, labels = ax.get_legend_handles_labels()
+        if labels:
+            ax.legend(frameon=False, fontsize=5, ncol=min(3, len(labels)))
+    else:
+        color = palette.get("categorical", ["#0072B2"])[0]
+        ax.scatter(plot_df[fitted_col], plot_df[resid_col], s=10, alpha=0.5, color=color,
+                   linewidth=0.3, edgecolor="white", zorder=2)
+        ax.axhline(0, color="black", linewidth=0.6, linestyle="--", zorder=1)
 
-    # LOWESS smoother
-    from statsmodels.nonparametric.smoothers_lowess import lowess
-    smoothed = lowess(df[resid_col].dropna(), df[fitted_col].dropna(), frac=0.3)
-    ax.plot(smoothed[:, 0], smoothed[:, 1], color="#C8553D", linewidth=0.8,
-            solid_capstyle="round", zorder=3)
+    try:
+        from statsmodels.nonparametric.smoothers_lowess import lowess
+        smoothed = lowess(plot_df[resid_col], plot_df[fitted_col], frac=0.3)
+        ax.plot(smoothed[:, 0], smoothed[:, 1], color="#C8553D", linewidth=0.8,
+                solid_capstyle="round", zorder=4)
+    except Exception:
+        pass
 
     ax.set_xlabel("Fitted values")
-    ax.set_ylabel("Residuals")
+    ax.set_ylabel("Residual" if standalone else "")
     if standalone:
         apply_chart_polish(ax, "residual_vs_fitted")
     return ax
@@ -2284,11 +2338,18 @@ def gen_grouped_bar(df, dataProfile, chartPlan, rcParams, palette, col_map=None,
                 tick.set_color("#111111")
         ax.invert_yaxis()
         ax.set_xlabel(metric_label)
-        ax.set_ylabel("Model")
+        ax.set_ylabel("Model" if standalone else "")
         ax.xaxis.grid(True, linestyle="--", linewidth=0.35, alpha=0.45, zorder=0)
         ax.set_axisbelow(True)
         fig_for_margin = ax.figure
         if fig_for_margin is not None:
+            try:
+                if hasattr(fig_for_margin, "set_layout_engine"):
+                    fig_for_margin.set_layout_engine(None)
+                else:
+                    fig_for_margin.set_constrained_layout(False)
+            except Exception:
+                pass
             sp = fig_for_margin.subplotpars
             fig_for_margin.subplots_adjust(
                 left=max(sp.left, 0.20),
@@ -3278,8 +3339,18 @@ def gen_scatter_regression(df, dataProfile, chartPlan, rcParams, palette, col_ma
     """Scatter with regression line and r annotation."""
     standalone = ax is None
     roles = dataProfile.get("semanticRoles", {})
-    x_col = roles.get("x") or roles.get("dose")
-    y_col = roles.get("y") or roles.get("value")
+    x_col = roles.get("actual") or roles.get("observed") or roles.get("measured") or roles.get("x") or roles.get("dose")
+    y_col = roles.get("predicted") or roles.get("prediction") or roles.get("fitted") or roles.get("y") or roles.get("value")
+    split_col = roles.get("split") or roles.get("sample_type") or roles.get("source") or roles.get("cohort") or roles.get("group")
+    template_case = (chartPlan.get("templateCasePlan") or chartPlan.get("visualContentPlan", {}).get("templateCasePlan") or {})
+    patterns = {str(p).lower() for p in dataProfile.get("specialPatterns", [])}
+    is_prediction_report = (
+        template_case.get("bundleKey") == "rf_model_performance_report"
+        or "model_performance_benchmark" in patterns
+        or "ml_model_family" in patterns
+        or "prediction_diagnostic" in patterns
+        or ("actual" in roles and ("predicted" in roles or "fitted" in roles))
+    )
 
     if x_col is None or y_col is None:
         raise ValueError("scatter_regression requires 'x' and 'y' in semanticRoles")
@@ -3288,19 +3359,68 @@ def gen_scatter_regression(df, dataProfile, chartPlan, rcParams, palette, col_ma
         fig, ax = plt.subplots(figsize=(89 * (1 / 25.4), 65 * (1 / 25.4)),
                            constrained_layout=True)
 
-    ax.scatter(df[x_col], df[y_col], c="#000000", s=15, alpha=0.7,
-               linewidth=0.3, edgecolors="white")
+    plot_cols = [x_col, y_col] + ([split_col] if split_col and split_col in df.columns else [])
+    plot_df = df[plot_cols].copy()
+    plot_df[x_col] = pd.to_numeric(plot_df[x_col], errors="coerce")
+    plot_df[y_col] = pd.to_numeric(plot_df[y_col], errors="coerce")
+    plot_df = plot_df.dropna(subset=[x_col, y_col])
 
-    z = np.polyfit(df[x_col], df[y_col], 1)
+    if is_prediction_report:
+        split_styles = {
+            "train": ("s", "#F6CFA3"),
+            "training": ("s", "#F6CFA3"),
+            "test": ("^", "#9BCBEB"),
+            "testing": ("^", "#9BCBEB"),
+            "valid": ("D", "#CFE8CF"),
+            "validation": ("D", "#CFE8CF"),
+            "external": ("v", "#B7C9E2"),
+        }
+        groups = [(None, plot_df)] if not split_col or split_col not in plot_df.columns else list(plot_df.groupby(split_col))
+        fallback = palette.get("categorical", ["#1F4E79", "#D55E00", "#009E73"])
+        for i, (name, grp) in enumerate(groups):
+            label = "samples" if name is None else str(name)
+            marker, color = split_styles.get(label.lower(), ("o", fallback[i % len(fallback)]))
+            ax.scatter(
+                grp[x_col], grp[y_col], marker=marker, s=22,
+                facecolors="none", edgecolors=color, linewidth=0.75,
+                alpha=0.9, label=label, zorder=3,
+            )
+        lo = float(np.nanmin([plot_df[x_col].min(), plot_df[y_col].min()]))
+        hi = float(np.nanmax([plot_df[x_col].max(), plot_df[y_col].max()]))
+        pad = max((hi - lo) * 0.04, 1e-9)
+        ax.plot([lo - pad, hi + pad], [lo - pad, hi + pad], color="black", lw=0.8, ls="--", label="1:1", zorder=2)
+        ax.set_xlim(lo - pad, hi + pad)
+        ax.set_ylim(lo - pad, hi + pad)
+        residuals = plot_df[y_col] - plot_df[x_col]
+        ss_res = float(np.sum((plot_df[y_col] - plot_df[x_col]) ** 2))
+        ss_tot = float(np.sum((plot_df[x_col] - plot_df[x_col].mean()) ** 2))
+        r2 = 1 - ss_res / ss_tot if ss_tot > 0 else np.nan
+        rmse = float(np.sqrt(np.mean(residuals ** 2))) if len(residuals) else np.nan
+        mae = float(np.mean(np.abs(residuals))) if len(residuals) else np.nan
+        ax.text(
+            0.05, 0.95, f"R2={r2:.3f}\nRMSE={rmse:.3g}\nMAE={mae:.3g}",
+            transform=ax.transAxes, ha="left", va="top", fontsize=5.2,
+            bbox=dict(boxstyle="round,pad=0.22", facecolor="white", edgecolor="#333333", linewidth=0.4, alpha=0.92),
+            zorder=6,
+        )
+        handles, labels = ax.get_legend_handles_labels()
+        if labels:
+            ax.legend(frameon=False, fontsize=5, ncol=min(4, len(labels)))
+    else:
+        ax.scatter(plot_df[x_col], plot_df[y_col], c="#000000", s=15, alpha=0.7,
+                   linewidth=0.3, edgecolors="white")
+
+    z = np.polyfit(plot_df[x_col], plot_df[y_col], 1)
     p_line = np.poly1d(z)
-    xs = np.linspace(df[x_col].min(), df[x_col].max(), 100)
+    xs = np.linspace(plot_df[x_col].min(), plot_df[x_col].max(), 100)
     ax.plot(xs, p_line(xs), color="#D55E00", lw=1, ls="--")
 
-    r = np.corrcoef(df[x_col], df[y_col])[0, 1]
-    ax.text(0.05, 0.95, f"r = {r:.3f}", transform=ax.transAxes, fontsize=6, va="top")
+    r = np.corrcoef(plot_df[x_col], plot_df[y_col])[0, 1]
+    if not is_prediction_report:
+        ax.text(0.05, 0.95, f"r = {r:.3f}", transform=ax.transAxes, fontsize=6, va="top")
 
-    ax.set_xlabel(x_col)
-    ax.set_ylabel(y_col)
+    ax.set_xlabel("Actual" if is_prediction_report else x_col)
+    ax.set_ylabel("Predicted" if is_prediction_report else y_col)
     if standalone:
         apply_chart_polish(ax, "scatter_regression")
     return ax
