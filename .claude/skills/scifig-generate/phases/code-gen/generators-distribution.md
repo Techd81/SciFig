@@ -3101,6 +3101,17 @@ def gen_pca(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=None
     return ax
 
 
+def _is_classifier_validation_board(chartPlan, dataProfile=None):
+    template_case = (chartPlan.get("templateCasePlan") or chartPlan.get("visualContentPlan", {}).get("templateCasePlan") or {})
+    patterns = {str(p).lower() for p in (dataProfile or {}).get("specialPatterns", [])}
+    return (
+        template_case.get("bundleKey") == "classifier_validation_board"
+        or "classifier_validation" in patterns
+        or "probability_calibration" in patterns
+        or "threshold_tuning" in patterns
+    )
+
+
 def gen_roc(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=None):
     """ROC curve with AUC annotation and confidence band."""
     standalone = ax is None
@@ -3116,16 +3127,32 @@ def gen_roc(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=None
     y_true = df[label_col].values
     y_scores = df[score_col].values
 
-    fpr, tpr, _ = roc_curve(y_true, y_scores)
+    fpr, tpr, thresholds = roc_curve(y_true, y_scores)
     roc_auc = auc(fpr, tpr)
+    is_classifier_board = _is_classifier_validation_board(chartPlan, dataProfile)
 
     if standalone:
         fig, ax = plt.subplots(figsize=(89 * (1 / 25.4), 75 * (1 / 25.4)),
                            constrained_layout=True)
 
-    ax.plot(fpr, tpr, color="#0072B2", lw=1, label=f"AUC = {roc_auc:.3f}")
-    ax.plot([0, 1], [0, 1], color="#999999", lw=0.5, ls="--")
-    ax.fill_between(fpr, 0, tpr, alpha=0.1, color="#0072B2")
+    color = "#1F4E79" if is_classifier_board else "#0072B2"
+    ax.plot(fpr, tpr, color=color, lw=1.15 if is_classifier_board else 1, label=f"ROC AUC = {roc_auc:.3f}")
+    ax.plot([0, 1], [0, 1], color="#999999", lw=0.5, ls="--", label="Chance")
+    ax.fill_between(fpr, 0, tpr, alpha=0.12 if is_classifier_board else 0.1, color=color)
+    if is_classifier_board and len(thresholds):
+        youden = tpr - fpr
+        best_idx = int(np.nanargmax(youden))
+        best_threshold = thresholds[best_idx]
+        if np.isfinite(best_threshold):
+            ax.scatter([fpr[best_idx]], [tpr[best_idx]], s=36, color="#B00000",
+                       edgecolor="white", linewidth=0.45, zorder=5, label="Best threshold")
+            ax.text(
+                0.62, 0.18,
+                f"AUC={roc_auc:.3f}\nthr={best_threshold:.2f}\nn={len(y_true)}",
+                transform=ax.transAxes, ha="left", va="bottom", fontsize=5.3,
+                bbox=dict(boxstyle="round,pad=0.22", facecolor="white", edgecolor="#333333", linewidth=0.4, alpha=0.93),
+                zorder=6,
+            )
 
     ax.set_xlabel("False Positive Rate")
     ax.set_ylabel("True Positive Rate")
@@ -3149,18 +3176,41 @@ def gen_calibration(df, dataProfile, chartPlan, rcParams, palette, col_map=None,
         fig, ax = plt.subplots(figsize=(89 * (1 / 25.4), 75 * (1 / 25.4)),
                            constrained_layout=True)
 
+    is_classifier_board = _is_classifier_validation_board(chartPlan, dataProfile)
+
     # Bin predictions and compute observed fraction
     bins = np.linspace(0, 1, 11)
     bin_centers = (bins[:-1] + bins[1:]) / 2
     observed = []
+    counts = []
     for lo, hi in zip(bins[:-1], bins[1:]):
         mask = (df[pred_col] >= lo) & (df[pred_col] < hi)
+        counts.append(int(mask.sum()))
         if mask.sum() > 0:
             observed.append(df.loc[mask, label_col].mean())
         else:
             observed.append(np.nan)
 
-    ax.plot(bin_centers, observed, "o-", color="#0072B2", lw=1, markersize=4)
+    observed_arr = np.asarray(observed, dtype=float)
+    counts_arr = np.asarray(counts, dtype=float)
+    ax.plot(bin_centers, observed, "-", color="#1F4E79" if is_classifier_board else "#0072B2", lw=1)
+    if is_classifier_board:
+        sizes = 18 + (counts_arr / max(float(np.nanmax(counts_arr)), 1.0)) * 56
+        ax.scatter(bin_centers, observed_arr, s=sizes, color="#1F4E79",
+                   edgecolor="white", linewidth=0.45, zorder=4, label="Calibration bins")
+        valid = np.isfinite(observed_arr)
+        ece = float(np.nansum((counts_arr[valid] / max(counts_arr.sum(), 1.0)) * np.abs(observed_arr[valid] - bin_centers[valid]))) if valid.any() else np.nan
+        ax.fill_between([0, 1], [0, 1], [0.05, 1.05], color="#F6CFA3", alpha=0.18, linewidth=0, label="_nolegend_")
+        if np.isfinite(ece):
+            ax.text(
+                0.05, 0.88, f"ECE={ece:.3f}\nbins={int(valid.sum())}",
+                transform=ax.transAxes, ha="left", va="top", fontsize=5.3,
+                bbox=dict(boxstyle="round,pad=0.22", facecolor="white", edgecolor="#333333", linewidth=0.4, alpha=0.93),
+                zorder=6,
+            )
+        ax.legend(frameon=False, fontsize=5, loc="lower right")
+    else:
+        ax.plot(bin_centers, observed, "o-", color="#0072B2", lw=1, markersize=4)
     ax.plot([0, 1], [0, 1], "--", color="#999999", lw=0.5)
 
     ax.set_xlabel("Predicted probability")
@@ -4044,18 +4094,32 @@ def gen_pr_curve(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax
 
     y_true = df[label_col].values
     y_score = df[score_col].values
+    is_classifier_board = _is_classifier_validation_board(chartPlan, dataProfile)
 
     try:
         from sklearn.metrics import precision_recall_curve, average_precision_score
-        precision, recall, _ = precision_recall_curve(y_true, y_score)
+        precision, recall, thresholds = precision_recall_curve(y_true, y_score)
         ap = average_precision_score(y_true, y_score)
 
-        ax.plot(recall, precision, color="#1F4E79", lw=0.8, label=f"AP = {ap:.3f}")
-        ax.fill_between(recall, precision, alpha=0.1, color="#1F4E79")
+        ax.plot(recall, precision, color="#1F4E79", lw=1.1 if is_classifier_board else 0.8, label=f"AP = {ap:.3f}")
+        ax.fill_between(recall, precision, alpha=0.12 if is_classifier_board else 0.1, color="#1F4E79")
 
         # Baseline
         baseline = y_true.mean()
         ax.axhline(y=baseline, color="#999999", lw=0.4, ls="--", label=f"Baseline = {baseline:.3f}")
+        if is_classifier_board and len(thresholds):
+            f1 = 2 * precision[:-1] * recall[:-1] / np.maximum(precision[:-1] + recall[:-1], 1e-12)
+            best_idx = int(np.nanargmax(f1))
+            best_threshold = thresholds[best_idx]
+            ax.scatter([recall[best_idx]], [precision[best_idx]], s=36, color="#B00000",
+                       edgecolor="white", linewidth=0.45, zorder=5, label="Best F1 threshold")
+            ax.text(
+                0.08, 0.18,
+                f"AP={ap:.3f}\nF1={f1[best_idx]:.3f}\nthr={best_threshold:.2f}",
+                transform=ax.transAxes, ha="left", va="bottom", fontsize=5.3,
+                bbox=dict(boxstyle="round,pad=0.22", facecolor="white", edgecolor="#333333", linewidth=0.4, alpha=0.93),
+                zorder=6,
+            )
 
         ax.legend(fontsize=5, frameon=False)
     except ImportError:

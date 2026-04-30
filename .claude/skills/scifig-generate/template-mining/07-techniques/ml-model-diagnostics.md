@@ -37,6 +37,15 @@ When columns include `feature`, `importance`, `gain`, `permutation`, `shap`, or 
 - Right lane: SHAP donut or compact contribution summary with callout leaders outside the ring.
 - If donut is unsupported for the data, use `lollipop_horizontal` plus `dotplot`, but preserve the left/right asymmetric composition and feature ordering.
 
+## Classifier Validation Board
+
+When columns include `score`, `probability`, `label`, `threshold`, `AUC`, `F1`, `precision`, or `recall`, clone the classifier validation board before falling back to generic ROC:
+
+- Use a ROC + PR + calibration panel set, not a single ROC alone.
+- Add data-derived metric boxes for AUC, AP, best threshold, F1, ECE, bin count, and sample count.
+- Mark the selected threshold with a red point and reference guides.
+- Use calibration bin marker size for sample count so imbalanced bins remain visible.
+
 ## Routing Rules
 
 - Prefer `rf_model_performance_report` when both model benchmark metrics and actual/predicted or residual fields exist.

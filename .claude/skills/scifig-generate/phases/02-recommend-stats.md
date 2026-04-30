@@ -153,10 +153,29 @@ def recommend_chart_bundle(dataProfile, workflowPreferences):
         or has_model_performance
         or any(token in cols for token in ("auc", "accuracy", "f1", "r2", "rmse", "mae"))
     )
+    has_classifier_validation_board = (
+        "classifier_validation" in patterns
+        or "threshold_tuning" in patterns
+        or "probability_calibration" in patterns
+        or (
+            "score" in roles and "label" in roles
+            and (
+                domain == "computer_ai_ml"
+                or "ml_model_family" in patterns
+                or any(token in cols for token in ("probability", "proba", "auc", "f1", "precision", "recall", "threshold"))
+            )
+        )
+    )
 
     # Direct pattern matches
     if has_feature_selection_curve:
         return "line", ["grouped_bar", "lollipop_horizontal"]
+    if has_classifier_validation_board and "score" in roles and "label" in roles:
+        label_col = dataProfile["df"][roles["label"]]
+        pos_rate = label_col.mean() if pd.api.types.is_numeric_dtype(label_col) else 0.5
+        primary = "pr_curve" if n_obs > 0 and pos_rate < DATA_SCALE_POLICY["rare_positive_rate"] else "roc"
+        secondary = ["roc" if primary == "pr_curve" else "pr_curve", "calibration", "forest"]
+        return primary, secondary
     if has_model_performance and has_prediction_fit:
         return "grouped_bar", ["scatter_regression", "residual_vs_fitted"]
     if has_model_performance:
@@ -832,6 +851,8 @@ def resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreference
             continue
         if family and family not in families:
             families.append(family)
+        if chart in {"roc", "pr_curve", "calibration"} and has_ml_signal and "ml_model_diagnostics" not in families:
+            families.append("ml_model_diagnostics")
 
     technique_refs = list(selected_bundle.get("techniqueRefs") or [])
     for family in families:
@@ -876,6 +897,7 @@ def resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreference
             "use_template_palette_layering_annotation_idioms_when_supported",
             "when_bundleKey_is_inferred_follow_the_same_template_case_as_user_selected_bundle",
             "when_feature_count_or_ablation_columns_exist_clone_incremental_feature_selection_curve",
+            "when_probability_label_or_threshold_columns_exist_clone_classifier_validation_board",
         ],
     }
 
