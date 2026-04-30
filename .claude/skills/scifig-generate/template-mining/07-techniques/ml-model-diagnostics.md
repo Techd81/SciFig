@@ -87,8 +87,10 @@ When RF/Random Forest classifier probability and label columns appear together w
 
 - Keep the classifier validation board as the visual hero, then add a ranked RF feature-importance lane.
 - Use the feature importance values supplied by the data; do not fabricate importances from labels alone.
+- Accept stacked long tables that separate prediction rows from feature-importance rows using `table_type`, `record_type`, `row_type`, or similar source columns.
+- Wrap long feature names into compact two-line labels before truncating so dense importance lanes remain legible.
 - Add a compact model summary with n, positive count, best threshold, best F1, and number of ranked features.
-- Executable fallback: `rf_classifier_report_board` embeds `classifier_validation_board`, draws a top-12 relative importance lane, and records both classifier-validation and explainability motifs for render QA.
+- Executable fallback: `rf_classifier_report_board` splits validation rows from importance rows when a source/type column exists, embeds `classifier_validation_board`, draws a top-12 relative importance lane with wrapped feature labels, and records both classifier-validation and explainability motifs for render QA.
 
 ## Routing Rules
 

@@ -4388,6 +4388,7 @@ def gen_rf_classifier_report_board(df, dataProfile, chartPlan, rcParams, palette
     plt.rcParams.update(rcParams)
     roles = dataProfile.get("semanticRoles", {})
     columns_lower = {str(c).lower(): c for c in df.columns}
+    import textwrap
 
     def _role_or_col(*names, contains=()):
         for name in names:
@@ -4406,6 +4407,10 @@ def gen_rf_classifier_report_board(df, dataProfile, chartPlan, rcParams, palette
 
     score_col = _role_or_col("score", "probability", "proba", "prediction_score", "y_score")
     label_col = _role_or_col("label", "true_label", "actual_label", "y_true", "event", "class")
+    partition_col = _role_or_col(
+        "table_type", "record_type", "row_type", "source_type", "panel", "kind",
+        contains=("table_type", "record_type", "row_type", "source_type")
+    )
     feature_col = _role_or_col("feature_id", "feature", "feature_name", "variable", "term", contains=("feature", "variable"))
     importance_col = _role_or_col(
         "importance", "feature_importance", "mean_abs_shap", "gain", "permutation", "shap_value", "value",
@@ -4414,6 +4419,22 @@ def gen_rf_classifier_report_board(df, dataProfile, chartPlan, rcParams, palette
     model_col = _role_or_col("model", "algorithm", "estimator", contains=("model", "algorithm", "estimator"))
     if score_col is None or label_col is None:
         raise ValueError("rf_classifier_report_board requires score/probability and binary label columns")
+
+    prediction_df = df
+    importance_source_df = df
+    if partition_col and partition_col in df.columns:
+        partition = df[partition_col].astype(str).str.lower()
+        prediction_tokens = ("prediction", "validation", "classifier", "probability", "score", "holdout", "test")
+        importance_tokens = ("importance", "feature", "shap", "gain", "permutation", "explain")
+        prediction_mask = partition.apply(lambda value: any(token in value for token in prediction_tokens))
+        importance_mask = partition.apply(lambda value: any(token in value for token in importance_tokens))
+        score_label_mask = df[score_col].notna() & df[label_col].notna()
+        if prediction_mask.any() or score_label_mask.any():
+            prediction_df = df[prediction_mask | score_label_mask].copy()
+        if feature_col and importance_col and feature_col in df.columns and importance_col in df.columns:
+            feature_mask = df[feature_col].notna() & df[importance_col].notna()
+            if importance_mask.any() or feature_mask.any():
+                importance_source_df = df[importance_mask | feature_mask].copy()
 
     if standalone:
         fig, ax = plt.subplots(figsize=(183 / 25.4, 128 / 25.4), constrained_layout=False)
@@ -4440,11 +4461,14 @@ def gen_rf_classifier_report_board(df, dataProfile, chartPlan, rcParams, palette
     validation_plan["primaryChart"] = "classifier_validation_board"
     validation_plan["suppressBoardTitle"] = True
     validation_plan["templateCasePlan"] = {"bundleKey": "classifier_validation_board"}
-    gen_classifier_validation_board(df, dataProfile, validation_plan, rcParams, palette, col_map=col_map, ax=validation_ax)
+    validation_profile = dict(dataProfile)
+    validation_profile["df"] = prediction_df
+    validation_profile["nObservations"] = len(prediction_df)
+    gen_classifier_validation_board(prediction_df, validation_profile, validation_plan, rcParams, palette, col_map=col_map, ax=validation_ax)
 
     colors = palette.get("categorical", ["#1F4E79", "#D55E00", "#009E73", "#7A6C8F"])
-    if feature_col and importance_col and feature_col in df.columns and importance_col in df.columns:
-        feature_df = df[[feature_col, importance_col]].dropna().copy()
+    if feature_col and importance_col and feature_col in importance_source_df.columns and importance_col in importance_source_df.columns:
+        feature_df = importance_source_df[[feature_col, importance_col]].dropna().copy()
         feature_df[importance_col] = pd.to_numeric(feature_df[importance_col], errors="coerce")
         feature_df = feature_df.dropna(subset=[importance_col])
         if not feature_df.empty:
@@ -4458,10 +4482,23 @@ def gen_rf_classifier_report_board(df, dataProfile, chartPlan, rcParams, palette
     else:
         feature_df = pd.DataFrame()
 
+    def _feature_label(value, width=18, max_lines=2):
+        text = str(value).replace("_", " ").replace("/", " / ").strip()
+        text = " ".join(text.split())
+        if not text:
+            return "feature"
+        wrapped = textwrap.wrap(text, width=width, break_long_words=False, break_on_hyphens=True)
+        if not wrapped:
+            wrapped = [text[:width]]
+        if len(wrapped) > max_lines:
+            wrapped = wrapped[:max_lines]
+            wrapped[-1] = wrapped[-1][:max(3, width - 3)].rstrip() + "..."
+        return "\n".join(wrapped)
+
     importance_ax.set_title("E. RF feature importance", loc="left", fontsize=6.8, fontweight="bold", pad=3)
     if not feature_df.empty:
         values = feature_df[importance_col].astype(float).to_numpy()
-        labels = [str(value).replace("_", " ")[:24] for value in feature_df[feature_col]]
+        labels = [_feature_label(value) for value in feature_df[feature_col]]
         denom = max(float(np.nanmax(np.abs(values))), 1e-12)
         scaled = np.abs(values) / denom
         y = np.arange(len(labels))
@@ -4486,8 +4523,8 @@ def gen_rf_classifier_report_board(df, dataProfile, chartPlan, rcParams, palette
         importance_ax.spines[side].set_linewidth(0.45)
 
     summary_ax.set_axis_off()
-    score = pd.to_numeric(df[score_col], errors="coerce")
-    raw_label = df[label_col]
+    score = pd.to_numeric(prediction_df[score_col], errors="coerce")
+    raw_label = prediction_df[label_col]
     if pd.api.types.is_numeric_dtype(raw_label):
         label = pd.to_numeric(raw_label, errors="coerce")
         unique_labels = sorted([v for v in label.dropna().unique().tolist()], key=lambda value: str(value))
