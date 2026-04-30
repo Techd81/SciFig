@@ -81,6 +81,30 @@ TEMPLATE_MATCH_POLICY = {
 
 If a user-selected or inferred domain contains AI/ML/computer-science signals, Phase 2 must route to `computer_ai_ml` before generic biomedical or engineering defaults. If Random Forest/RF/RFR is present and the schema supports model metrics, actual/predicted, residuals, or feature importance, the RF anchor cases are preferred over generic prediction diagnostics.
 
+## Autonomous Distillation Policy
+
+```python
+AUTONOMOUS_DISTILLATION_POLICY = {
+    "cycle_minutes": 30,
+    "smoke_output_root": "output/autonomous_distill",
+    "smoke_domains": [
+        "computer_ai_ml",
+        "genomics_transcriptomics",
+        "clinical_diagnostics_survival",
+        "materials_engineering",
+        "ecology_environmental",
+    ],
+    "single_figures_per_domain": 3,
+    "composite_figures_per_domain": 2,
+    "generated_artifacts_must_be_ignored": True,
+    "commit_tracked_skill_changes_only": True,
+    "carry_forward_previous_cycle_lessons": True,
+    "prefer_code_promotion_over_prompt_growth": True,
+}
+```
+
+Every autonomous maintenance cycle must run Phase 5 once, inspect the previous cycle's smoke outputs and failures, promote one reusable template-derived improvement, generate the smoke bundle under the ignored output root, run render/test validation, and commit only tracked skill/package changes. Generated PNG/SVG/PDF, scratch reports, and temporary datasets remain ignored artifacts.
+
 ## Crowding And Layout Policy
 
 ```python

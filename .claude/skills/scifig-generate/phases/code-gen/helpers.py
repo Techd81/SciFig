@@ -2083,7 +2083,7 @@ def apply_subplot_margins(fig, legend_mode, has_colorbar=False, legend=None):
     invalidate_layout_cache(fig)
     get_cached_renderer(fig, force=True)
     subplotpars = fig.subplotpars
-    left = 0.11
+    left = max(subplotpars.left, 0.11)
     top = min(subplotpars.top, 0.95)
     bottom = max(subplotpars.bottom, 0.14)
     right = min(subplotpars.right, 0.95)

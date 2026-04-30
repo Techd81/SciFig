@@ -16,6 +16,7 @@ RECIPE_GEOMETRY = {
     "board_3x3":               {"rows": 3, "cols": 3, "axes_map": {"A": (0, 0, 1, 1), "B": (0, 1, 1, 1), "C": (0, 2, 1, 1), "D": (1, 0, 1, 1), "E": (1, 1, 1, 1), "F": (1, 2, 1, 1), "G": (2, 0, 1, 1), "H": (2, 1, 1, 1), "I": (2, 2, 1, 1)}},
     "hero_plus_triple_support": {"rows": 3, "cols": 2, "axes_map": {"A": (0, 0, 3, 1), "B": (0, 1, 1, 1), "C": (1, 1, 1, 1), "D": (2, 1, 1, 1)}},
     "asymmetric_L":            {"rows": 2, "cols": 2, "axes_map": {"A": (0, 0, 1, 2), "B": (1, 0, 1, 1), "C": (1, 1, 1, 1)}},
+    "ml_model_performance_triptych": {"rows": 2, "cols": 2, "axes_map": {"A": (0, 0, 1, 2), "B": (1, 0, 1, 1), "C": (1, 1, 1, 1)}},
 }
 
 RECIPE_CANVAS = {
@@ -30,6 +31,7 @@ RECIPE_CANVAS = {
     "board_3x3":               {"width": "double", "height_key": "board_3x3",           "default_h": 270},
     "hero_plus_triple_support": {"width": "double", "height_key": "hero_plus_triple_support", "default_h": 170},
     "asymmetric_L":            {"width": "double", "height_key": "asymmetric_L",        "default_h": 130},
+    "ml_model_performance_triptych": {"width": "double", "height_key": "ml_model_performance_triptych", "default_h": 160},
 }
 
 
@@ -48,13 +50,19 @@ def resolve_panel_geometry(panelBlueprint, journalProfile):
     recipe = panelBlueprint["layout"]["recipe"]
     geo = RECIPE_GEOMETRY.get(recipe, RECIPE_GEOMETRY["story_board_2x2"])
     gap = max(journalProfile.get("panel_gap_rel", 0.18), 0.24 if recipe != "single" else 0.0)
+    if recipe == "ml_model_performance_triptych":
+        gap_h = max(gap, 0.38)
+        gap_w = max(gap, 0.34)
+    else:
+        gap_h = gap
+        gap_w = gap
     return {
         "engine": "GridSpec" if geo["rows"] > 1 or geo["cols"] > 2 else "subplots",
         "rows": geo["rows"],
         "cols": geo["cols"],
         "axes_map": geo["axes_map"],
-        "hspace": gap if geo["rows"] > 1 else 0.0,
-        "wspace": gap if geo["cols"] > 1 else 0.0,
+        "hspace": gap_h if geo["rows"] > 1 else 0.0,
+        "wspace": gap_w if geo["cols"] > 1 else 0.0,
     }
 
 

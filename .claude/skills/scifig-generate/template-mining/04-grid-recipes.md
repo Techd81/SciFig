@@ -332,7 +332,8 @@ Anchor: `期刊配图复现 _ Matplotlib 挑战"多面板+三Y轴"组合图`.
 def build_grid(recipe: str, fig=None, **opts) -> tuple[Figure, list[Axes]]:
     """Build a multi-panel figure from a recipe key.
     recipe: 'R0_single_panel' | 'R1_two_panel_horizontal' | 'R2_two_by_two_storyboard'
-            | 'R3_two_by_three_grid' | 'R4_three_panel_horizontal' | 'R5_n_by_n_pairwise'
+            | 'R3_two_by_three_grid' | 'R4_three_panel_horizontal'
+            | 'R4b_rf_ml_diagnostic_triptych' | 'R5_n_by_n_pairwise'
             | 'R6_four_panel_band' | 'R7_dense_2x6_lineup' | 'R8_main_with_marginal'
             | 'R9_inset_overlay' | 'R10_asymmetric_top_wide' | 'R11_triple_y_axis'
     opts:   recipe-specific tuning (figsize, n for R5, ratios, spacing).

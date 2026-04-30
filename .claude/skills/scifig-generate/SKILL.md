@@ -47,6 +47,8 @@ Pipeline: preference gates -> Phase 1 `dataProfile` -> Phase 2 `chartPlan` -> Ph
 
 **Code promotion**: when the user asks to absorb article examples into the skill, run optional Phase 5 and follow `specs/template-distillation-contract.md`. Promote reusable Matplotlib logic into helpers/generators first; update prose only after executable behavior and tests exist.
 
+**Autonomous distillation**: when the user asks for recurring or overnight optimization, each cycle runs Phase 5 once, promotes one or two reusable template-derived improvements, generates ignored smoke figures under `output/autonomous_distill/`, validates render/test contracts, and commits tracked skill changes only.
+
 **Operational entry point** — Phase 3 generators should start with:
 
 ```python

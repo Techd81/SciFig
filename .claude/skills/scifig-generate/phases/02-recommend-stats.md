@@ -814,11 +814,26 @@ def resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreference
         for anchor in anchor_by_family.get(family, []):
             if anchor not in anchors:
                 anchors.append(anchor)
+    inferred_bundle_key = selected_bundle.get("bundleKey")
+    if not inferred_bundle_key:
+        chart_set = set(normalized)
+        if "ml_model_diagnostics" in families and {"grouped_bar", "scatter_regression", "residual_vs_fitted"} & chart_set:
+            inferred_bundle_key = "rf_model_performance_report"
+        elif "ml_model_diagnostics" in families and "line" in chart_set:
+            inferred_bundle_key = "incremental_feature_selection_curve"
+        elif "shap_composite" in families and {"lollipop_horizontal", "dotplot", "heatmap_annotated"} & chart_set:
+            inferred_bundle_key = "rf_feature_importance_shap"
+        elif {"roc", "pr_curve", "calibration"} & chart_set:
+            inferred_bundle_key = "classifier_validation_board"
+    template_match_mode = selected_bundle.get("templateMatchMode") or ("clone_when_known" if families else "best_effort")
+    if inferred_bundle_key and families:
+        template_match_mode = "clone_when_known"
     return {
         "selectedByUser": bool(selected_bundle),
-        "bundleKey": selected_bundle.get("bundleKey"),
+        "bundleKey": inferred_bundle_key,
+        "inferredBundleKey": inferred_bundle_key if not selected_bundle.get("bundleKey") else None,
         "label": selected_bundle.get("label"),
-        "templateMatchMode": selected_bundle.get("templateMatchMode") or ("clone_when_known" if families else "best_effort"),
+        "templateMatchMode": template_match_mode,
         "exactTemplateReplicationRequired": bool(families),
         "primaryChart": primaryChart,
         "secondaryCharts": list(secondaryCharts or []),
@@ -829,6 +844,7 @@ def resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreference
             "if_chart_type_matches_template_family_clone_template_structure_first",
             "preserve_template_chart_composition_before_data_specific_adaptation",
             "use_template_palette_layering_annotation_idioms_when_supported",
+            "when_bundleKey_is_inferred_follow_the_same_template_case_as_user_selected_bundle",
         ],
     }
 

@@ -2159,7 +2159,10 @@ def gen_grouped_bar(df, dataProfile, chartPlan, rcParams, palette, col_map=None,
     Each category on the x-axis contains one bar per subgroup, with SEM
     error bars.  Expects in semanticRoles: group (x-axis categories),
     subgroup (bar series within each group), and value (numeric y).
-    Computes mean and SEM per cell for error bar display.
+    Computes mean and SEM per cell for error bar display.  In AI/ML model
+    benchmark contexts, switches to the RF-template horizontal benchmark:
+    models sorted by test/validation metric, stable train/test colors, and
+    Random Forest highlighted when present.
     """
     standalone = ax is None
     plt.rcParams.update(rcParams)
@@ -2180,6 +2183,135 @@ def gen_grouped_bar(df, dataProfile, chartPlan, rcParams, palette, col_map=None,
     if standalone:
         fig, ax = plt.subplots(figsize=(89 * (1 / 25.4), 60 * (1 / 25.4)),
                            constrained_layout=True)
+    patterns = set(dataProfile.get("specialPatterns", []))
+    domain = (dataProfile.get("domainHints", {}) or {}).get("primary", "")
+    tokens = " ".join(
+        [str(c).lower() for c in df.columns]
+        + [str(v).lower() for v in roles.values()]
+        + [str(v).lower() for v in df[group_col].dropna().unique().tolist()]
+    )
+    is_ml_benchmark = (
+        domain == "computer_ai_ml"
+        or "model_performance_benchmark" in patterns
+        or "ml_model_family" in patterns
+        or any(t in tokens for t in ("random forest", "randomforest", "rf", "rfr", "xgboost", "lightgbm", "gbdt", "svm", "knn"))
+    )
+
+    if is_ml_benchmark:
+        metric_col = roles.get("metric")
+        plot_df = df.copy()
+        metric_label = value_col
+        higher_is_better = True
+        if metric_col and metric_col in plot_df:
+            metric_order = ["r2", "auc", "accuracy", "f1", "precision", "recall", "rmse", "mae", "mse", "error"]
+            metric_values = plot_df[metric_col].astype(str).str.lower()
+            selected_metric = next((m for m in metric_order if metric_values.str.contains(m, regex=False).any()), None)
+            if selected_metric:
+                plot_df = plot_df[metric_values.str.contains(selected_metric, regex=False)]
+                metric_label = selected_metric.upper()
+                higher_is_better = selected_metric not in {"rmse", "mae", "mse", "error"}
+
+        subgroup_labels = [str(s).lower() for s in subgroups]
+        priority_terms = ("test", "valid", "validation", "cv", "external")
+        priority_subgroups = [
+            subgroups[i] for i, label in enumerate(subgroup_labels)
+            if any(term in label for term in priority_terms)
+        ] or subgroups[-1:]
+
+        score_by_category = {}
+        for cat in categories:
+            cell = plot_df[plot_df[group_col] == cat]
+            priority_cell = cell[cell[subgroup_col].isin(priority_subgroups)]
+            score_source = priority_cell if len(priority_cell) else cell
+            vals = pd.to_numeric(score_source[value_col], errors="coerce").dropna()
+            score_by_category[cat] = vals.mean() if len(vals) else np.nan
+        categories = sorted(
+            categories,
+            key=lambda c: np.nan_to_num(score_by_category.get(c), nan=-np.inf if higher_is_better else np.inf),
+            reverse=higher_is_better,
+        )
+
+        split_colors = {
+            "train": "#F6CFA3",
+            "training": "#F6CFA3",
+            "test": "#9BCBEB",
+            "testing": "#9BCBEB",
+            "valid": "#CFE8CF",
+            "validation": "#CFE8CF",
+            "cv": "#CFE8CF",
+            "external": "#B7C9E2",
+        }
+        bar_height = min(0.78 / max(n_sub, 1), 0.26)
+        y = np.arange(len(categories))
+        best_index = 0 if categories else None
+        best_score = score_by_category.get(categories[0]) if categories else None
+
+        for si, sub in enumerate(subgroups):
+            means, sems = [], []
+            for cat in categories:
+                cell = pd.to_numeric(
+                    plot_df[(plot_df[group_col] == cat) & (plot_df[subgroup_col] == sub)][value_col],
+                    errors="coerce",
+                ).dropna()
+                means.append(cell.mean() if len(cell) > 0 else np.nan)
+                sems.append(cell.sem() if len(cell) > 1 else 0)
+            offset = (si - (n_sub - 1) / 2) * bar_height
+            label = str(sub)
+            color = split_colors.get(label.lower(), colors[si % len(colors)])
+            for yi, cat, mean, sem in zip(y + offset, categories, means, sems):
+                if np.isnan(mean):
+                    continue
+                is_rf = any(token in str(cat).lower() for token in ("random forest", "randomforest", "rf", "rfr"))
+                ax.barh(
+                    yi,
+                    mean,
+                    height=bar_height,
+                    xerr=sem,
+                    color=color,
+                    edgecolor="#111111" if is_rf else "white",
+                    linewidth=0.85 if is_rf else 0.35,
+                    capsize=2,
+                    error_kw=dict(linewidth=0.5),
+                    label=label if yi == y[0] + offset else "_nolegend_",
+                    zorder=3 if is_rf else 2,
+                )
+
+        ax.set_yticks(y)
+        ax.set_yticklabels([str(c) for c in categories], fontsize=5)
+        for tick, cat in zip(ax.get_yticklabels(), categories):
+            if any(token in str(cat).lower() for token in ("random forest", "randomforest", "rf", "rfr")):
+                tick.set_fontweight("bold")
+                tick.set_color("#111111")
+        ax.invert_yaxis()
+        ax.set_xlabel(metric_label)
+        ax.set_ylabel("Model")
+        ax.xaxis.grid(True, linestyle="--", linewidth=0.35, alpha=0.45, zorder=0)
+        ax.set_axisbelow(True)
+        fig_for_margin = ax.figure
+        if fig_for_margin is not None:
+            sp = fig_for_margin.subplotpars
+            fig_for_margin.subplots_adjust(
+                left=max(sp.left, 0.20),
+                bottom=max(sp.bottom, 0.20),
+                right=min(sp.right, 0.94),
+            )
+        if best_index is not None and best_score is not None and not np.isnan(best_score):
+            ax.text(
+                0.98,
+                0.06,
+                f"best: {str(categories[best_index])[:18]}",
+                transform=ax.transAxes,
+                fontsize=5,
+                ha="right",
+                va="bottom",
+                bbox=dict(boxstyle="round,pad=0.18", facecolor="white", edgecolor="#333333", linewidth=0.35, alpha=0.88),
+                zorder=8,
+            )
+        ax.legend(frameon=False, fontsize=5, ncol=min(n_sub, 4))
+        if standalone:
+            apply_chart_polish(ax, "grouped_bar")
+        return ax
+
     bar_width = 0.8 / n_sub
     x = np.arange(len(categories))
 

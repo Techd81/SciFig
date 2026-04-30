@@ -10,6 +10,7 @@ This contract governs how `template/articles` examples become executable `scifig
 4. Layout recipes must reserve physical space for sidecars, legends, colorbars, risk tables, and annotations. Negative axes text is forbidden unless a real slot exists.
 5. Every promoted visual effect must expose a QA signal: a counter, `gid`, render metadata field, or testable artifact.
 6. Article code may be normalized to print-scale typography and current legend/layout contracts. Do not copy poster-scale font sizes, outside-right legends, or `loc="best"`.
+7. Autonomous distillation cycles must leave generated smoke artifacts under the ignored output root, then commit only tracked skill/package changes after validation.
 
 ## Classification
 
@@ -37,3 +38,4 @@ This contract governs how `template/articles` examples become executable `scifig
 - Never invent statistics for visual impact.
 - Prefer one strong article-derived motif plus one support motif over many weak decorations.
 - Keep all generated output source-data friendly and reproducible.
+- In each autonomous cycle, compare the new smoke bundle against the previous cycle and promote at least one reusable lesson before the next commit.

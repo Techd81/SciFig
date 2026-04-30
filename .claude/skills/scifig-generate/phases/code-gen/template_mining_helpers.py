@@ -474,8 +474,7 @@ def build_grid(recipe: str, *, fig: Figure | None = None,
                 ) -> tuple[Figure, list[Axes]]:
     """Build a multi-panel figure from a recipe key. Returns (fig, axes-flat).
 
-    Implemented recipes: R0 R1 R2 R3 R4 R5 R6 R8 R9.
-    Stubs raising NotImplementedError: R7 R10 R11 (low frequency in corpus).
+    Implemented recipes: R0 R1 R2 R3 R4 R4b R5 R6 R7 R8 R9 R10 R11.
     """
     if recipe == "R0_single_panel":
         fig = fig or plt.figure(figsize=figsize or (6.5, 6.0))
@@ -510,6 +509,20 @@ def build_grid(recipe: str, *, fig: Figure | None = None,
         fig = fig or plt.figure(figsize=figsize or (15, 5))
         axs = fig.subplots(1, 3, sharey=True)
         return fig, list(axs)
+
+    if recipe in ("R4b_rf_ml_diagnostic_triptych", "ml_model_performance_triptych"):
+        fig = fig or plt.figure(figsize=figsize or (14, 10.6))
+        gs = GridSpec(
+            2,
+            2,
+            height_ratios=list(height_ratios) if height_ratios else [0.92, 1.00],
+            hspace=hspace if hspace is not None else 0.23,
+            wspace=wspace if wspace is not None else 0.22,
+        )
+        ax_benchmark = fig.add_subplot(gs[0, :])
+        ax_parity = fig.add_subplot(gs[1, 0])
+        ax_residual = fig.add_subplot(gs[1, 1])
+        return fig, [ax_benchmark, ax_parity, ax_residual]
 
     if recipe == "R5_n_by_n_pairwise":
         fig = fig or plt.figure(figsize=figsize or (2.4 * n, 2.4 * n))
