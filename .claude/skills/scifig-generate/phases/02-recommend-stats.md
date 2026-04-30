@@ -90,7 +90,7 @@ def recommend_chart_bundle(dataProfile, workflowPreferences):
     IMPLEMENTED_CHARTS = {
         # Mirrors phases/code-gen/registry.py; every registered key has a gen_ implementation.
         "violin_strip", "box_strip", "raincloud", "beeswarm", "paired_lines",
-        "dumbbell", "line", "line_ci", "spaghetti", "heatmap_cluster",
+        "dumbbell", "line", "training_curve", "line_ci", "spaghetti", "heatmap_cluster",
         "heatmap_pure", "volcano", "ma_plot", "pca", "umap",
         "tsne", "enrichment_dotplot", "oncoprint", "lollipop_mutation", "roc",
         "pr_curve", "calibration", "km", "forest", "waterfall",
@@ -153,6 +153,25 @@ def recommend_chart_bundle(dataProfile, workflowPreferences):
         or has_model_performance
         or any(token in cols for token in ("auc", "accuracy", "f1", "r2", "rmse", "mae"))
     )
+    has_training_curve = (
+        "training_curve" in patterns
+        or "learning_curve" in patterns
+        or "training_history" in patterns
+        or "neural_training" in patterns
+        or (
+            any(role in roles for role in ("epoch", "step", "iteration", "time"))
+            and any(role in roles for role in ("loss", "train_loss", "val_loss", "accuracy", "val_accuracy", "metric", "value"))
+            and (
+                domain == "computer_ai_ml"
+                or "ml_model_family" in patterns
+                or any(token in cols for token in ("epoch", "train_loss", "training_loss", "val_loss", "validation_loss", "accuracy", "val_accuracy", "learning_rate"))
+            )
+        )
+        or (
+            any(token in cols for token in ("epoch", "step", "iteration"))
+            and any(token in cols for token in ("loss", "train_loss", "training_loss", "val_loss", "validation_loss", "accuracy", "val_accuracy", "auc", "f1"))
+        )
+    )
     has_classifier_validation_board = (
         "classifier_validation" in patterns
         or "threshold_tuning" in patterns
@@ -192,6 +211,11 @@ def recommend_chart_bundle(dataProfile, workflowPreferences):
     )
 
     # Direct pattern matches
+    if has_training_curve:
+        secondary = ["line", "grouped_bar", "lollipop_horizontal"]
+        if has_confusion_matrix_labels:
+            secondary = ["confusion_matrix", "line", "grouped_bar"]
+        return "training_curve", secondary
     if has_feature_selection_curve:
         return "line", ["grouped_bar", "lollipop_horizontal"]
     if has_classifier_validation_board and "score" in roles and "label" in roles:
@@ -275,7 +299,7 @@ def select_statistical_plan(dataProfile, primaryChart, workflowPreferences):
     if rigor == "descriptive":
         return {"method": "none", "correction": None, "notes": ["descriptive_only"]}
 
-    if primaryChart in ("volcano", "ma_plot", "heatmap+cluster", "heatmap_pure", "umap", "tsne", "pca", "spatial_feature"):
+    if primaryChart in ("volcano", "ma_plot", "heatmap+cluster", "heatmap_pure", "umap", "tsne", "pca", "spatial_feature", "training_curve"):
         return {"method": "none", "correction": None, "notes": ["exploratory_primary_chart"]}
 
     if primaryChart in ("roc", "pr_curve", "calibration"):
@@ -640,10 +664,10 @@ def infer_visual_chart_family(chart_type):
             "heatmap_cluster", "heatmap_pure", "heatmap_annotated",
             "heatmap_triangular", "heatmap_mirrored", "heatmap_symmetric",
             "adjacency_matrix", "cooccurrence_matrix", "bubble_matrix",
-            "dotplot", "composition_dotplot",
+            "dotplot", "composition_dotplot", "confusion_matrix",
         },
         "time_series": {
-            "line", "line_ci", "spaghetti", "sparkline", "area", "area_stacked",
+            "line", "training_curve", "line_ci", "spaghetti", "sparkline", "area", "area_stacked",
             "streamgraph", "gantt", "timeline_annotation", "control_chart",
             "slope_chart", "bump_chart",
         },
@@ -814,10 +838,14 @@ def resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreference
         "precision", "recall", "r2", "rmse", "mae", "residual", "shap",
         "feature_importance", "confusion", "confusion_matrix", "classification_error",
         "true_label", "actual_label", "predicted_label", "prediction_label", "y_pred",
+        "epoch", "learning_curve", "training_curve", "training_history",
+        "train_loss", "training_loss", "val_loss", "validation_loss", "val_accuracy",
     }
     feature_selection_tokens = {"n_features", "top_k", "feature_count", "ablation", "feature_selection", "incremental_feature_selection"}
+    training_curve_tokens = {"epoch", "learning_curve", "training_curve", "training_history", "train_loss", "training_loss", "val_loss", "validation_loss", "val_accuracy"}
     has_ml_signal = domain_hint == "computer_ai_ml" or bool(profile_tokens & ml_tokens)
     has_feature_selection_signal = bool(profile_tokens & feature_selection_tokens)
+    has_training_curve_signal = bool(profile_tokens & training_curve_tokens)
     family_map = {
         "scatter_regression": "marginal_joint",
         "residual_vs_fitted": "marginal_joint",
@@ -825,6 +853,7 @@ def resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreference
         "histogram": "marginal_joint",
         "grouped_bar": "ml_model_diagnostics",
         "line": "ml_model_diagnostics",
+        "training_curve": "ml_model_diagnostics",
         "lollipop_horizontal": "shap_composite",
         "dotplot": "shap_composite",
         "nested_donut": "shap_composite",
@@ -877,7 +906,7 @@ def resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreference
     families = list(selected_bundle.get("templateFamilies") or [])
     for chart in sorted(normalized):
         family = family_map.get(chart)
-        if family == "ml_model_diagnostics" and chart in {"line", "grouped_bar"} and not (selected_bundle or has_ml_signal or has_feature_selection_signal):
+        if family == "ml_model_diagnostics" and chart in {"line", "grouped_bar"} and not (selected_bundle or has_ml_signal or has_feature_selection_signal or has_training_curve_signal):
             continue
         if family and family not in families:
             families.append(family)
@@ -898,7 +927,9 @@ def resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreference
     inferred_bundle_key = selected_bundle.get("bundleKey")
     if not inferred_bundle_key:
         chart_set = set(normalized)
-        if "ml_model_diagnostics" in families and "line" in chart_set and has_feature_selection_signal:
+        if "ml_model_diagnostics" in families and "training_curve" in chart_set:
+            inferred_bundle_key = "neural_training_dynamics"
+        elif "ml_model_diagnostics" in families and "line" in chart_set and has_feature_selection_signal:
             inferred_bundle_key = "incremental_feature_selection_curve"
         elif "ml_model_diagnostics" in families and {"grouped_bar", "scatter_regression", "residual_vs_fitted"} & chart_set:
             inferred_bundle_key = "rf_model_performance_report"

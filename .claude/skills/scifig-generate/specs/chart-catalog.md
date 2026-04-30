@@ -46,6 +46,7 @@ Expanded chart taxonomy for `scifig-generate`. Use this as the lookup table duri
 | `roc` | ✅ | score + binary label | Classifier discrimination |
 | `pr_curve` | ✅ | score + binary label (imbalanced) | Precision-recall assessment |
 | `calibration` | ✅ | predicted risk + observed outcome | Calibration of risk models |
+| `training_curve` | ✅ | epoch/step + loss/accuracy/validation metrics | Neural-network training dynamics |
 | `waterfall` | ✅ | ordered patient/response values | Heterogeneous response summary |
 | `stacked_bar_comp` | ✅ | compositional outcome by group | Cohort composition |
 

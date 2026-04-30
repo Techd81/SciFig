@@ -403,6 +403,7 @@ CHART_GENERATORS = {
     "paired_lines": "gen_paired_lines",
     "dumbbell": "gen_dumbbell",
     "line": "gen_line",
+    "training_curve": "gen_training_curve",
     "line_ci": "gen_line_ci",
     "spaghetti": "gen_spaghetti",
     "heatmap_cluster": "gen_heatmap_cluster",
@@ -464,10 +465,11 @@ CHART_GENERATORS = {
     "mean_diff_plot": "gen_mean_diff_plot",
     "ci_plot": "gen_ci_plot",
 
-    # Matrix / heatmap variants (6)
+    # Matrix / heatmap variants (7)
     "dotplot": "gen_dotplot",
     "adjacency_matrix": "gen_adjacency_matrix",
     "heatmap_annotated": "gen_heatmap_annotated",
+    "confusion_matrix": "gen_confusion_matrix",
     "heatmap_triangular": "gen_heatmap_triangular",
     "heatmap_mirrored": "gen_heatmap_mirrored",
     "cooccurrence_matrix": "gen_cooccurrence_matrix",

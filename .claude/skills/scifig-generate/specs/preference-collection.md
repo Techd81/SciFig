@@ -282,6 +282,15 @@ _TEMPLATE_CHART_BUNDLE_SEEDS = {
             "zh": ("增量特征选择 benchmark 套餐", "适合 feature-count、top-k、消融、AUC/F1/accuracy 或多算法曲线；保留 RF 高亮和决策拐点风格。"),
         },
         {
+            "key": "neural_training_dynamics",
+            "charts": ["training_curve", "line", "grouped_bar"],
+            "families": ["ml_model_diagnostics", "time_series_pi"],
+            "techniqueRefs": ["template-mining/07-techniques/ml-model-diagnostics.md", "template-mining/07-techniques/time-series-pi.md"],
+            "anchors": ["拒绝默认配色：Python 绘制多模型性能对比图的进阶实战_1777451272.md"],
+            "en": ("Neural training dynamics board", "Use for epoch/step histories with train loss, validation loss, accuracy, learning-rate, or early-stopping columns; show convergence, generalization gap, and best epoch."),
+            "zh": ("神经网络训练动态板", "适合 epoch/step、训练损失、验证损失、准确率、学习率或早停字段；展示收敛、泛化差距和最佳 epoch。"),
+        },
+        {
             "key": "rf_feature_importance_shap",
             "charts": ["lollipop_horizontal", "dotplot", "scatter_regression", "nested_donut", "heatmap_annotated"],
             "families": ["ml_model_diagnostics", "shap_composite"],

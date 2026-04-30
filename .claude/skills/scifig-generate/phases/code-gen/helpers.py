@@ -193,7 +193,7 @@ def infer_chart_family(chart_type):
             "dotplot", "composition_dotplot", "confusion_matrix",
         },
         "time_series": {
-            "line", "line_ci", "spaghetti", "sparkline", "area", "area_stacked",
+            "line", "training_curve", "line_ci", "spaghetti", "sparkline", "area", "area_stacked",
             "streamgraph", "gantt", "timeline_annotation", "control_chart",
             "slope_chart", "bump_chart",
         },
@@ -368,6 +368,15 @@ def infer_template_motifs(charts, dataProfile=None):
         or any(token in tokens for token in ("true_label", "actual_label", "predicted_label", "prediction_label", "y_pred"))
     ):
         add("classification_error_matrix")
+        add("metric_table_in_panel")
+    if (
+        "training_curve" in chart_keys
+        or "training_curve" in patterns
+        or "learning_curve" in patterns
+        or "training_history" in patterns
+        or any(token in tokens for token in ("epoch", "train_loss", "training_loss", "val_loss", "validation_loss", "val_accuracy"))
+    ):
+        add("neural_training_dynamics")
         add("metric_table_in_panel")
     if "model_error_diagnostic" in patterns or any(token in tokens for token in ("rmse", "mae", "percent_error", "percentage_error", "error_pct")):
         add("dual_axis_error_sidecar")
@@ -1424,6 +1433,10 @@ def _enhance_time_series(ax, dataProfile, visualPlan, palette, col_map):
     enhancements = []
     df = _df_from_profile(dataProfile)
     x_col = _resolve_numeric_column(dataProfile, df, "x", "time", "index", "point")
+    if _template_motif_planned(visualPlan, "neural_training_dynamics"):
+        _add_inplot_label(ax, "training dynamics\nbest epoch marked", visualPlan, loc="upper_left")
+        _record_template_motif(visualPlan, "neural_training_dynamics")
+        enhancements.append("neural_training_dynamics")
     if _add_dual_axis_error_bars(ax, df, x_col, visualPlan):
         enhancements.append("dual_axis_error_bars")
     for line in ax.lines[:visualPlan.get("maxInlineStats", 4)]:

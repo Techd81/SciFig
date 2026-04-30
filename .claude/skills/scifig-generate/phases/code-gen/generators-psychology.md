@@ -671,6 +671,195 @@ def gen_line(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=Non
     return ax
 
 
+def gen_training_curve(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=None):
+    """Neural-network training history with validation gap and best-epoch callout."""
+    standalone = ax is None
+    import numpy as np
+    import pandas as pd
+    plt.rcParams.update(rcParams)
+    roles = dataProfile.get("semanticRoles", {})
+    columns_lower = {str(c).lower(): c for c in df.columns}
+    display = globals().get("_display_col", lambda col, mapping=None: str(col))
+
+    def _col(*names):
+        for name in names:
+            if name in roles and roles[name] in df.columns:
+                return roles[name]
+        for name in names:
+            key = str(name).lower()
+            if key in columns_lower:
+                return columns_lower[key]
+        return None
+
+    epoch_col = _col("epoch", "epochs", "step", "iteration", "iter", "batch", "x", "time")
+    metric_role = _col("metric")
+    value_col = _col("value", "score", "y")
+    split_col = _col("split", "phase", "subset", "group")
+    model_col = _col("model", "run", "fold", "seed", "optimizer")
+    if epoch_col is None:
+        numeric_cols = df.select_dtypes(include="number").columns.tolist()
+        epoch_col = numeric_cols[0] if numeric_cols else None
+    if epoch_col is None:
+        raise ValueError("training_curve requires an epoch, step, or iteration column")
+
+    work = df.copy()
+    metric_cols = []
+    if metric_role and value_col and metric_role in work.columns and value_col in work.columns:
+        index_cols = [epoch_col]
+        if split_col and split_col in work.columns:
+            index_cols.append(split_col)
+        if model_col and model_col in work.columns:
+            index_cols.append(model_col)
+        wide = work.pivot_table(index=index_cols, columns=metric_role, values=value_col, aggfunc="mean").reset_index()
+        wide.columns = [str(c) for c in wide.columns]
+        work = wide
+        columns_lower = {str(c).lower(): c for c in work.columns}
+
+    def _match_cols(tokens, exclude=()):
+        matches = []
+        for col in work.columns:
+            key = str(col).lower()
+            if col == epoch_col or col in exclude:
+                continue
+            if not pd.api.types.is_numeric_dtype(work[col]):
+                continue
+            if any(token in key for token in tokens):
+                matches.append(col)
+        return matches
+
+    loss_cols = _match_cols(("loss", "cross_entropy", "ce"), exclude=(value_col,))
+    score_cols = _match_cols(("accuracy", "acc", "auc", "f1", "precision", "recall"), exclude=(value_col,))
+    preferred = [
+        "train_loss", "training_loss", "loss", "val_loss", "validation_loss", "test_loss",
+        "train_accuracy", "training_accuracy", "accuracy", "val_accuracy", "validation_accuracy",
+        "val_auc", "auc", "f1", "val_f1",
+    ]
+    ordered = []
+    for key in preferred:
+        col = columns_lower.get(key)
+        if col in loss_cols + score_cols and col not in ordered:
+            ordered.append(col)
+    for col in loss_cols + score_cols:
+        if col not in ordered:
+            ordered.append(col)
+    metric_cols = ordered[:6]
+    if not metric_cols:
+        numeric_cols = [c for c in work.select_dtypes(include="number").columns if c != epoch_col]
+        metric_cols = numeric_cols[:4]
+    if not metric_cols:
+        raise ValueError("training_curve requires loss, accuracy, auc, f1, or numeric metric columns")
+
+    if standalone:
+        fig, ax = plt.subplots(figsize=(105 * (1 / 25.4), 72 * (1 / 25.4)),
+                               constrained_layout=True)
+
+    fallback = palette.get("categorical", ["#1F4E79", "#C8553D", "#4C956C", "#F2A541", "#7A6C8F", "#2B6F77"])
+    line_styles = ["-", "--", "-.", ":", "-", "--"]
+    ordered_work = work.sort_values(epoch_col)
+    x = pd.to_numeric(ordered_work[epoch_col], errors="coerce").to_numpy(dtype=float)
+    finite_x = np.isfinite(x)
+    x = x[finite_x]
+    line_records = []
+    for idx, col in enumerate(metric_cols):
+        y = pd.to_numeric(ordered_work[col], errors="coerce").to_numpy(dtype=float)[finite_x]
+        mask = np.isfinite(x) & np.isfinite(y)
+        if mask.sum() < 2:
+            continue
+        key = str(col).lower()
+        is_validation = any(token in key for token in ("val", "valid", "test"))
+        is_score = any(token in key for token in ("acc", "auc", "f1", "precision", "recall"))
+        color = fallback[idx % len(fallback)]
+        lw = 1.25 if is_validation else 0.95
+        marker = "o" if is_validation else None
+        markevery = max(1, int(mask.sum() / 7))
+        ax.plot(
+            x[mask], y[mask],
+            color=color,
+            lw=lw,
+            ls=line_styles[idx % len(line_styles)],
+            marker=marker,
+            markersize=2.8,
+            markevery=markevery,
+            label=display(col, col_map),
+            alpha=0.96 if is_validation else 0.78,
+            zorder=4 if is_validation else 3,
+        )
+        line_records.append((col, key, x[mask], y[mask], is_score, color))
+
+    train_loss_col = next((col for col in metric_cols if "loss" in str(col).lower() and not any(t in str(col).lower() for t in ("val", "valid", "test"))), None)
+    val_loss_col = next((col for col in metric_cols if "loss" in str(col).lower() and any(t in str(col).lower() for t in ("val", "valid", "test"))), None)
+    if train_loss_col and val_loss_col:
+        train = pd.to_numeric(ordered_work[train_loss_col], errors="coerce").to_numpy(dtype=float)[finite_x]
+        val = pd.to_numeric(ordered_work[val_loss_col], errors="coerce").to_numpy(dtype=float)[finite_x]
+        gap_mask = np.isfinite(x) & np.isfinite(train) & np.isfinite(val)
+        if gap_mask.sum() >= 2:
+            ax.fill_between(x[gap_mask], train[gap_mask], val[gap_mask],
+                            color="#B00000", alpha=0.08, linewidth=0, label="generalization gap")
+
+    decision = None
+    if val_loss_col:
+        y = pd.to_numeric(ordered_work[val_loss_col], errors="coerce").to_numpy(dtype=float)[finite_x]
+        mask = np.isfinite(x) & np.isfinite(y)
+        if mask.any():
+            pos = int(np.nanargmin(y[mask]))
+            decision = ("best val loss", x[mask][pos], y[mask][pos], "#B00000")
+    if decision is None:
+        score_records = [rec for rec in line_records if rec[4]]
+        if score_records:
+            col, key, xs, ys, _, color = score_records[-1]
+            pos = int(np.nanargmax(ys))
+            decision = (f"best {display(col, col_map)}", xs[pos], ys[pos], color)
+    if decision is not None:
+        label, best_x, best_y, color = decision
+        ax.axvline(best_x, color="#333333", lw=0.65, ls="--", alpha=0.62, zorder=1)
+        ax.scatter([best_x], [best_y], s=38, color=color, edgecolor="white", linewidth=0.55, zorder=7)
+        ax.text(
+            0.98, 0.07, f"{label}\nepoch={best_x:g}\nvalue={best_y:.3g}",
+            transform=ax.transAxes, ha="right", va="bottom", fontsize=5.2,
+            bbox=dict(boxstyle="round,pad=0.22", facecolor="white",
+                      edgecolor="#333333", linewidth=0.45, alpha=0.92),
+            zorder=8,
+        )
+
+    if line_records:
+        first = line_records[0]
+        last_delta = first[3][-1] - first[3][0]
+        ax.text(0.04, 0.94, f"training history\ncurves={len(line_records)}\nΔ={last_delta:+.2g}",
+                transform=ax.transAxes, ha="left", va="top", fontsize=5.2,
+                bbox=dict(boxstyle="round,pad=0.22", facecolor="white",
+                          edgecolor="#CCCCCC", linewidth=0.35, alpha=0.88))
+
+    ax.set_xlabel(display(epoch_col, col_map))
+    ax.set_ylabel("Metric value")
+    ax.xaxis.grid(True, linestyle="--", linewidth=0.3, alpha=0.25)
+    ax.yaxis.grid(True, linestyle="--", linewidth=0.3, alpha=0.20)
+    handles, labels = ax.get_legend_handles_labels()
+    if labels:
+        if standalone and ax.figure is not None:
+            legend = ax.figure.legend(handles, labels, loc="lower center", bbox_to_anchor=(0.5, 0.02),
+                                      ncol=min(4, len(labels)), fontsize=5, frameon=True,
+                                      fancybox=True, borderpad=0.25, handlelength=1.6, columnspacing=0.8)
+            legend.set_gid("scifig_shared_legend")
+            legend.get_frame().set_linewidth(0.35)
+            legend.get_frame().set_edgecolor("#333333")
+            legend.get_frame().set_alpha(0.94)
+            try:
+                if hasattr(ax.figure, "set_layout_engine"):
+                    ax.figure.set_layout_engine(None)
+                else:
+                    ax.figure.set_constrained_layout(False)
+            except Exception:
+                pass
+            sp = ax.figure.subplotpars
+            ax.figure.subplots_adjust(left=max(sp.left, 0.16), bottom=max(sp.bottom, 0.30), right=min(sp.right, 0.96))
+        else:
+            ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.24), ncol=min(4, len(labels)),
+                      frameon=False, fontsize=5)
+    if standalone:
+        apply_chart_polish(ax, "training_curve")
+    return ax
+
+
 def gen_ma_plot(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=None):
     """MA plot: average abundance/intensity versus log2 fold change."""
     standalone = ax is None

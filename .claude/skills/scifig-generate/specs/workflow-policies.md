@@ -68,10 +68,13 @@ TEMPLATE_MATCH_POLICY = {
         "validation", "cv", "auc", "accuracy", "f1", "precision", "recall",
         "r2", "rmse", "mae", "residual", "shap", "feature_importance",
         "confusion", "confusion_matrix", "classification_error",
-        "true_label", "actual_label", "predicted_label", "prediction_label", "y_pred"
+        "true_label", "actual_label", "predicted_label", "prediction_label", "y_pred",
+        "epoch", "learning_curve", "training_curve", "training_history",
+        "train_loss", "training_loss", "val_loss", "validation_loss", "val_accuracy"
     ],
     "preferred_ml_bundle_order": [
         "rf_model_performance_report",
+        "neural_training_dynamics",
         "incremental_feature_selection_curve",
         "rf_feature_importance_shap",
         "pso_shap_optimization_framework",

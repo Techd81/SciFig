@@ -1,6 +1,6 @@
 # ML Model Diagnostics Technique
 
-Use this deep-dive whenever `templateCasePlan.families` contains `ml_model_diagnostics`, or when the selected bundle key is one of `rf_model_performance_report`, `incremental_feature_selection_curve`, `rf_feature_importance_shap`, `pso_shap_optimization_framework`, or `classifier_validation_board`.
+Use this deep-dive whenever `templateCasePlan.families` contains `ml_model_diagnostics`, or when the selected bundle key is one of `rf_model_performance_report`, `neural_training_dynamics`, `incremental_feature_selection_curve`, `rf_feature_importance_shap`, `pso_shap_optimization_framework`, or `classifier_validation_board`.
 
 ## Anchor Cases
 
@@ -30,6 +30,16 @@ When columns include `n_features`, `top_k`, `feature_count`, `ablation`, `AUC`, 
 - Mark the elbow/decision point with vertical and horizontal dashed references.
 - Highlight RF when present, but keep other model trajectories visible for benchmark credibility.
 - Executable fallback: `line` detects `n_features` / `top_k` / `feature_count` / `ablation` tables, sorts model trajectories by final score, gives RF the strongest stroke, and marks the decision elbow with dashed guides plus an in-panel callout.
+
+## Neural Training Dynamics
+
+When columns include `epoch`, `step`, `iteration`, `train_loss`, `training_loss`, `val_loss`, `validation_loss`, `accuracy`, `val_accuracy`, `learning_rate`, or early-stopping markers, clone the training-history board before generic time-series plotting:
+
+- Use convergence curves rather than bare line charts. Plot train and validation metrics together, and visually distinguish validation traces.
+- Add validation-gap shading when train and validation loss are both present.
+- Mark the best epoch using validation loss when available, otherwise validation accuracy / AUC / F1.
+- Report compact final/best metrics in-panel so a standalone training curve reads like a model diagnostic, not a logging artifact.
+- Executable fallback: `training_curve` detects wide or long training-history tables, plots up to six loss/score traces, shades the generalization gap, marks the best epoch, and keeps legends outside the plotting area for final render QA.
 
 ## RF Feature Importance + SHAP
 
@@ -62,6 +72,7 @@ When columns include `score`, `probability`, `label`, `true_label`, `predicted_l
 ## Routing Rules
 
 - Prefer `rf_model_performance_report` when both model benchmark metrics and actual/predicted or residual fields exist.
+- Prefer `neural_training_dynamics` when epoch/step training histories include loss, validation loss, accuracy, or learning-rate fields.
 - Prefer `incremental_feature_selection_curve` when feature-count or ablation fields exist.
 - Prefer `rf_feature_importance_shap` when explainability fields exist.
 - Prefer `pso_shap_optimization_framework` when optimization / Pareto / objective columns exist alongside explainability or model-metric fields.

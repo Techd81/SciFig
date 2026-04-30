@@ -12,6 +12,7 @@ CHART_GENERATORS = {
     "paired_lines": "gen_paired_lines",
     "dumbbell": "gen_dumbbell",
     "line": "gen_line",
+    "training_curve": "gen_training_curve",
     "line_ci": "gen_line_ci",
     "spaghetti": "gen_spaghetti",
     "heatmap_cluster": "gen_heatmap_cluster",
