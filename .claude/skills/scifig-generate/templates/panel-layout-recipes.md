@@ -321,6 +321,7 @@ cbar.set_label("Value", fontsize=5)
 - Clone the RF anchor case before generic grouped-bar styling.
 - Use `ml_model_performance_10` for model colors and keep train/test colors stable.
 - Accept both long metric/value rows and wide metric columns; pick the priority metric for split benchmarks or melt metrics into subgroups when no split column exists.
+- For wide metric inputs, reserve right-side benchmark whitespace and render a compact metric-table sidecar for the top model so AUC/F1/precision/recall remain visible without becoming legend entries.
 - Wrap long model names, allocate a larger left gutter, and move 5+ split legends to the bottom center outside the axes.
 - If actual/predicted or residual fields are absent, keep panel A and replace B/C with feature-selection or importance support panels; do not invent residuals.
 

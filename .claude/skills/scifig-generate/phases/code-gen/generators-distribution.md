@@ -2392,6 +2392,8 @@ def gen_grouped_bar(df, dataProfile, chartPlan, rcParams, palette, col_map=None,
     group_col = roles.get("group") or roles.get("x")
     subgroup_col = roles.get("subgroup") or roles.get("color") or roles.get("hue")
     value_col = roles.get("value") or roles.get("y")
+    source_df = df.copy()
+    source_subgroup_col = subgroup_col
 
     if group_col is None:
         raise ValueError("grouped_bar requires 'group' in semanticRoles")
@@ -2492,6 +2494,38 @@ def gen_grouped_bar(df, dataProfile, chartPlan, rcParams, palette, col_map=None,
         def _compact_label(value, width=22):
             text = str(value).strip()
             return text if len(text) <= width else text[:max(3, width - 3)].rstrip() + "..."
+        visual_plan = chartPlan.setdefault("visualContentPlan", {}) if isinstance(chartPlan, dict) else {}
+        priority_terms = ("test", "valid", "validation", "cv", "external")
+        metric_table_rows = []
+
+        def _format_metric_value(value):
+            try:
+                numeric = float(value)
+            except (TypeError, ValueError):
+                return str(value)
+            if not np.isfinite(numeric):
+                return ""
+            return f"{numeric:.3f}" if abs(numeric) < 10 else f"{numeric:.3g}"
+
+        def _metric_display(value):
+            key = _metric_key(value)
+            aliases = {
+                "roc_auc": "ROC AUC",
+                "accuracy": "Acc.",
+                "precision": "Prec.",
+                "recall": "Rec.",
+                "rmse": "RMSE",
+                "mae": "MAE",
+                "mse": "MSE",
+                "auc": "AUC",
+                "f1": "F1",
+                "r2": "R2",
+            }
+            for token, label in aliases.items():
+                if token in key:
+                    return label
+            label = str(value).replace("_", " ").replace("-", " ").strip()
+            return label.upper() if len(label) <= 8 else label[:10].rstrip()
         if metric_col and metric_col in plot_df:
             metric_values = plot_df[metric_col].astype(str).str.lower()
             selected_metric = next((m for m in metric_priority if metric_values.str.contains(m, regex=False).any()), None)
@@ -2506,8 +2540,17 @@ def gen_grouped_bar(df, dataProfile, chartPlan, rcParams, palette, col_map=None,
             metric_label = "Metric score"
             higher_is_better = True
 
+        summary_metric_cols = []
+        for candidate in ([value_col] if value_col in source_df.columns else []) + wide_metric_cols:
+            if (
+                candidate in source_df.columns
+                and pd.api.types.is_numeric_dtype(source_df[candidate])
+                and any(metric in _metric_key(candidate) for metric in metric_priority)
+                and candidate not in summary_metric_cols
+            ):
+                summary_metric_cols.append(candidate)
+
         subgroup_labels = [str(s).lower() for s in subgroups]
-        priority_terms = ("test", "valid", "validation", "cv", "external")
         if wide_metric_mode == "metrics_as_subgroups":
             priority_subgroups = subgroups[:1]
         else:
@@ -2528,6 +2571,20 @@ def gen_grouped_bar(df, dataProfile, chartPlan, rcParams, palette, col_map=None,
             key=lambda c: np.nan_to_num(score_by_category.get(c), nan=-np.inf if higher_is_better else np.inf),
             reverse=higher_is_better,
         )
+        if summary_metric_cols and categories and group_col in source_df.columns:
+            table_source = source_df[source_df[group_col] == categories[0]]
+            if source_subgroup_col and source_subgroup_col in table_source.columns:
+                split_labels = table_source[source_subgroup_col].astype(str).str.lower()
+                for term in ("external", "test", "valid", "validation", "cv"):
+                    split_match = split_labels.str.contains(term, regex=False)
+                    if split_match.any():
+                        table_source = table_source[split_match]
+                        break
+            for metric_name in summary_metric_cols[:4]:
+                values = pd.to_numeric(table_source[metric_name], errors="coerce").dropna()
+                if len(values):
+                    metric_table_rows.append((_metric_display(metric_name), _format_metric_value(values.mean())))
+
         max_model_label_len = max([len(str(c)) for c in categories] or [0])
         if standalone:
             fig_for_size = ax.figure
@@ -2592,6 +2649,23 @@ def gen_grouped_bar(df, dataProfile, chartPlan, rcParams, palette, col_map=None,
         ax.set_ylabel("Model" if standalone else "")
         ax.xaxis.grid(True, linestyle="--", linewidth=0.35, alpha=0.45, zorder=0)
         ax.set_axisbelow(True)
+        if metric_table_rows:
+            finite_values = pd.to_numeric(plot_df[value_col], errors="coerce").dropna()
+            if len(finite_values):
+                current_left, current_right = ax.get_xlim()
+                max_value = float(finite_values.max())
+                if np.isfinite(max_value) and max_value > 0:
+                    ax.set_xlim(left=current_left, right=max(current_right, max_value / 0.68))
+            add_metric_table = globals().get("_add_metric_table")
+            record_template_motif = globals().get("_record_template_motif")
+            if callable(add_metric_table):
+                table = add_metric_table(ax, metric_table_rows, visual_plan, loc="sidecar_right")
+                if table is not None:
+                    enhancements = visual_plan.setdefault("appliedEnhancements", [])
+                    if "model_benchmark_metric_table" not in enhancements:
+                        enhancements.append("model_benchmark_metric_table")
+                    if callable(record_template_motif):
+                        record_template_motif(visual_plan, "ml_model_performance_triptych")
         fig_for_margin = ax.figure
         if fig_for_margin is not None:
             try:
@@ -2610,13 +2684,20 @@ def gen_grouped_bar(df, dataProfile, chartPlan, rcParams, palette, col_map=None,
                 right=min(sp.right, 0.94),
             )
         if best_index is not None and best_score is not None and not np.isnan(best_score):
-            best_note = f"best: {_compact_label(categories[best_index], 18)}"
+            if metric_table_rows and _is_rf_label(categories[best_index]):
+                best_label = "RF"
+            elif _is_rf_label(categories[best_index]):
+                best_label = "Random Forest"
+            else:
+                best_label = _compact_label(categories[best_index], 14 if metric_table_rows else 18)
+            best_note = f"best: {best_label}"
             if standalone:
                 ax.set_title(f"Model benchmark | {best_note}", loc="left", fontsize=7, fontweight="bold", pad=6)
             else:
+                note_x, note_y = (0.70, 0.34) if metric_table_rows else (0.02, 0.06)
                 ax.text(
-                    0.02,
-                    0.06,
+                    note_x,
+                    note_y,
                     best_note,
                     transform=ax.transAxes,
                     fontsize=5,

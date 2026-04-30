@@ -1028,6 +1028,7 @@ def _add_metric_table(ax, rows, visualPlan, loc="lower_right"):
         "lower_right": [0.58, 0.05, 0.38, 0.20],
         "lower_left": [0.04, 0.05, 0.38, 0.20],
         "upper_right": [0.58, 0.74, 0.38, 0.20],
+        "sidecar_right": [0.70, 0.06, 0.27, 0.22],
     }
     table = ax.table(
         cellText=[[label, value] for label, value in clean[:4]],
