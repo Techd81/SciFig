@@ -1,6 +1,6 @@
 # ML Model Diagnostics Technique
 
-Use this deep-dive whenever `templateCasePlan.families` contains `ml_model_diagnostics`, or when the selected bundle key is one of `rf_model_performance_report`, `neural_architecture_topology`, `neural_training_dynamics`, `incremental_feature_selection_curve`, `rf_feature_importance_shap`, `pso_shap_optimization_framework`, or `classifier_validation_board`.
+Use this deep-dive whenever `templateCasePlan.families` contains `ml_model_diagnostics`, or when the selected bundle key is one of `rf_model_performance_report`, `neural_architecture_metric_storyboard`, `neural_architecture_topology`, `neural_training_dynamics`, `incremental_feature_selection_curve`, `rf_feature_importance_shap`, `pso_shap_optimization_framework`, or `classifier_validation_board`.
 
 ## Anchor Cases
 
@@ -28,9 +28,10 @@ When columns include `layer`, `module`, `component`, `block`, `source`, `target`
 - Use rounded module blocks rather than plain nodes. Put the layer or module name on the first line and compact type/unit/parameter tags below it.
 - Group modules by stage or block with pale stage bands. Keep all labels inside the axes so the figure survives layout QA.
 - Use directed arrows for source-target edges or sequential layer order. Encode supplied edge weights with line width and keep legends out unless a real categorical mapping is needed outside the plotting area.
-- If edge/module metrics such as latency, FLOPs, memory, throughput, cost, parameters, or edge weights exist, add a compact in-panel metric dashboard instead of hiding them in prose.
-- Pair the architecture hero with `training_curve` or `lollipop_horizontal` support panels when training or explainability fields are also available.
-- Executable fallback: `model_architecture` detects node tables or edge tables, derives a compact DAG/sequential layout, draws stage bands, directed arrows, module blocks, edge-weight strokes, a module/edge/parameter summary box, and an edge/module metric dashboard when metric columns exist.
+- If edge/module metrics such as latency, FLOPs, memory, throughput, cost, parameters, or edge weights exist, prefer `model_architecture_board`: topology spans the top row, metric profile occupies panel B, and edge signal occupies panel C.
+- Use the compact in-panel metric dashboard only for plain `model_architecture` single-panel fallback.
+- Pair the architecture hero with `training_curve` or `lollipop_horizontal` support panels only when training or explainability fields are also available.
+- Executable fallback: `model_architecture_board` creates a three-axis architecture metric storyboard from one edge table; `model_architecture` detects node tables or edge tables, derives a compact DAG/sequential layout, draws stage bands, directed arrows, module blocks, edge-weight strokes, a module/edge/parameter summary box, and an edge/module metric dashboard when metric columns exist.
 
 ## Incremental Feature Selection
 
@@ -83,7 +84,8 @@ When columns include `score`, `probability`, `label`, `true_label`, `predicted_l
 ## Routing Rules
 
 - Prefer `rf_model_performance_report` when both model benchmark metrics and actual/predicted or residual fields exist.
-- Prefer `neural_architecture_topology` when layer/module/component or source-target architecture fields exist.
+- Prefer `neural_architecture_metric_storyboard` / `model_architecture_board` when architecture fields include latency/FLOPs/memory/throughput/cost/edge metrics.
+- Prefer `neural_architecture_topology` when layer/module/component or source-target architecture fields exist without metric columns.
 - Prefer `neural_training_dynamics` when epoch/step training histories include loss, validation loss, accuracy, or learning-rate fields.
 - Prefer `incremental_feature_selection_curve` when feature-count or ablation fields exist.
 - Prefer `rf_feature_importance_shap` when explainability fields exist.

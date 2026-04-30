@@ -287,6 +287,24 @@ cbar.set_label("Value", fontsize=5)
 - Use `ml_model_performance_10` for model colors and keep train/test colors stable.
 - If actual/predicted or residual fields are absent, keep panel A and replace B/C with feature-selection or importance support panels; do not invent residuals.
 
+## Recipe 18: Architecture Metric Storyboard
+
+**When to use**
+- `templateLayoutIntents` contains `architecture_metric_storyboard`.
+- Data contain layer/module/component or source-target topology fields plus latency, FLOPs, memory, throughput, cost, edge_weight, params, or parameter columns.
+- User selected an AI/ML/computer domain or explicitly asks for neural-network, pipeline, DAG, transformer, encoder/decoder, or model architecture figures.
+
+**Layout**
+- `2 x 2` with top row spanning both columns.
+- A = architecture topology with stage bands, rounded modules, directed arrows, and compact module metadata.
+- B = metric profile support axis summarizing latency/FLOPs/memory/throughput/cost/parameter columns.
+- C = edge-signal support axis for source-target edge weights or the strongest available edge metric.
+
+**Rules**
+- Prefer `model_architecture_board` over a plain topology chart when edge/module metrics exist.
+- Keep metric panels as real axes, not floating text only; use the in-axis dashboard only as a fallback for single-panel outputs.
+- Suppress redundant legends and keep panel labels inside axes so render QA can hard-fail overlap.
+
 ## Composition Rules
 
 1. Share legends whenever the same categorical mapping appears in multiple panels, and keep them outside the data region.

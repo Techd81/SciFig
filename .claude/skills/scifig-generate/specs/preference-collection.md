@@ -274,11 +274,11 @@ _TEMPLATE_CHART_BUNDLE_SEEDS = {
         },
         {
             "key": "neural_architecture_topology",
-            "charts": ["model_architecture", "training_curve", "lollipop_horizontal"],
+            "charts": ["model_architecture_board", "model_architecture", "parallel_coordinates"],
             "families": ["ml_model_diagnostics", "time_series_pi", "shap_composite"],
             "techniqueRefs": ["template-mining/07-techniques/ml-model-diagnostics.md", "template-mining/07-techniques/time-series-pi.md", "template-mining/07-techniques/shap-composite.md"],
             "anchors": ["基于PSO多目标优化与SHAP可解释分析的回归预测模型框架_1777461729.md"],
-            "en": ("Neural architecture topology package", "Use for layer/module/component or source-target architecture tables: rounded module blocks, stage bands, directed arrows, parameter/unit tags, edge-metric dashboards, then training or explainability support panels."),
+            "en": ("Neural architecture topology package", "Use for layer/module/component or source-target architecture tables: rounded module blocks, stage bands, directed arrows, parameter/unit tags, and a real architecture-metric storyboard when latency/FLOPs/memory/edge metrics exist."),
             "zh": ("神经网络架构拓扑套装", "适合 layer/module/component 或 source-target 架构表：圆角模块、阶段泳道、有向箭头、参数/单元标签、边指标 dashboard，并搭配训练或解释性支持面板。"),
         },
         {

@@ -315,6 +315,7 @@ def gen_model_architecture(df, dataProfile, chartPlan, rcParams, palette, col_ma
     detail_font = 4.0 if len(level_keys) >= 6 else 4.25
     node_line_len = 9 if len(level_keys) >= 6 else 13
 
+    stage_label_centers = []
     for stage in stage_values:
         stage_nodes = [node for node in nodes if str(meta.get(node, {}).get("stage") or "Architecture") == stage]
         if not stage_nodes:
@@ -336,14 +337,18 @@ def gen_model_architecture(df, dataProfile, chartPlan, rcParams, palette, col_ma
             zorder=0,
         )
         ax.add_patch(band)
-        _arch_text(
-            (x0 + x1) / 2, 0.865, _clean_label(stage, 18),
-            ha="center", va="bottom", fontsize=5.2, fontweight="bold",
-            color=stage_color.get(stage, "#475569"), transform=ax.transAxes,
-            clip_on=True, zorder=3,
-        )
+        label_center = (x0 + x1) / 2
+        if all(abs(label_center - used) > 0.105 for used in stage_label_centers):
+            stage_label_centers.append(label_center)
+            _arch_text(
+                label_center, 0.865, _clean_label(stage, 18),
+                ha="center", va="bottom", fontsize=4.8 if len(stage_values) >= 5 else 5.2, fontweight="bold",
+                color=stage_color.get(stage, "#475569"), transform=ax.transAxes,
+                clip_on=True, zorder=3,
+            )
 
-    dashboard_cols = [col for col in metric_cols if col != params_col][:3]
+    suppress_dashboard = bool(chartPlan.get("suppressArchitectureDashboard", False))
+    dashboard_cols = [] if suppress_dashboard else [col for col in metric_cols if col != params_col][:3]
     show_edge_value_labels = bool(chartPlan.get("showEdgeValueLabels", False) or (len(edges) <= 4 and not dashboard_cols))
     arrow_values = {}
     arrow_widths = {}
@@ -507,6 +512,169 @@ def gen_model_architecture(df, dataProfile, chartPlan, rcParams, palette, col_ma
     ax.axis("off")
     if standalone:
         apply_chart_polish(ax, "model_architecture")
+    return ax
+
+
+def gen_model_architecture_board(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=None):
+    """Architecture plus metric storyboard for AI/ML source-target tables.
+
+    Use when topology rows also contain latency, FLOPs, memory, throughput,
+    cost, edge_weight, or parameter columns. The board promotes the metric
+    evidence into real support axes instead of compressing everything into
+    labels inside the topology panel.
+    """
+    import numpy as np
+    import pandas as pd
+
+    standalone = ax is None
+    plt.rcParams.update(rcParams)
+    if df is None or not len(df):
+        raise ValueError("model_architecture_board requires architecture rows")
+    if standalone:
+        fig, ax = plt.subplots(figsize=(183 / 25.4, 118 / 25.4), constrained_layout=False)
+    else:
+        fig = ax.figure
+
+    roles = dataProfile.get("semanticRoles", {}) if isinstance(dataProfile, dict) else {}
+
+    def _pick_col(*role_names, tokens=()):
+        for role_name in role_names:
+            candidate = roles.get(role_name)
+            if candidate in getattr(df, "columns", []):
+                return candidate
+        lower_to_col = {str(col).lower(): col for col in getattr(df, "columns", [])}
+        for token in tokens:
+            if token in lower_to_col:
+                return lower_to_col[token]
+        for col in getattr(df, "columns", []):
+            lowered = str(col).lower()
+            if any(token in lowered for token in tokens):
+                return col
+        return None
+
+    def _short(value, max_len=18):
+        text = str(value).replace("_", " ").strip()
+        if not text or text.lower() in ("nan", "none"):
+            return "metric"
+        return text if len(text) <= max_len else text[:max_len - 1] + "..."
+
+    source_col = _pick_col("source", "from", tokens=("source", "from", "input"))
+    target_col = _pick_col("target", "to", tokens=("target", "to", "output"))
+    params_col = _pick_col("params", "parameters", tokens=("params", "parameters", "n_params"))
+    metric_tokens = (
+        "latency", "flops", "memory", "throughput", "cost", "score",
+        "accuracy", "auc", "f1", "params", "parameters", "weight",
+    )
+    metric_cols = []
+    for col in getattr(df, "columns", []):
+        lowered = str(col).lower()
+        if col in {source_col, target_col}:
+            continue
+        if any(token in lowered for token in metric_tokens):
+            numeric = pd.to_numeric(df[col], errors="coerce")
+            if numeric.notna().any():
+                metric_cols.append(col)
+
+    ax.set_axis_off()
+    arch_ax = ax.inset_axes([0.025, 0.345, 0.95, 0.61])
+    metric_ax = ax.inset_axes([0.045, 0.070, 0.425, 0.205])
+    edge_ax = ax.inset_axes([0.545, 0.070, 0.405, 0.205])
+    for sub_ax in (arch_ax, metric_ax, edge_ax):
+        sub_ax.set_facecolor("#FFFFFF")
+        for spine in sub_ax.spines.values():
+            spine.set_edgecolor("#CBD5E1")
+            spine.set_linewidth(0.55)
+
+    arch_plan = dict(chartPlan)
+    arch_plan["suppressArchitectureDashboard"] = True
+    arch_plan.setdefault("drawInternalTitle", False)
+    gen_model_architecture(df, dataProfile, arch_plan, rcParams, palette, col_map=col_map, ax=arch_ax)
+
+    colors = palette.get("categorical", ["#2B6CB0", "#D97706", "#0F766E", "#7C3AED"])
+    dashboard_cols = metric_cols[:4]
+    if dashboard_cols:
+        labels = [_short(col, 16) for col in dashboard_cols]
+        means = []
+        fractions = []
+        for col in dashboard_cols:
+            numeric = pd.to_numeric(df[col], errors="coerce")
+            value = float(numeric.mean()) if numeric.notna().any() else 0.0
+            denom = max(float(np.nanmax(np.abs(numeric))) if numeric.notna().any() else 1.0, abs(value), 1.0)
+            means.append(value)
+            fractions.append(min(1.0, abs(value) / denom))
+        y = np.arange(len(labels))
+        metric_ax.barh(y, fractions, color=[colors[i % len(colors)] for i in range(len(labels))], alpha=0.78)
+        metric_ax.set_yticks(y)
+        metric_ax.set_yticklabels(labels, fontsize=5.1)
+        metric_ax.invert_yaxis()
+        metric_ax.set_xlim(0, 1.18)
+        metric_ax.set_xticks([])
+        metric_ax.set_title("b  metric profile", loc="left", fontsize=6.1, fontweight="bold", pad=2)
+        for yi, value in zip(y, means):
+            metric_ax.text(
+                0.86, yi, f"{value:.2g}",
+                va="center", ha="right", fontsize=4.8, color="#1E293B", clip_on=True,
+                bbox=dict(facecolor="white", edgecolor="none", alpha=0.72, pad=0.35),
+            )
+    else:
+        metric_ax.text(0.5, 0.56, "b  metric profile", ha="center", va="center",
+                       fontsize=6.1, fontweight="bold", transform=metric_ax.transAxes)
+        metric_ax.text(0.5, 0.38, "no numeric metric columns", ha="center", va="center",
+                       fontsize=5.0, color="#64748B", transform=metric_ax.transAxes)
+        metric_ax.set_xticks([])
+        metric_ax.set_yticks([])
+
+    edge_metric = None
+    for token in ("edge_weight", "weight", "latency", "flops", "memory", "throughput"):
+        for col in metric_cols:
+            if token in str(col).lower():
+                edge_metric = col
+                break
+        if edge_metric:
+            break
+    if not edge_metric and metric_cols:
+        edge_metric = metric_cols[0]
+
+    if source_col and target_col and edge_metric:
+        edge_df = df[[source_col, target_col, edge_metric]].copy()
+        edge_df[edge_metric] = pd.to_numeric(edge_df[edge_metric], errors="coerce")
+        edge_df = edge_df.dropna(subset=[source_col, target_col, edge_metric]).head(8)
+    else:
+        edge_df = pd.DataFrame()
+
+    if not edge_df.empty:
+        labels = [
+            _short(f"{row[source_col]} -> {row[target_col]}", 20)
+            for _, row in edge_df.iterrows()
+        ]
+        values = edge_df[edge_metric].astype(float).to_numpy()
+        y = np.arange(len(labels))
+        edge_ax.barh(y, values, color="#334155", alpha=0.72)
+        edge_ax.set_yticks(y)
+        edge_ax.set_yticklabels(labels, fontsize=4.8)
+        edge_ax.invert_yaxis()
+        edge_ax.tick_params(axis="x", labelsize=4.6, length=2)
+        edge_ax.set_title(f"c  edge signal: {_short(edge_metric, 14)}", loc="left",
+                          fontsize=6.1, fontweight="bold", pad=2)
+        limit = max([abs(float(v)) for v in values] + [1.0])
+        edge_ax.set_xlim(0, limit * 1.18)
+    else:
+        edge_ax.text(0.5, 0.56, "c  edge signal", ha="center", va="center",
+                     fontsize=6.1, fontweight="bold", transform=edge_ax.transAxes)
+        edge_ax.text(0.5, 0.38, "source-target metric unavailable", ha="center", va="center",
+                     fontsize=5.0, color="#64748B", transform=edge_ax.transAxes)
+        edge_ax.set_xticks([])
+        edge_ax.set_yticks([])
+
+    ax.text(0.025, 0.975, "a  architecture topology", ha="left", va="top",
+            fontsize=7.0, fontweight="bold", color="#0F172A", transform=ax.transAxes)
+    visual_plan = chartPlan.get("visualContentPlan", {}) if isinstance(chartPlan, dict) else {}
+    if callable(globals().get("_record_template_motif")):
+        _record_template_motif(visual_plan, "neural_architecture_topology")
+        _record_template_motif(visual_plan, "architecture_metric_dashboard")
+        _record_template_motif(visual_plan, "architecture_metric_storyboard")
+    if callable(globals().get("_visual_count")):
+        _visual_count(visual_plan, "metricTableCount")
     return ax
 
 

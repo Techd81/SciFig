@@ -71,7 +71,7 @@ TEMPLATE_MATCH_POLICY = {
         "true_label", "actual_label", "predicted_label", "prediction_label", "y_pred",
         "epoch", "learning_curve", "training_curve", "training_history",
         "train_loss", "training_loss", "val_loss", "validation_loss", "val_accuracy",
-        "model_architecture", "neural_architecture", "architecture_diagram",
+        "model_architecture", "model_architecture_board", "neural_architecture", "architecture_diagram",
         "pipeline_topology", "dag_pipeline", "layer", "module", "component",
         "block", "node", "source", "target", "params", "parameters", "units",
         "channels", "heads", "attention", "transformer", "encoder", "decoder",
@@ -79,6 +79,7 @@ TEMPLATE_MATCH_POLICY = {
     ],
     "preferred_ml_bundle_order": [
         "rf_model_performance_report",
+        "neural_architecture_metric_storyboard",
         "neural_architecture_topology",
         "neural_training_dynamics",
         "incremental_feature_selection_curve",
@@ -90,7 +91,7 @@ TEMPLATE_MATCH_POLICY = {
 }
 ```
 
-If a user-selected or inferred domain contains AI/ML/computer-science signals, Phase 2 must route to `computer_ai_ml` before generic biomedical or engineering defaults. If layer/module/component or source-target topology fields are present, the neural architecture topology bundle is preferred over generic flow diagrams. If Random Forest/RF/RFR is present and the schema supports model metrics, actual/predicted, residuals, or feature importance, the RF anchor cases are preferred over generic prediction diagnostics.
+If a user-selected or inferred domain contains AI/ML/computer-science signals, Phase 2 must route to `computer_ai_ml` before generic biomedical or engineering defaults. If layer/module/component or source-target topology fields are present with latency, FLOPs, memory, throughput, cost, edge_weight, or parameter metrics, prefer `model_architecture_board` and the `neural_architecture_metric_storyboard` bundle over a plain topology diagram. If topology metrics are absent, the neural architecture topology bundle is still preferred over generic flow diagrams. If Random Forest/RF/RFR is present and the schema supports model metrics, actual/predicted, residuals, or feature importance, the RF anchor cases are preferred over generic prediction diagnostics.
 
 ## Autonomous Distillation Policy
 

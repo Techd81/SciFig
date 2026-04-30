@@ -90,7 +90,7 @@ def recommend_chart_bundle(dataProfile, workflowPreferences):
     IMPLEMENTED_CHARTS = {
         # Mirrors phases/code-gen/registry.py; every registered key has a gen_ implementation.
         "violin_strip", "box_strip", "raincloud", "beeswarm", "paired_lines",
-        "dumbbell", "line", "training_curve", "model_architecture", "line_ci", "spaghetti", "heatmap_cluster",
+        "dumbbell", "line", "training_curve", "model_architecture", "model_architecture_board", "line_ci", "spaghetti", "heatmap_cluster",
         "heatmap_pure", "volcano", "ma_plot", "pca", "umap",
         "tsne", "enrichment_dotplot", "oncoprint", "lollipop_mutation", "roc",
         "pr_curve", "calibration", "km", "forest", "waterfall",
@@ -175,6 +175,8 @@ def recommend_chart_bundle(dataProfile, workflowPreferences):
             )
         )
     )
+    architecture_metric_tokens = {"latency", "flops", "memory", "throughput", "edge_weight", "weight", "cost", "params", "parameters"}
+    has_architecture_metrics = has_model_architecture and bool(profile_tokens & architecture_metric_tokens)
     has_training_curve = (
         "training_curve" in patterns
         or "learning_curve" in patterns
@@ -233,6 +235,8 @@ def recommend_chart_bundle(dataProfile, workflowPreferences):
     )
 
     # Direct pattern matches
+    if has_architecture_metrics:
+        return "model_architecture_board", ["model_architecture", "parallel_coordinates"]
     if has_model_architecture:
         return "model_architecture", ["training_curve", "confusion_matrix", "lollipop_horizontal"]
     if has_training_curve:
@@ -323,7 +327,7 @@ def select_statistical_plan(dataProfile, primaryChart, workflowPreferences):
     if rigor == "descriptive":
         return {"method": "none", "correction": None, "notes": ["descriptive_only"]}
 
-    if primaryChart in ("volcano", "ma_plot", "heatmap+cluster", "heatmap_pure", "umap", "tsne", "pca", "spatial_feature", "training_curve", "model_architecture"):
+    if primaryChart in ("volcano", "ma_plot", "heatmap+cluster", "heatmap_pure", "umap", "tsne", "pca", "spatial_feature", "training_curve", "model_architecture", "model_architecture_board"):
         return {"method": "none", "correction": None, "notes": ["exploratory_primary_chart"]}
 
     if primaryChart in ("roc", "pr_curve", "calibration"):
@@ -420,6 +424,9 @@ def infer_template_layout_intents(dataProfile, primaryChart, secondaryCharts):
     roles = dataProfile.get("semanticRoles", {})
     patterns = set(dataProfile.get("specialPatterns", []))
     charts = [primaryChart] + list(secondaryCharts or [])
+    columns = [str(c).lower() for c in dataProfile.get("columnNames", [])]
+    profile_tokens = set(columns) | {str(k).lower() for k in roles} | {str(v).lower() for v in roles.values()} | patterns
+    architecture_metric_tokens = {"latency", "flops", "memory", "throughput", "edge_weight", "weight", "cost", "params", "parameters"}
     intents = []
 
     def add(intent):
@@ -435,6 +442,19 @@ def infer_template_layout_intents(dataProfile, primaryChart, secondaryCharts):
         or ("model" in roles and any(role in roles for role in ("metric", "score", "rmse", "mae", "residual")))
     ):
         add("ml_model_performance_triptych")
+    if (
+        "model_architecture_board" in charts
+        or "model_architecture_board" in patterns
+        or (
+            any(chart in ("model_architecture", "model_architecture_board") for chart in charts)
+            and bool(profile_tokens & architecture_metric_tokens)
+        )
+        or (
+            bool(patterns & {"model_architecture", "neural_architecture", "architecture_diagram", "pipeline_topology", "dag_pipeline"})
+            and bool(profile_tokens & architecture_metric_tokens)
+        )
+    ):
+        add("architecture_metric_storyboard")
     if "ml_explainability" in patterns or "feature_importance" in patterns or "shap_value" in roles:
         add("ml_explainability_board")
     if "optimization_tradeoff" in patterns or "pareto_chart" in charts or "pareto_flag" in roles:
@@ -453,7 +473,11 @@ def build_panel_blueprint(primaryChart, secondaryCharts, dataProfile, workflowPr
     story_was_default = "storyMode" not in workflowPreferences
     story = workflowPreferences.get("storyMode", "comparison_pair")
     template_layout_intents = infer_template_layout_intents(dataProfile, primaryChart, secondaryCharts)
-    if (story == "auto" or story_was_default) and "ml_model_performance_triptych" in template_layout_intents:
+    if (story == "auto" or story_was_default) and "architecture_metric_storyboard" in template_layout_intents and primaryChart == "model_architecture_board":
+        story = "single"
+    elif (story == "auto" or story_was_default) and "architecture_metric_storyboard" in template_layout_intents:
+        story = "architecture_metric_storyboard"
+    elif (story == "auto" or story_was_default) and "ml_model_performance_triptych" in template_layout_intents:
         story = "ml_model_performance_triptych"
     elif (story == "auto" or story_was_default) and "prediction_diagnostic_matrix" in template_layout_intents:
         story = "prediction_diagnostic_matrix"
@@ -485,6 +509,7 @@ def build_panel_blueprint(primaryChart, secondaryCharts, dataProfile, workflowPr
         "hero_plus_triple_support": 4,
         "asymmetric_L": 3,
         "ml_model_performance_triptych": 3,
+        "architecture_metric_storyboard": 3,
         "board_2x3": 6,
         "board_3x3": 9,
         "prediction_diagnostic_matrix": 4,
@@ -517,6 +542,7 @@ def build_panel_blueprint(primaryChart, secondaryCharts, dataProfile, workflowPr
 
     layout_grid_map = {
         "ml_model_performance_triptych": "2x2-rf-diagnostic",
+        "architecture_metric_storyboard": "2x2-architecture-metric",
         "prediction_diagnostic_matrix": "2x2-diagnostic",
         "ml_explainability_board": "2x2-explainability",
     }
@@ -608,6 +634,7 @@ def build_crowding_plan(primaryChart, secondaryCharts, dataProfile, workflowPref
         "board_3x3": ["board_2x3", "story_board_2x2", "hero_plus_stacked_support", "comparison_pair", "single"],
         "hero_plus_triple_support": ["hero_plus_stacked_support", "comparison_pair", "single"],
         "asymmetric_L": ["triple_horizontal", "comparison_pair", "single"],
+        "architecture_metric_storyboard": ["ml_model_performance_triptych", "hero_plus_stacked_support", "comparison_pair", "single"],
         "prediction_diagnostic_matrix": ["story_board_2x2", "comparison_pair", "single"],
         "ml_explainability_board": ["story_board_2x2", "hero_plus_stacked_support", "comparison_pair", "single"],
     }.get(final_layout, ["comparison_pair", "single"])
@@ -715,7 +742,7 @@ def infer_visual_chart_family(chart_type):
             "waffle_chart", "marimekko", "stacked_area_comp",
             "nested_donut", "chord_diagram", "parallel_coordinates",
             "sankey", "radar", "pareto_chart", "lollipop_horizontal",
-            "stem_plot", "mosaic_plot", "diverging_bar", "model_architecture",
+            "stem_plot", "mosaic_plot", "diverging_bar", "model_architecture", "model_architecture_board",
         },
         "psych_ecology": {
             "species_abundance", "shannon_diversity", "biodiversity_radar",
@@ -817,7 +844,8 @@ def infer_template_visual_motifs(charts, dataProfile):
     ):
         add("ml_model_performance_triptych", "model_algorithm_metric_or_split_columns")
     if (
-        "model_architecture" in chart_keys
+        "model_architecture_board" in chart_keys
+        or "model_architecture" in chart_keys
         or "model_architecture" in patterns
         or "neural_architecture" in patterns
         or "pipeline_topology" in patterns
@@ -826,8 +854,9 @@ def infer_template_visual_motifs(charts, dataProfile):
     ):
         add("neural_architecture_topology", "layer_module_or_source_target_topology_columns")
         add("metric_table_in_panel", "module_count_edge_count_or_parameter_summary")
-        if any(token in tokens for token in ("latency", "flops", "memory", "throughput", "cost", "edge_weight", "params", "parameters")):
+        if "model_architecture_board" in chart_keys or any(token in tokens for token in ("latency", "flops", "memory", "throughput", "cost", "edge_weight", "params", "parameters")):
             add("architecture_metric_dashboard", "edge_or_module_metric_columns")
+            add("architecture_metric_storyboard", "architecture_plus_metric_support_axes")
     if "model_error_diagnostic" in patterns or any(token in tokens for token in ("rmse", "mae", "percent_error", "percentage_error", "error_pct")):
         add("dual_axis_error_sidecar", "error_metric_column_or_computable_residuals")
     if "ml_explainability" in patterns or "feature_importance" in patterns or "shap_value" in roles or "importance" in roles:
@@ -876,7 +905,7 @@ def resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreference
         "true_label", "actual_label", "predicted_label", "prediction_label", "y_pred",
         "epoch", "learning_curve", "training_curve", "training_history",
         "train_loss", "training_loss", "val_loss", "validation_loss", "val_accuracy",
-        "model_architecture", "neural_architecture", "architecture_diagram",
+        "model_architecture", "model_architecture_board", "neural_architecture", "architecture_diagram",
         "pipeline_topology", "dag_pipeline", "layer", "module", "component",
         "block", "node", "source", "target", "params", "parameters", "units",
         "channels", "heads", "attention", "transformer", "encoder", "decoder",
@@ -884,7 +913,7 @@ def resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreference
     }
     feature_selection_tokens = {"n_features", "top_k", "feature_count", "ablation", "feature_selection", "incremental_feature_selection"}
     training_curve_tokens = {"epoch", "learning_curve", "training_curve", "training_history", "train_loss", "training_loss", "val_loss", "validation_loss", "val_accuracy"}
-    architecture_tokens = {"model_architecture", "neural_architecture", "architecture_diagram", "pipeline_topology", "dag_pipeline", "layer", "module", "component", "block", "node", "source", "target", "params", "parameters", "units", "channels", "heads", "attention", "transformer", "encoder", "decoder"}
+    architecture_tokens = {"model_architecture", "model_architecture_board", "neural_architecture", "architecture_diagram", "pipeline_topology", "dag_pipeline", "layer", "module", "component", "block", "node", "source", "target", "params", "parameters", "units", "channels", "heads", "attention", "transformer", "encoder", "decoder"}
     has_ml_signal = domain_hint == "computer_ai_ml" or bool(profile_tokens & ml_tokens)
     has_feature_selection_signal = bool(profile_tokens & feature_selection_tokens)
     has_training_curve_signal = bool(profile_tokens & training_curve_tokens)
@@ -895,6 +924,7 @@ def resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreference
         "bland_altman": "marginal_joint",
         "histogram": "marginal_joint",
         "model_architecture": "ml_model_diagnostics",
+        "model_architecture_board": "ml_model_diagnostics",
         "grouped_bar": "ml_model_diagnostics",
         "line": "ml_model_diagnostics",
         "training_curve": "ml_model_diagnostics",
@@ -971,7 +1001,9 @@ def resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreference
     inferred_bundle_key = selected_bundle.get("bundleKey")
     if not inferred_bundle_key:
         chart_set = set(normalized)
-        if "ml_model_diagnostics" in families and "model_architecture" in chart_set:
+        if "ml_model_diagnostics" in families and "model_architecture_board" in chart_set:
+            inferred_bundle_key = "neural_architecture_metric_storyboard"
+        elif "ml_model_diagnostics" in families and "model_architecture" in chart_set:
             inferred_bundle_key = "neural_architecture_topology"
         elif "ml_model_diagnostics" in families and "training_curve" in chart_set:
             inferred_bundle_key = "neural_training_dynamics"
@@ -1005,6 +1037,7 @@ def resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreference
             "when_bundleKey_is_inferred_follow_the_same_template_case_as_user_selected_bundle",
             "when_feature_count_or_ablation_columns_exist_clone_incremental_feature_selection_curve",
             "when_probability_label_or_threshold_columns_exist_clone_classifier_validation_board",
+            "when_architecture_metric_columns_exist_clone_architecture_metric_storyboard",
             "when_layer_module_or_source_target_columns_exist_clone_neural_architecture_topology",
         ],
     }

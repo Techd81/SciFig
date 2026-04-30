@@ -17,6 +17,7 @@ RECIPE_GEOMETRY = {
     "hero_plus_triple_support": {"rows": 3, "cols": 2, "axes_map": {"A": (0, 0, 3, 1), "B": (0, 1, 1, 1), "C": (1, 1, 1, 1), "D": (2, 1, 1, 1)}},
     "asymmetric_L":            {"rows": 2, "cols": 2, "axes_map": {"A": (0, 0, 1, 2), "B": (1, 0, 1, 1), "C": (1, 1, 1, 1)}},
     "ml_model_performance_triptych": {"rows": 2, "cols": 2, "axes_map": {"A": (0, 0, 1, 2), "B": (1, 0, 1, 1), "C": (1, 1, 1, 1)}},
+    "architecture_metric_storyboard": {"rows": 2, "cols": 2, "axes_map": {"A": (0, 0, 1, 2), "B": (1, 0, 1, 1), "C": (1, 1, 1, 1)}},
 }
 
 RECIPE_CANVAS = {
@@ -32,6 +33,7 @@ RECIPE_CANVAS = {
     "hero_plus_triple_support": {"width": "double", "height_key": "hero_plus_triple_support", "default_h": 170},
     "asymmetric_L":            {"width": "double", "height_key": "asymmetric_L",        "default_h": 130},
     "ml_model_performance_triptych": {"width": "double", "height_key": "ml_model_performance_triptych", "default_h": 160},
+    "architecture_metric_storyboard": {"width": "double", "height_key": "architecture_metric_storyboard", "default_h": 150},
 }
 
 
@@ -50,7 +52,7 @@ def resolve_panel_geometry(panelBlueprint, journalProfile):
     recipe = panelBlueprint["layout"]["recipe"]
     geo = RECIPE_GEOMETRY.get(recipe, RECIPE_GEOMETRY["story_board_2x2"])
     gap = max(journalProfile.get("panel_gap_rel", 0.18), 0.24 if recipe != "single" else 0.0)
-    if recipe == "ml_model_performance_triptych":
+    if recipe in ("ml_model_performance_triptych", "architecture_metric_storyboard"):
         gap_h = max(gap, 0.38)
         gap_w = max(gap, 0.34)
     else:

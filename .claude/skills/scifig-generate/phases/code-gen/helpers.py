@@ -218,7 +218,7 @@ def infer_chart_family(chart_type):
             "waffle_chart", "marimekko", "stacked_area_comp",
             "nested_donut", "chord_diagram", "parallel_coordinates",
             "sankey", "radar", "pareto_chart", "lollipop_horizontal",
-            "stem_plot", "mosaic_plot", "diverging_bar", "model_architecture",
+            "stem_plot", "mosaic_plot", "diverging_bar", "model_architecture", "model_architecture_board",
         },
         "psych_ecology": {
             "species_abundance", "shannon_diversity", "biodiversity_radar",
@@ -363,7 +363,8 @@ def infer_template_motifs(charts, dataProfile=None):
     ):
         add("ml_model_performance_triptych")
     if (
-        "model_architecture" in chart_keys
+        "model_architecture_board" in chart_keys
+        or "model_architecture" in chart_keys
         or "model_architecture" in patterns
         or "neural_architecture" in patterns
         or "pipeline_topology" in patterns
@@ -372,8 +373,9 @@ def infer_template_motifs(charts, dataProfile=None):
     ):
         add("neural_architecture_topology")
         add("metric_table_in_panel")
-        if any(token in tokens for token in ("latency", "flops", "memory", "throughput", "cost", "edge_weight", "params", "parameters")):
+        if "model_architecture_board" in chart_keys or any(token in tokens for token in ("latency", "flops", "memory", "throughput", "cost", "edge_weight", "params", "parameters")):
             add("architecture_metric_dashboard")
+            add("architecture_metric_storyboard")
     if (
         "confusion_matrix" in chart_keys
         or "confusion_matrix" in patterns
@@ -1629,6 +1631,9 @@ def _enhance_composition(ax, dataProfile, visualPlan, palette, col_map):
         if _template_motif_planned(visualPlan, "architecture_metric_dashboard"):
             _record_template_motif(visualPlan, "architecture_metric_dashboard")
             enhancements.append("architecture_metric_dashboard")
+        if _template_motif_planned(visualPlan, "architecture_metric_storyboard"):
+            _record_template_motif(visualPlan, "architecture_metric_storyboard")
+            enhancements.append("architecture_metric_storyboard")
     if _template_motif_planned(visualPlan, "explainability_importance_stack"):
         feature_col = _role(dataProfile, "feature_id", "label", "feature")
         importance_col = _role(dataProfile, "importance", "shap_value", "effect", "value")

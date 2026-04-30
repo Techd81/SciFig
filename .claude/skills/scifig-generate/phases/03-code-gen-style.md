@@ -387,6 +387,8 @@ def resolve_panel_geometry(panelBlueprint, journalProfile):
         return {"engine": "subplots", "grid": "1x2", "hspace": 0.0, "wspace": gap}
     if recipe == "hero_plus_stacked_support":
         return {"engine": "GridSpec", "grid": "2x2-hero-span", "hspace": gap, "wspace": gap}
+    if recipe == "architecture_metric_storyboard":
+        return {"engine": "GridSpec", "grid": "2x2-architecture-metric", "hspace": max(gap, 0.38), "wspace": max(gap, 0.34)}
     return {"engine": "GridSpec", "grid": "2x2", "hspace": gap, "wspace": gap}
 ```
 
@@ -405,6 +407,7 @@ CHART_GENERATORS = {
     "line": "gen_line",
     "training_curve": "gen_training_curve",
     "model_architecture": "gen_model_architecture",
+    "model_architecture_board": "gen_model_architecture_board",
     "line_ci": "gen_line_ci",
     "spaghetti": "gen_spaghetti",
     "heatmap_cluster": "gen_heatmap_cluster",
@@ -749,6 +752,17 @@ def _load_generator_source_map():
 def _build_generator_code(needed_names):
     """Return real Python source for the needed generator functions."""
     imports, helper_sources, generator_sources = _load_generator_source_map()
+    dependency_map = {
+        "gen_model_architecture_board": ["gen_model_architecture"],
+    }
+    expanded_names = []
+    for name in needed_names:
+        for dependency in dependency_map.get(name, []):
+            if dependency not in expanded_names:
+                expanded_names.append(dependency)
+        if name not in expanded_names:
+            expanded_names.append(name)
+    needed_names = expanded_names
     missing = [name for name in needed_names if name not in generator_sources]
     if missing:
         raise RuntimeError(f"Missing generator implementations: {missing}")
