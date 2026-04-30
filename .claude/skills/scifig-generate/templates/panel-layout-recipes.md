@@ -320,6 +320,7 @@ cbar.set_label("Value", fontsize=5)
 **Rules**
 - Clone the RF anchor case before generic grouped-bar styling.
 - Use `ml_model_performance_10` for model colors and keep train/test colors stable.
+- Wrap long model names, allocate a larger left gutter, and move 5+ split legends to the bottom center outside the axes.
 - If actual/predicted or residual fields are absent, keep panel A and replace B/C with feature-selection or importance support panels; do not invent residuals.
 
 ## Recipe 18: Architecture Metric Storyboard

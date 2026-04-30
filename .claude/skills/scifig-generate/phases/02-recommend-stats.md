@@ -209,6 +209,26 @@ def recommend_chart_bundle(dataProfile, workflowPreferences):
             )
         )
     )
+    classifier_metric_tokens = {
+        "auc", "roc_auc", "f1", "accuracy", "balanced_accuracy",
+        "precision", "recall", "specificity", "sensitivity",
+    }
+    row_level_classifier_tokens = {
+        "probability", "proba", "prediction_score", "y_score",
+        "threshold", "true_label", "actual_label", "y_true",
+        "predicted_label", "prediction_label", "predicted_class", "y_pred",
+    }
+    cols_set = set(cols)
+    has_aggregate_classifier_metrics = (
+        has_model_performance
+        and (
+            "metric" in roles
+            or bool(cols_set & classifier_metric_tokens)
+            or bool(profile_tokens & classifier_metric_tokens)
+        )
+        and not bool(cols_set & row_level_classifier_tokens)
+        and not bool(profile_tokens & {"probability", "proba", "prediction_score", "y_score", "threshold"})
+    )
     has_confusion_matrix_labels = (
         "confusion_matrix" in patterns
         or "classification_error" in patterns
@@ -226,6 +246,9 @@ def recommend_chart_bundle(dataProfile, workflowPreferences):
         ))
     )
     has_classifier_validation_board = has_classifier_validation_board or has_confusion_matrix_labels
+    if has_aggregate_classifier_metrics:
+        has_classifier_validation_board = False
+        has_confusion_matrix_labels = False
     df_for_role_values = dataProfile.get("df")
     model_cols = [
         roles.get(role)
@@ -270,6 +293,8 @@ def recommend_chart_bundle(dataProfile, workflowPreferences):
         return "training_curve", secondary
     if has_feature_selection_curve:
         return "line", ["grouped_bar", "lollipop_horizontal"]
+    if has_aggregate_classifier_metrics:
+        return "grouped_bar", ["line", "lollipop_horizontal"]
     if has_rf_classifier_report and "score" in roles and "label" in roles:
         return "rf_classifier_report_board", ["classifier_validation_board", "lollipop_horizontal", "dotplot"]
     if has_classifier_validation_board and "score" in roles and "label" in roles:

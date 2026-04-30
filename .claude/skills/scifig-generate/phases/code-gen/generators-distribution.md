@@ -2424,6 +2424,40 @@ def gen_grouped_bar(df, dataProfile, chartPlan, rcParams, palette, col_map=None,
         plot_df = df.copy()
         metric_label = value_col
         higher_is_better = True
+
+        def _is_rf_label(value):
+            label = str(value).lower().replace("-", " ").replace("_", " ")
+            collapsed = label.replace(" ", "")
+            return "random forest" in label or collapsed in {"rf", "rfr", "randomforest"} or collapsed.startswith("rf")
+
+        def _wrap_model_label(value, width=24, max_lines=2):
+            text = str(value).strip()
+            if len(text) <= width:
+                return text
+            words = text.replace("_", " ").split()
+            lines = []
+            current = ""
+            for word in words:
+                candidate = f"{current} {word}".strip()
+                if len(candidate) <= width or not current:
+                    current = candidate
+                else:
+                    lines.append(current)
+                    current = word
+                if len(lines) >= max_lines:
+                    break
+            if current and len(lines) < max_lines:
+                lines.append(current)
+            if not lines:
+                lines = [text[:width]]
+            original_joined = " ".join(lines)
+            if len(original_joined) < len(text):
+                lines[-1] = lines[-1][:max(3, width - 3)].rstrip() + "..."
+            return "\n".join(lines[:max_lines])
+
+        def _compact_label(value, width=22):
+            text = str(value).strip()
+            return text if len(text) <= width else text[:max(3, width - 3)].rstrip() + "..."
         if metric_col and metric_col in plot_df:
             metric_order = ["r2", "auc", "accuracy", "f1", "precision", "recall", "rmse", "mae", "mse", "error"]
             metric_values = plot_df[metric_col].astype(str).str.lower()
@@ -2452,6 +2486,12 @@ def gen_grouped_bar(df, dataProfile, chartPlan, rcParams, palette, col_map=None,
             key=lambda c: np.nan_to_num(score_by_category.get(c), nan=-np.inf if higher_is_better else np.inf),
             reverse=higher_is_better,
         )
+        max_model_label_len = max([len(str(c)) for c in categories] or [0])
+        if standalone:
+            fig_for_size = ax.figure
+            target_width_mm = 112 if max_model_label_len > 26 or n_sub > 4 else 100
+            target_height_mm = max(68, 12 * len(categories) + 22 + (10 if n_sub > 4 else 0))
+            fig_for_size.set_size_inches(target_width_mm / 25.4, target_height_mm / 25.4, forward=True)
 
         split_colors = {
             "train": "#F6CFA3",
@@ -2483,7 +2523,7 @@ def gen_grouped_bar(df, dataProfile, chartPlan, rcParams, palette, col_map=None,
             for yi, cat, mean, sem in zip(y + offset, categories, means, sems):
                 if np.isnan(mean):
                     continue
-                is_rf = any(token in str(cat).lower() for token in ("random forest", "randomforest", "rf", "rfr"))
+                is_rf = _is_rf_label(cat)
                 ax.barh(
                     yi,
                     mean,
@@ -2499,9 +2539,10 @@ def gen_grouped_bar(df, dataProfile, chartPlan, rcParams, palette, col_map=None,
                 )
 
         ax.set_yticks(y)
-        ax.set_yticklabels([str(c) for c in categories], fontsize=5)
+        wrapped_labels = [_wrap_model_label(c, width=24 if len(categories) <= 7 else 20) for c in categories]
+        ax.set_yticklabels(wrapped_labels, fontsize=4.8 if max_model_label_len > 28 else 5)
         for tick, cat in zip(ax.get_yticklabels(), categories):
-            if any(token in str(cat).lower() for token in ("random forest", "randomforest", "rf", "rfr")):
+            if _is_rf_label(cat):
                 tick.set_fontweight("bold")
                 tick.set_color("#111111")
         ax.invert_yaxis()
@@ -2519,24 +2560,51 @@ def gen_grouped_bar(df, dataProfile, chartPlan, rcParams, palette, col_map=None,
             except Exception:
                 pass
             sp = fig_for_margin.subplotpars
+            left_margin = min(0.46, max(0.22, 0.16 + min(max_model_label_len, 54) * 0.0052))
+            bottom_margin = 0.26 if n_sub > 4 else 0.22
             fig_for_margin.subplots_adjust(
-                left=max(sp.left, 0.20),
-                bottom=max(sp.bottom, 0.20),
+                left=max(sp.left, left_margin),
+                bottom=max(sp.bottom, bottom_margin),
                 right=min(sp.right, 0.94),
             )
         if best_index is not None and best_score is not None and not np.isnan(best_score):
-            ax.text(
-                0.98,
-                0.06,
-                f"best: {str(categories[best_index])[:18]}",
-                transform=ax.transAxes,
-                fontsize=5,
-                ha="right",
-                va="bottom",
-                bbox=dict(boxstyle="round,pad=0.18", facecolor="white", edgecolor="#333333", linewidth=0.35, alpha=0.88),
-                zorder=8,
-            )
-        ax.legend(frameon=False, fontsize=5, ncol=min(n_sub, 4))
+            best_note = f"best: {_compact_label(categories[best_index], 18)}"
+            if standalone:
+                ax.set_title(f"Model benchmark | {best_note}", loc="left", fontsize=7, fontweight="bold", pad=6)
+            else:
+                ax.text(
+                    0.02,
+                    0.06,
+                    best_note,
+                    transform=ax.transAxes,
+                    fontsize=5,
+                    ha="left",
+                    va="bottom",
+                    bbox=dict(boxstyle="round,pad=0.18", facecolor="white", edgecolor="#333333", linewidth=0.35, alpha=0.88),
+                    zorder=8,
+                )
+        if standalone:
+            handles, labels = ax.get_legend_handles_labels()
+            if handles:
+                legend = ax.figure.legend(
+                    handles,
+                    [_compact_label(label, 18) for label in labels],
+                    loc="lower center",
+                    bbox_to_anchor=(0.5, 0.025),
+                    ncol=min(n_sub, 6),
+                    fontsize=4.8,
+                    frameon=True,
+                    fancybox=True,
+                    borderpad=0.25,
+                    handlelength=1.1,
+                    columnspacing=0.7,
+                )
+                legend.set_gid("scifig_shared_legend")
+                legend.get_frame().set_linewidth(0.35)
+                legend.get_frame().set_edgecolor("#333333")
+                legend.get_frame().set_alpha(0.94)
+        else:
+            ax.legend(frameon=False, fontsize=4.8, ncol=min(n_sub, 4))
         if standalone:
             apply_chart_polish(ax, "grouped_bar")
         return ax
@@ -2982,7 +3050,7 @@ def gen_forest(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=N
 
     if standalone:
         fig, ax = plt.subplots(figsize=(89 * (1 / 25.4), max(40, len(df) * 8) * (1 / 25.4)),
-                           constrained_layout=True)
+                           constrained_layout=False)
 
     y_pos = range(len(df))
     estimates = df[estimate_col].values
@@ -3007,6 +3075,15 @@ def gen_forest(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=N
     ax.set_xlabel("Effect size (95% CI)")
     ax.invert_yaxis()
     if standalone:
+        fig = ax.figure
+        try:
+            if hasattr(fig, "set_layout_engine"):
+                fig.set_layout_engine(None)
+            else:
+                fig.set_constrained_layout(False)
+        except Exception:
+            pass
+        fig.subplots_adjust(left=0.24, right=0.96, top=0.92, bottom=0.30)
         apply_chart_polish(ax, "forest")
     return ax
 

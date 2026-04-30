@@ -269,7 +269,7 @@ _TEMPLATE_CHART_BUNDLE_SEEDS = {
             "families": ["ml_model_diagnostics", "forest", "scatter_regression", "marginal_joint"],
             "techniqueRefs": ["template-mining/07-techniques/ml-model-diagnostics.md", "template-mining/07-techniques/marginal-joint.md"],
             "anchors": ["期刊复现：基于随机森林(RF)的多维模型性能评估与预测残差可视化图谱_1777456409.md"],
-            "en": ("Random-forest model report (Recommended)", "Clone the RF case when model/algorithm, train-test metrics, predicted-vs-actual, or residual columns are present: benchmark bar, marginal parity scatter, residual panel."),
+            "en": ("Random-forest model report (Recommended)", "Clone the RF case when model/algorithm, train-test or aggregate classifier metrics, predicted-vs-actual, or residual columns are present: benchmark bar, marginal parity scatter, residual panel."),
             "zh": ("随机森林模型报告套餐（推荐）", "当数据含 model/algorithm、训练测试指标、预测-真实值或残差字段时，直接复刻 RF 案例：指标横向柱、带边缘分布的 1:1 预测散点、残差面板。"),
         },
         {
