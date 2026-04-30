@@ -826,6 +826,8 @@ def infer_template_visual_motifs(charts, dataProfile):
     ):
         add("neural_architecture_topology", "layer_module_or_source_target_topology_columns")
         add("metric_table_in_panel", "module_count_edge_count_or_parameter_summary")
+        if any(token in tokens for token in ("latency", "flops", "memory", "throughput", "cost", "edge_weight", "params", "parameters")):
+            add("architecture_metric_dashboard", "edge_or_module_metric_columns")
     if "model_error_diagnostic" in patterns or any(token in tokens for token in ("rmse", "mae", "percent_error", "percentage_error", "error_pct")):
         add("dual_axis_error_sidecar", "error_metric_column_or_computable_residuals")
     if "ml_explainability" in patterns or "feature_importance" in patterns or "shap_value" in roles or "importance" in roles:
@@ -878,6 +880,7 @@ def resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreference
         "pipeline_topology", "dag_pipeline", "layer", "module", "component",
         "block", "node", "source", "target", "params", "parameters", "units",
         "channels", "heads", "attention", "transformer", "encoder", "decoder",
+        "latency", "flops", "memory", "throughput", "edge_weight",
     }
     feature_selection_tokens = {"n_features", "top_k", "feature_count", "ablation", "feature_selection", "incremental_feature_selection"}
     training_curve_tokens = {"epoch", "learning_curve", "training_curve", "training_history", "train_loss", "training_loss", "val_loss", "validation_loss", "val_accuracy"}

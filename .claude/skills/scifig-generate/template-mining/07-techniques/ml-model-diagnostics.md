@@ -27,9 +27,10 @@ When columns include `layer`, `module`, `component`, `block`, `source`, `target`
 
 - Use rounded module blocks rather than plain nodes. Put the layer or module name on the first line and compact type/unit/parameter tags below it.
 - Group modules by stage or block with pale stage bands. Keep all labels inside the axes so the figure survives layout QA.
-- Use directed arrows for source-target edges or sequential layer order. Do not add a legend unless a real categorical mapping is needed outside the plotting area.
+- Use directed arrows for source-target edges or sequential layer order. Encode supplied edge weights with line width and keep legends out unless a real categorical mapping is needed outside the plotting area.
+- If edge/module metrics such as latency, FLOPs, memory, throughput, cost, parameters, or edge weights exist, add a compact in-panel metric dashboard instead of hiding them in prose.
 - Pair the architecture hero with `training_curve` or `lollipop_horizontal` support panels when training or explainability fields are also available.
-- Executable fallback: `model_architecture` detects node tables or edge tables, derives a compact DAG/sequential layout, draws stage bands, directed arrows, module blocks, and a module/edge/parameter summary box.
+- Executable fallback: `model_architecture` detects node tables or edge tables, derives a compact DAG/sequential layout, draws stage bands, directed arrows, module blocks, edge-weight strokes, a module/edge/parameter summary box, and an edge/module metric dashboard when metric columns exist.
 
 ## Incremental Feature Selection
 

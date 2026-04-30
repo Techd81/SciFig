@@ -112,9 +112,11 @@ def gen_model_architecture(df, dataProfile, chartPlan, rcParams, palette, col_ma
     """AI/ML model architecture or pipeline topology diagram.
 
     Supports ordered node tables (`layer`, `module`, `component`, `stage`,
-    `type`, `units`, `params`, `order`) and edge tables (`source`, `target`,
-    optional `value`). The output intentionally avoids legends and keeps every
-    label inside axes bounds so render QA can treat it as a hard layout object.
+    `type`, `units`, `params`, `order`) and source-target edge tables with
+    optional node metadata (`source_stage`, `target_type`, `target_params`) and
+    edge metrics (`latency`, `flops`, `memory`, `throughput`, `value`). The
+    output intentionally avoids legends and keeps every label inside axes
+    bounds so render QA can treat it as a hard layout object.
     """
     import numpy as np
     import pandas as pd
@@ -154,6 +156,22 @@ def gen_model_architecture(df, dataProfile, chartPlan, rcParams, palette, col_ma
     units_col = _pick_col("units", "channels", "features", tokens=("units", "neurons", "channels", "features", "heads", "dim"))
     params_col = _pick_col("params", "parameters", tokens=("params", "parameters", "n_params"))
     value_col = _pick_col("value", "weight", tokens=("value", "weight", "latency", "flops"))
+    metric_tokens = (
+        "latency", "flops", "memory", "throughput", "cost", "score",
+        "accuracy", "auc", "f1", "params", "parameters", "weight",
+    )
+    metric_cols = []
+    for col in getattr(df, "columns", []):
+        lowered = str(col).lower()
+        if col in {source_col, target_col, node_col, order_col}:
+            continue
+        if any(token in lowered for token in metric_tokens):
+            try:
+                numeric = pd.to_numeric(df[col], errors="coerce")
+            except Exception:
+                continue
+            if numeric.notna().any():
+                metric_cols.append(col)
 
     def _clean_label(value, max_len=20):
         text = str(value).strip()
@@ -193,6 +211,28 @@ def gen_model_architecture(df, dataProfile, chartPlan, rcParams, palette, col_ma
             node_set = set(nodes)
             edges = [(src, tgt) for src, tgt in edges if src in node_set and tgt in node_set]
         meta = {node: {} for node in nodes}
+        meta_fields = {
+            "stage": ("stage", "phase", "group"),
+            "type": ("type", "kind", "operation", "op"),
+            "units": ("units", "neurons", "channels", "features", "heads", "dim"),
+            "params": ("params", "parameters", "n_params"),
+        }
+        lower_cols = {str(col).lower(): col for col in df.columns}
+        for _, row in df.iterrows():
+            src = str(row.get(source_col))
+            tgt = str(row.get(target_col))
+            for node, prefix in ((src, "source"), (tgt, "target")):
+                if node not in meta:
+                    continue
+                for field, suffixes in meta_fields.items():
+                    candidates = [f"{prefix}_{suffix}" for suffix in suffixes] + [f"{prefix}{suffix}" for suffix in suffixes]
+                    if field == "stage":
+                        candidates.extend(suffixes)
+                    for candidate in candidates:
+                        col = lower_cols.get(candidate)
+                        if col in df.columns and pd.notna(row.get(col)) and str(row.get(col)).strip():
+                            meta[node].setdefault(field, row.get(col))
+                            break
     else:
         if not node_col:
             candidate_cols = [col for col in df.columns if not pd.api.types.is_numeric_dtype(df[col])]
@@ -303,12 +343,23 @@ def gen_model_architecture(df, dataProfile, chartPlan, rcParams, palette, col_ma
             clip_on=True, zorder=3,
         )
 
+    dashboard_cols = [col for col in metric_cols if col != params_col][:3]
+    show_edge_value_labels = bool(chartPlan.get("showEdgeValueLabels", False) or (len(edges) <= 4 and not dashboard_cols))
     arrow_values = {}
+    arrow_widths = {}
     if source_col and target_col and value_col in getattr(df, "columns", []):
+        numeric_values = pd.to_numeric(df[value_col], errors="coerce")
+        finite_values = numeric_values[np.isfinite(numeric_values)]
+        v_min = float(finite_values.min()) if len(finite_values) else None
+        v_rng = float(finite_values.max() - finite_values.min()) if len(finite_values) else 0.0
         for _, row in df.iterrows():
             src, tgt = str(row[source_col]), str(row[target_col])
             if src in position and tgt in position:
                 arrow_values[(src, tgt)] = row.get(value_col)
+                edge_value = pd.to_numeric(pd.Series([row.get(value_col)]), errors="coerce").iloc[0]
+                if pd.notna(edge_value) and v_min is not None:
+                    scaled = 0.0 if v_rng == 0 else (float(edge_value) - v_min) / v_rng
+                    arrow_widths[(src, tgt)] = 0.75 + 1.25 * scaled
 
     for src, tgt in edges:
         if src not in position or tgt not in position:
@@ -320,7 +371,7 @@ def gen_model_architecture(df, dataProfile, chartPlan, rcParams, palette, col_ma
             (sx + box_w / 2, sy), (tx - box_w / 2, ty),
             arrowstyle="-|>",
             mutation_scale=8,
-            linewidth=0.85,
+            linewidth=arrow_widths.get((src, tgt), 0.85),
             color="#334155",
             alpha=0.72,
             connectionstyle=f"arc3,rad={rad}",
@@ -330,7 +381,7 @@ def gen_model_architecture(df, dataProfile, chartPlan, rcParams, palette, col_ma
         )
         ax.add_patch(arrow)
         edge_value = arrow_values.get((src, tgt))
-        if edge_value is not None and pd.notna(edge_value):
+        if show_edge_value_labels and edge_value is not None and pd.notna(edge_value):
             mx, my = (sx + tx) / 2, (sy + ty) / 2
             _arch_text(
                 mx, my + 0.035, _clean_label(edge_value, 10),
@@ -389,6 +440,58 @@ def gen_model_architecture(df, dataProfile, chartPlan, rcParams, palette, col_ma
         bbox=dict(boxstyle="round,pad=0.25", facecolor="white", edgecolor="#CBD5E1", linewidth=0.55, alpha=0.94),
         transform=ax.transAxes, clip_on=True, zorder=6,
     )
+    if dashboard_cols:
+        panel_x, panel_y, panel_w, panel_h = 0.035, 0.045, 0.30, 0.15
+        dashboard = mpatches.FancyBboxPatch(
+            (panel_x, panel_y), panel_w, panel_h,
+            boxstyle="round,pad=0.012,rounding_size=0.018",
+            linewidth=0.55,
+            edgecolor="#CBD5E1",
+            facecolor="white",
+            alpha=0.94,
+            transform=ax.transAxes,
+            clip_on=True,
+            zorder=6,
+        )
+        ax.add_patch(dashboard)
+        _arch_text(
+            panel_x + 0.012, panel_y + panel_h - 0.024, "metric dashboard",
+            ha="left", va="center", fontsize=4.7, fontweight="bold",
+            color="#1E293B", transform=ax.transAxes, clip_on=True, zorder=7,
+        )
+        for idx, col in enumerate(dashboard_cols):
+            numeric = pd.to_numeric(df[col], errors="coerce")
+            value = float(numeric.mean()) if numeric.notna().any() else 0.0
+            denom = max(float(np.nanmax(np.abs(numeric))) if numeric.notna().any() else 1.0, abs(value), 1.0)
+            frac = min(1.0, abs(value) / denom)
+            y_pos = panel_y + panel_h - 0.050 - idx * 0.035
+            label = _clean_label(str(col).replace("_", " "), 13)
+            _arch_text(
+                panel_x + 0.012, y_pos, label,
+                ha="left", va="center", fontsize=4.2, color="#475569",
+                transform=ax.transAxes, clip_on=True, zorder=7,
+            )
+            ax.add_patch(mpatches.Rectangle(
+                (panel_x + 0.115, y_pos - 0.006), 0.145, 0.012,
+                facecolor="#E2E8F0", edgecolor="none",
+                transform=ax.transAxes, clip_on=True, zorder=7,
+            ))
+            ax.add_patch(mpatches.Rectangle(
+                (panel_x + 0.115, y_pos - 0.006), 0.145 * frac, 0.012,
+                facecolor=colors[idx % len(colors)], edgecolor="none",
+                alpha=0.75,
+                transform=ax.transAxes, clip_on=True, zorder=8,
+            ))
+            _arch_text(
+                panel_x + panel_w - 0.012, y_pos, f"{value:.2g}",
+                ha="right", va="center", fontsize=4.2, color="#1E293B",
+                transform=ax.transAxes, clip_on=True, zorder=8,
+            )
+        visual_plan = chartPlan.get("visualContentPlan", {}) if isinstance(chartPlan, dict) else {}
+        if callable(globals().get("_visual_count")):
+            _visual_count(visual_plan, "metricTableCount")
+        if callable(globals().get("_record_template_motif")):
+            _record_template_motif(visual_plan, "architecture_metric_dashboard")
     if chartPlan.get("drawInternalTitle", False):
         title = chartPlan.get("title") or "AI model architecture"
         title_text = str(title).strip()

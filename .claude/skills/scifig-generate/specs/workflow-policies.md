@@ -74,7 +74,8 @@ TEMPLATE_MATCH_POLICY = {
         "model_architecture", "neural_architecture", "architecture_diagram",
         "pipeline_topology", "dag_pipeline", "layer", "module", "component",
         "block", "node", "source", "target", "params", "parameters", "units",
-        "channels", "heads", "attention", "transformer", "encoder", "decoder"
+        "channels", "heads", "attention", "transformer", "encoder", "decoder",
+        "latency", "flops", "memory", "throughput", "edge_weight"
     ],
     "preferred_ml_bundle_order": [
         "rf_model_performance_report",
