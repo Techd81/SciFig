@@ -1,6 +1,6 @@
 # ML Model Diagnostics Technique
 
-Use this deep-dive whenever `templateCasePlan.families` contains `ml_model_diagnostics`, or when the selected bundle key is one of `rf_model_performance_report`, `incremental_feature_selection_curve`, `rf_feature_importance_shap`, or `classifier_validation_board`.
+Use this deep-dive whenever `templateCasePlan.families` contains `ml_model_diagnostics`, or when the selected bundle key is one of `rf_model_performance_report`, `incremental_feature_selection_curve`, `rf_feature_importance_shap`, `pso_shap_optimization_framework`, or `classifier_validation_board`.
 
 ## Anchor Cases
 
@@ -40,6 +40,15 @@ When columns include `feature`, `importance`, `gain`, `permutation`, `shap`, or 
 - If donut is unsupported for the data, use `lollipop_horizontal` plus `dotplot`, but preserve the left/right asymmetric composition and feature ordering.
 - Executable fallback: `lollipop_horizontal` renders the top-15 importance lane and `dotplot` renders the SHAP beeswarm lane with shared feature ordering, zero reference, and feature-value color encoding.
 
+## PSO / Pareto Optimization + SHAP
+
+When columns include `objective_1`, `objective_2`, `obj1`, `obj2`, `cost`, `latency`, `complexity`, `rank`, `pareto_flag`, `optimal_flag`, `iteration`, or explicit PSO/NSGA/Pareto wording, clone the optimization + explainability framework instead of treating Pareto as category frequency:
+
+- Use `radar` for model/solution metric signatures, `lollipop_horizontal` or `dotplot` for SHAP-style explanation, `heatmap_triangular` for objective/feature correlation context, and `pareto_chart` for the tradeoff front.
+- Highlight Pareto / optimal points only when a flag or rank column exists; otherwise show the tradeoff cloud and state that no Pareto flag was supplied.
+- Use a red diamond + connecting line for the supplied Pareto/top-rank front, a rank or candidate-index colorbar, and an in-panel best-candidate callout.
+- Executable fallback: `pareto_chart` detects `pso_shap_optimization_framework` / optimization patterns plus two numeric objective columns, switches from categorical bars to a multi-objective tradeoff scatter, uses supplied Pareto/optimal flags or ranks for front highlighting, and keeps embedded labels compact for render QA.
+
 ## Classifier Validation Board
 
 When columns include `score`, `probability`, `label`, `threshold`, `AUC`, `F1`, `precision`, or `recall`, clone the classifier validation board before falling back to generic ROC:
@@ -55,5 +64,6 @@ When columns include `score`, `probability`, `label`, `threshold`, `AUC`, `F1`, 
 - Prefer `rf_model_performance_report` when both model benchmark metrics and actual/predicted or residual fields exist.
 - Prefer `incremental_feature_selection_curve` when feature-count or ablation fields exist.
 - Prefer `rf_feature_importance_shap` when explainability fields exist.
+- Prefer `pso_shap_optimization_framework` when optimization / Pareto / objective columns exist alongside explainability or model-metric fields.
 - Prefer `classifier_validation_board` when labels/probabilities and AUC/F1/precision/recall fields exist.
 - If a user explicitly mentions Random Forest/RF/RFR and the data is compatible, keep the RF anchor even if another generic prediction template also matches.

@@ -847,21 +847,189 @@ def gen_funnel_plot(df, dataProfile, chartPlan, rcParams, palette, col_map=None,
 
 
 def gen_pareto_chart(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=None):
-    """Pareto chart: bars sorted descending with cumulative percentage line.
+    """Pareto chart or optimization Pareto tradeoff board.
 
-    Bars represent category frequencies (descending order) and a secondary
-    y-axis shows the cumulative percentage.  The 80% threshold line is
-    drawn per the Pareto principle.
+    Default mode is the classical categorical Pareto chart: bars sorted
+    descending with a cumulative-percentage line.  When templateCasePlan or
+    specialPatterns indicate PSO/NSGA/Pareto/multi-objective optimization and
+    two numeric objective columns are available, this renders a tradeoff
+    scatter with Pareto / optimal points highlighted from supplied flags or
+    ranks.
 
     Expects in semanticRoles: category (categorical column) and optionally
-    value (pre-aggregated counts).  If value is absent, rows are counted
-    per category.
+    value for categorical mode; x/y or objective_1/objective_2 for
+    optimization mode.
     """
     standalone = ax is None
     plt.rcParams.update(rcParams)
     roles = dataProfile.get("semanticRoles", {})
     cat_col = roles.get("category") or roles.get("group") or roles.get("x")
     val_col = roles.get("value") or roles.get("y")
+    template_case = (chartPlan.get("templateCasePlan") or chartPlan.get("visualContentPlan", {}).get("templateCasePlan") or {})
+    patterns = {str(p).lower() for p in dataProfile.get("specialPatterns", [])}
+    lower_cols = {str(c).lower(): c for c in df.columns}
+    numeric_cols = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
+
+    optimization_tokens = {
+        "pareto", "optimization", "optimisation", "multiobjective",
+        "multi_objective", "pso", "nsga", "tradeoff", "trade_off",
+    }
+    is_optimization_pareto = (
+        template_case.get("bundleKey") in {"pso_shap_optimization_framework", "materials_model_explain_optimize"}
+        or bool(optimization_tokens & patterns)
+        or any(token in " ".join(lower_cols.keys()) for token in ("pareto", "objective", "optimal", "optimization", "rank"))
+    )
+
+    def _first_existing(candidates):
+        for candidate in candidates:
+            if candidate and candidate in df.columns:
+                return candidate
+            if candidate and str(candidate).lower() in lower_cols:
+                return lower_cols[str(candidate).lower()]
+        return None
+
+    objective_x = _first_existing([
+        roles.get("objective_1"), roles.get("objective_x"), roles.get("x"),
+        roles.get("score"), roles.get("performance"), "objective_1",
+        "objective1", "obj1", "accuracy", "auc", "f1", "r2", "score",
+        "performance", "utility", "benefit",
+    ])
+    objective_y = _first_existing([
+        roles.get("objective_2"), roles.get("objective_y"), roles.get("y"),
+        roles.get("cost"), roles.get("complexity"), "objective_2",
+        "objective2", "obj2", "cost", "latency", "complexity", "rmse",
+        "mae", "loss", "error", "time", "size",
+    ])
+    if objective_x == objective_y:
+        objective_y = None
+    if (objective_x is None or objective_y is None) and len(numeric_cols) >= 2:
+        candidates = [c for c in numeric_cols if str(c).lower() not in {"rank", "iteration", "seed"}]
+        if objective_x is None and candidates:
+            objective_x = candidates[0]
+        if objective_y is None:
+            objective_y = next((c for c in candidates if c != objective_x), None)
+
+    if is_optimization_pareto and objective_x and objective_y:
+        if standalone:
+            fig, ax = plt.subplots(figsize=(89 * (1 / 25.4), 72 * (1 / 25.4)),
+                               constrained_layout=True)
+
+        plot_df = df[[objective_x, objective_y]].copy()
+        for optional in ("rank", "pareto_flag", "optimal_flag", "iteration", "candidate_id", "candidate"):
+            col = roles.get(optional) or lower_cols.get(optional)
+            if col and col in df.columns and col not in plot_df.columns:
+                plot_df[col] = df[col]
+        rank_col = roles.get("rank") or lower_cols.get("rank")
+        flag_col = (
+            roles.get("pareto_flag") or roles.get("optimal_flag")
+            or _first_existing(["pareto_flag", "is_pareto", "pareto", "optimal_flag", "optimal", "non_dominated"])
+        )
+        candidate_col = roles.get("candidate_id") or roles.get("candidate") or lower_cols.get("candidate_id") or lower_cols.get("candidate")
+        iter_col = roles.get("iteration") or lower_cols.get("iteration")
+
+        plot_df["_scifig_source_index"] = plot_df.index
+        plot_df[objective_x] = pd.to_numeric(plot_df[objective_x], errors="coerce")
+        plot_df[objective_y] = pd.to_numeric(plot_df[objective_y], errors="coerce")
+        plot_df = plot_df.dropna(subset=[objective_x, objective_y]).reset_index(drop=True)
+        if plot_df.empty:
+            raise ValueError("pareto_chart optimization mode requires finite objective values")
+        source_index = plot_df["_scifig_source_index"]
+
+        if rank_col and rank_col in df.columns:
+            rank_values = pd.to_numeric(df.loc[source_index, rank_col], errors="coerce").reset_index(drop=True)
+        elif rank_col and rank_col in plot_df.columns:
+            rank_values = pd.to_numeric(plot_df[rank_col], errors="coerce")
+        else:
+            rank_values = pd.Series(np.nan, index=plot_df.index)
+        color_values = rank_values.where(
+            rank_values.notna(),
+            pd.Series(np.arange(len(plot_df)), index=rank_values.index),
+        )
+        sc = ax.scatter(
+            plot_df[objective_x], plot_df[objective_y],
+            c=color_values, cmap="viridis_r", s=26,
+            alpha=0.72, edgecolor="white", linewidth=0.35,
+            zorder=3, label="Candidates",
+        )
+        if standalone:
+            cbar = ax.figure.colorbar(sc, ax=ax, shrink=0.72, pad=0.02)
+            cbar.set_label("Rank" if rank_values.notna().any() else "Candidate index")
+
+        highlight_mask = pd.Series(False, index=plot_df.index)
+        if flag_col and flag_col in df.columns:
+            raw_flag = df.loc[source_index, flag_col].reset_index(drop=True)
+            if pd.api.types.is_numeric_dtype(raw_flag):
+                highlight_mask = pd.to_numeric(raw_flag, errors="coerce").fillna(0) > 0
+            else:
+                highlight_mask = raw_flag.astype(str).str.lower().isin({"true", "1", "yes", "pareto", "optimal", "front"})
+        elif rank_values.notna().any():
+            best_rank = float(rank_values.min())
+            highlight_mask = rank_values <= best_rank + max(2.0, abs(best_rank) * 0.05)
+
+        if bool(highlight_mask.any()):
+            front = plot_df.loc[highlight_mask].copy().sort_values(objective_x)
+            ax.plot(front[objective_x], front[objective_y], color="#B00000", lw=1.0,
+                    alpha=0.86, zorder=4, label="Pareto / top rank")
+            ax.scatter(front[objective_x], front[objective_y], s=58, marker="D",
+                       facecolor="#B00000", edgecolor="white", linewidth=0.55,
+                       zorder=5)
+            if rank_values.notna().any():
+                best_idx = int(rank_values.idxmin())
+            else:
+                best_idx = int(front.index[0])
+            best_x = plot_df.loc[best_idx, objective_x]
+            best_y = plot_df.loc[best_idx, objective_y]
+            source_best_idx = plot_df.loc[best_idx, "_scifig_source_index"]
+            best_label = str(df.loc[source_best_idx, candidate_col]) if candidate_col and candidate_col in df.columns else "best"
+            ax.annotate(
+                f"{best_label}\n{objective_x}={best_x:.3g}\n{objective_y}={best_y:.3g}",
+                xy=(best_x, best_y), xytext=(0.05, 0.95),
+                textcoords=ax.transAxes, ha="left", va="top", fontsize=5.1,
+                arrowprops=dict(arrowstyle="-", color="#B00000", lw=0.65),
+                bbox=dict(boxstyle="round,pad=0.22", facecolor="white", edgecolor="#333333", linewidth=0.4, alpha=0.93),
+                zorder=6,
+            )
+        else:
+            ax.text(
+                0.05, 0.95, f"tradeoff cloud\nn={len(plot_df)}\nno Pareto flag",
+                transform=ax.transAxes, ha="left", va="top", fontsize=5.1,
+                bbox=dict(boxstyle="round,pad=0.22", facecolor="white", edgecolor="#333333", linewidth=0.4, alpha=0.93),
+                zorder=6,
+            )
+
+        if iter_col and iter_col in df.columns:
+            iter_vals = pd.to_numeric(df.loc[source_index, iter_col], errors="coerce").reset_index(drop=True)
+            if iter_vals.notna().any():
+                early = iter_vals <= iter_vals.quantile(0.25)
+                late = iter_vals >= iter_vals.quantile(0.75)
+                ax.scatter(plot_df.loc[early, objective_x], plot_df.loc[early, objective_y],
+                           s=18, facecolor="none", edgecolor="#777777", linewidth=0.45,
+                           alpha=0.7, zorder=2, label="Early search")
+                ax.scatter(plot_df.loc[late, objective_x], plot_df.loc[late, objective_y],
+                           s=36, facecolor="none", edgecolor="#111111", linewidth=0.65,
+                           alpha=0.85, zorder=4, label="Late search")
+
+        y_name = str(objective_y).lower()
+        if any(token in y_name for token in ("cost", "loss", "error", "rmse", "mae", "latency", "complexity", "time")):
+            ax.annotate("better", xy=(0.96, 0.08), xytext=(0.80, 0.24),
+                        xycoords="axes fraction", textcoords="axes fraction",
+                        arrowprops=dict(arrowstyle="->", color="#555555", lw=0.65),
+                        ha="center", va="center", fontsize=5.0, color="#333333")
+        else:
+            ax.annotate("better", xy=(0.96, 0.92), xytext=(0.80, 0.76),
+                        xycoords="axes fraction", textcoords="axes fraction",
+                        arrowprops=dict(arrowstyle="->", color="#555555", lw=0.65),
+                        ha="center", va="center", fontsize=5.0, color="#333333")
+
+        ax.set_xlabel(display_label(objective_x, col_map) if col_map else str(objective_x))
+        ax.set_ylabel(display_label(objective_y, col_map) if (standalone and col_map) else (str(objective_y) if standalone else ""))
+        ax.xaxis.grid(True, linestyle="--", linewidth=0.3, alpha=0.25, zorder=0)
+        ax.yaxis.grid(True, linestyle="--", linewidth=0.3, alpha=0.25, zorder=0)
+        if bool(highlight_mask.any()) or iter_col:
+            ax.legend(frameon=False, fontsize=5, loc="best")
+        if standalone:
+            apply_chart_polish(ax, "pareto_chart")
+        return ax
 
     if cat_col is None:
         raise ValueError("pareto_chart requires a 'category' column in semanticRoles")
