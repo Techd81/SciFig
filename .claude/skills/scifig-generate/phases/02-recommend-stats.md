@@ -90,7 +90,7 @@ def recommend_chart_bundle(dataProfile, workflowPreferences):
     IMPLEMENTED_CHARTS = {
         # Mirrors phases/code-gen/registry.py; every registered key has a gen_ implementation.
         "violin_strip", "box_strip", "raincloud", "beeswarm", "paired_lines",
-        "dumbbell", "line", "training_curve", "line_ci", "spaghetti", "heatmap_cluster",
+        "dumbbell", "line", "training_curve", "model_architecture", "line_ci", "spaghetti", "heatmap_cluster",
         "heatmap_pure", "volcano", "ma_plot", "pca", "umap",
         "tsne", "enrichment_dotplot", "oncoprint", "lollipop_mutation", "roc",
         "pr_curve", "calibration", "km", "forest", "waterfall",
@@ -153,6 +153,28 @@ def recommend_chart_bundle(dataProfile, workflowPreferences):
         or has_model_performance
         or any(token in cols for token in ("auc", "accuracy", "f1", "r2", "rmse", "mae"))
     )
+    profile_tokens = set(cols) | {str(k).lower() for k in roles} | {str(v).lower() for v in roles.values()} | patterns
+    architecture_tokens = {
+        "model_architecture", "neural_architecture", "architecture_diagram",
+        "pipeline_topology", "dag_pipeline", "layer", "module", "component",
+        "block", "node", "source", "target", "from", "to", "params",
+        "parameters", "units", "channels", "heads", "attention", "transformer",
+        "encoder", "decoder", "embedding", "classifier",
+    }
+    has_source_target_schema = bool(profile_tokens & {"source", "from", "input"}) and bool(profile_tokens & {"target", "to", "output"})
+    has_architecture_hint = bool(profile_tokens & (architecture_tokens - {"source", "target", "from", "to"}))
+    has_model_architecture = (
+        bool(patterns & {"model_architecture", "neural_architecture", "architecture_diagram", "pipeline_topology", "dag_pipeline"})
+        or (has_source_target_schema and (domain == "computer_ai_ml" or has_architecture_hint))
+        or (
+            bool(profile_tokens & {"layer", "module", "component", "block", "node"})
+            and (
+                domain == "computer_ai_ml"
+                or "ml_model_family" in patterns
+                or bool(profile_tokens & architecture_tokens)
+            )
+        )
+    )
     has_training_curve = (
         "training_curve" in patterns
         or "learning_curve" in patterns
@@ -211,6 +233,8 @@ def recommend_chart_bundle(dataProfile, workflowPreferences):
     )
 
     # Direct pattern matches
+    if has_model_architecture:
+        return "model_architecture", ["training_curve", "confusion_matrix", "lollipop_horizontal"]
     if has_training_curve:
         secondary = ["line", "grouped_bar", "lollipop_horizontal"]
         if has_confusion_matrix_labels:
@@ -299,7 +323,7 @@ def select_statistical_plan(dataProfile, primaryChart, workflowPreferences):
     if rigor == "descriptive":
         return {"method": "none", "correction": None, "notes": ["descriptive_only"]}
 
-    if primaryChart in ("volcano", "ma_plot", "heatmap+cluster", "heatmap_pure", "umap", "tsne", "pca", "spatial_feature", "training_curve"):
+    if primaryChart in ("volcano", "ma_plot", "heatmap+cluster", "heatmap_pure", "umap", "tsne", "pca", "spatial_feature", "training_curve", "model_architecture"):
         return {"method": "none", "correction": None, "notes": ["exploratory_primary_chart"]}
 
     if primaryChart in ("roc", "pr_curve", "calibration"):
@@ -691,7 +715,7 @@ def infer_visual_chart_family(chart_type):
             "waffle_chart", "marimekko", "stacked_area_comp",
             "nested_donut", "chord_diagram", "parallel_coordinates",
             "sankey", "radar", "pareto_chart", "lollipop_horizontal",
-            "stem_plot", "mosaic_plot", "diverging_bar",
+            "stem_plot", "mosaic_plot", "diverging_bar", "model_architecture",
         },
         "psych_ecology": {
             "species_abundance", "shannon_diversity", "biodiversity_radar",
@@ -792,6 +816,16 @@ def infer_template_visual_motifs(charts, dataProfile):
         or ("model" in roles and any(role in roles for role in ("metric", "score", "rmse", "mae", "residual")))
     ):
         add("ml_model_performance_triptych", "model_algorithm_metric_or_split_columns")
+    if (
+        "model_architecture" in chart_keys
+        or "model_architecture" in patterns
+        or "neural_architecture" in patterns
+        or "pipeline_topology" in patterns
+        or any(token in tokens for token in ("layer", "module", "component", "transformer", "attention", "encoder", "decoder"))
+        or (("source" in roles or "from" in roles) and ("target" in roles or "to" in roles))
+    ):
+        add("neural_architecture_topology", "layer_module_or_source_target_topology_columns")
+        add("metric_table_in_panel", "module_count_edge_count_or_parameter_summary")
     if "model_error_diagnostic" in patterns or any(token in tokens for token in ("rmse", "mae", "percent_error", "percentage_error", "error_pct")):
         add("dual_axis_error_sidecar", "error_metric_column_or_computable_residuals")
     if "ml_explainability" in patterns or "feature_importance" in patterns or "shap_value" in roles or "importance" in roles:
@@ -840,17 +874,24 @@ def resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreference
         "true_label", "actual_label", "predicted_label", "prediction_label", "y_pred",
         "epoch", "learning_curve", "training_curve", "training_history",
         "train_loss", "training_loss", "val_loss", "validation_loss", "val_accuracy",
+        "model_architecture", "neural_architecture", "architecture_diagram",
+        "pipeline_topology", "dag_pipeline", "layer", "module", "component",
+        "block", "node", "source", "target", "params", "parameters", "units",
+        "channels", "heads", "attention", "transformer", "encoder", "decoder",
     }
     feature_selection_tokens = {"n_features", "top_k", "feature_count", "ablation", "feature_selection", "incremental_feature_selection"}
     training_curve_tokens = {"epoch", "learning_curve", "training_curve", "training_history", "train_loss", "training_loss", "val_loss", "validation_loss", "val_accuracy"}
+    architecture_tokens = {"model_architecture", "neural_architecture", "architecture_diagram", "pipeline_topology", "dag_pipeline", "layer", "module", "component", "block", "node", "source", "target", "params", "parameters", "units", "channels", "heads", "attention", "transformer", "encoder", "decoder"}
     has_ml_signal = domain_hint == "computer_ai_ml" or bool(profile_tokens & ml_tokens)
     has_feature_selection_signal = bool(profile_tokens & feature_selection_tokens)
     has_training_curve_signal = bool(profile_tokens & training_curve_tokens)
+    has_architecture_signal = bool(profile_tokens & architecture_tokens)
     family_map = {
         "scatter_regression": "marginal_joint",
         "residual_vs_fitted": "marginal_joint",
         "bland_altman": "marginal_joint",
         "histogram": "marginal_joint",
+        "model_architecture": "ml_model_diagnostics",
         "grouped_bar": "ml_model_diagnostics",
         "line": "ml_model_diagnostics",
         "training_curve": "ml_model_diagnostics",
@@ -906,7 +947,7 @@ def resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreference
     families = list(selected_bundle.get("templateFamilies") or [])
     for chart in sorted(normalized):
         family = family_map.get(chart)
-        if family == "ml_model_diagnostics" and chart in {"line", "grouped_bar"} and not (selected_bundle or has_ml_signal or has_feature_selection_signal or has_training_curve_signal):
+        if family == "ml_model_diagnostics" and chart in {"line", "grouped_bar"} and not (selected_bundle or has_ml_signal or has_feature_selection_signal or has_training_curve_signal or has_architecture_signal):
             continue
         if family and family not in families:
             families.append(family)
@@ -927,7 +968,9 @@ def resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreference
     inferred_bundle_key = selected_bundle.get("bundleKey")
     if not inferred_bundle_key:
         chart_set = set(normalized)
-        if "ml_model_diagnostics" in families and "training_curve" in chart_set:
+        if "ml_model_diagnostics" in families and "model_architecture" in chart_set:
+            inferred_bundle_key = "neural_architecture_topology"
+        elif "ml_model_diagnostics" in families and "training_curve" in chart_set:
             inferred_bundle_key = "neural_training_dynamics"
         elif "ml_model_diagnostics" in families and "line" in chart_set and has_feature_selection_signal:
             inferred_bundle_key = "incremental_feature_selection_curve"
@@ -959,6 +1002,7 @@ def resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreference
             "when_bundleKey_is_inferred_follow_the_same_template_case_as_user_selected_bundle",
             "when_feature_count_or_ablation_columns_exist_clone_incremental_feature_selection_curve",
             "when_probability_label_or_threshold_columns_exist_clone_classifier_validation_board",
+            "when_layer_module_or_source_target_columns_exist_clone_neural_architecture_topology",
         ],
     }
 

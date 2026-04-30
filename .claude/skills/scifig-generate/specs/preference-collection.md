@@ -273,6 +273,15 @@ _TEMPLATE_CHART_BUNDLE_SEEDS = {
             "zh": ("随机森林模型报告套餐（推荐）", "当数据含 model/algorithm、训练测试指标、预测-真实值或残差字段时，直接复刻 RF 案例：指标横向柱、带边缘分布的 1:1 预测散点、残差面板。"),
         },
         {
+            "key": "neural_architecture_topology",
+            "charts": ["model_architecture", "training_curve", "lollipop_horizontal"],
+            "families": ["ml_model_diagnostics", "time_series_pi", "shap_composite"],
+            "techniqueRefs": ["template-mining/07-techniques/ml-model-diagnostics.md", "template-mining/07-techniques/time-series-pi.md", "template-mining/07-techniques/shap-composite.md"],
+            "anchors": ["基于PSO多目标优化与SHAP可解释分析的回归预测模型框架_1777461729.md"],
+            "en": ("Neural architecture topology package", "Use for layer/module/component or source-target architecture tables: rounded module blocks, stage bands, directed arrows, parameter/unit tags, then training or explainability support panels."),
+            "zh": ("神经网络架构拓扑套装", "适合 layer/module/component 或 source-target 架构表：圆角模块、阶段泳道、有向箭头、参数/单元标签，并搭配训练或解释性支持面板。"),
+        },
+        {
             "key": "incremental_feature_selection_curve",
             "charts": ["line", "lollipop_horizontal", "scatter_regression"],
             "families": ["ml_model_diagnostics", "time_series_pi", "shap_composite"],

@@ -108,6 +108,305 @@ def gen_chord_diagram(df, dataProfile, chartPlan, rcParams, palette, col_map=Non
     return ax
 
 
+def gen_model_architecture(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=None):
+    """AI/ML model architecture or pipeline topology diagram.
+
+    Supports ordered node tables (`layer`, `module`, `component`, `stage`,
+    `type`, `units`, `params`, `order`) and edge tables (`source`, `target`,
+    optional `value`). The output intentionally avoids legends and keeps every
+    label inside axes bounds so render QA can treat it as a hard layout object.
+    """
+    import numpy as np
+    import pandas as pd
+    import matplotlib.patches as mpatches
+    import textwrap
+
+    standalone = ax is None
+    plt.rcParams.update(rcParams)
+    roles = dataProfile.get("semanticRoles", {}) if isinstance(dataProfile, dict) else {}
+    if df is None or not len(df):
+        raise ValueError("model_architecture requires layer/module rows or source-target edges")
+
+    def _pick_col(*role_names, tokens=()):
+        for role_name in role_names:
+            candidate = roles.get(role_name)
+            if candidate in getattr(df, "columns", []):
+                return candidate
+        lower_to_col = {str(col).lower(): col for col in getattr(df, "columns", [])}
+        for token in tokens:
+            if token in lower_to_col:
+                return lower_to_col[token]
+        for col in getattr(df, "columns", []):
+            lowered = str(col).lower()
+            if any(token in lowered for token in tokens):
+                return col
+        return None
+
+    source_col = _pick_col("source", "from", tokens=("source", "from", "input"))
+    target_col = _pick_col("target", "to", tokens=("target", "to", "output"))
+    node_col = _pick_col(
+        "layer", "module", "node", "name", "component", "block", "feature_id", "label",
+        tokens=("layer", "module", "node", "name", "component", "block")
+    )
+    order_col = _pick_col("order", "step", "depth", tokens=("order", "step", "depth", "rank", "idx"))
+    stage_col = _pick_col("stage", "group", "phase", tokens=("stage", "phase", "block_group", "group"))
+    type_col = _pick_col("type", "kind", "operation", tokens=("type", "kind", "operation", "op"))
+    units_col = _pick_col("units", "channels", "features", tokens=("units", "neurons", "channels", "features", "heads", "dim"))
+    params_col = _pick_col("params", "parameters", tokens=("params", "parameters", "n_params"))
+    value_col = _pick_col("value", "weight", tokens=("value", "weight", "latency", "flops"))
+
+    def _clean_label(value, max_len=20):
+        text = str(value).strip()
+        if text.lower() in ("nan", "none", ""):
+            text = "module"
+        replacements = {
+            "Transformer": "Transf.",
+            "Convolutional": "Conv.",
+            "Embedding": "Embed.",
+            "Classifier": "Classif.",
+        }
+        for old, new in replacements.items():
+            text = text.replace(old, new)
+        return text if len(text) <= max_len else text[:max_len - 1] + "..."
+
+    def _wrap_label(value, line_len=13, max_lines=2):
+        wrapped = textwrap.wrap(_clean_label(value, max_len=line_len * max_lines + 3), width=line_len)
+        if not wrapped:
+            return "module"
+        if len(wrapped) > max_lines:
+            wrapped = wrapped[:max_lines]
+            wrapped[-1] = _clean_label(wrapped[-1], line_len)
+        return "\n".join(wrapped)
+
+    if source_col and target_col:
+        edge_frame = df[[source_col, target_col]].dropna().astype(str)
+        if edge_frame.empty:
+            raise ValueError("model_architecture source-target table has no valid edges")
+        nodes = []
+        for src, tgt in edge_frame.itertuples(index=False, name=None):
+            for node in (src, tgt):
+                if node not in nodes:
+                    nodes.append(node)
+        edges = [(src, tgt) for src, tgt in edge_frame.itertuples(index=False, name=None)]
+        if len(nodes) > 14:
+            nodes = nodes[:14]
+            node_set = set(nodes)
+            edges = [(src, tgt) for src, tgt in edges if src in node_set and tgt in node_set]
+        meta = {node: {} for node in nodes}
+    else:
+        if not node_col:
+            candidate_cols = [col for col in df.columns if not pd.api.types.is_numeric_dtype(df[col])]
+            if not candidate_cols:
+                raise ValueError("model_architecture requires a layer/module/node column")
+            node_col = candidate_cols[0]
+        node_df = df.copy()
+        if order_col in node_df:
+            node_df = node_df.sort_values(order_col, kind="mergesort")
+        node_df = node_df.dropna(subset=[node_col]).head(14)
+        nodes = [_clean_label(value, 28) for value in node_df[node_col].astype(str).tolist()]
+        edges = list(zip(nodes[:-1], nodes[1:]))
+        meta = {}
+        for node, (_, row) in zip(nodes, node_df.iterrows()):
+            meta[node] = {
+                "stage": row.get(stage_col) if stage_col in node_df else None,
+                "type": row.get(type_col) if type_col in node_df else None,
+                "units": row.get(units_col) if units_col in node_df else None,
+                "params": row.get(params_col) if params_col in node_df else None,
+            }
+
+    if not nodes:
+        raise ValueError("model_architecture could not derive any modules")
+
+    depth = {node: idx for idx, node in enumerate(nodes)}
+    if source_col and target_col and edges:
+        depth = {node: 0 for node in nodes}
+        for _ in range(len(nodes)):
+            changed = False
+            for src, tgt in edges:
+                if src in depth and tgt in depth and depth[tgt] <= depth[src]:
+                    depth[tgt] = depth[src] + 1
+                    changed = True
+            if not changed:
+                break
+        if max(depth.values(), default=0) > len(nodes):
+            depth = {node: idx for idx, node in enumerate(nodes)}
+
+    levels = {}
+    for node in nodes:
+        levels.setdefault(depth.get(node, 0), []).append(node)
+    level_keys = sorted(levels)
+    x_positions = np.linspace(0.12, 0.88, max(1, len(level_keys)))
+    position = {}
+    for depth_idx, level in enumerate(level_keys):
+        members = levels[level]
+        if len(members) == 1:
+            y_positions = [0.52]
+        else:
+            y_positions = np.linspace(0.75, 0.30, len(members))
+        for node, y_pos in zip(members, y_positions):
+            position[node] = (float(x_positions[depth_idx]), float(y_pos))
+
+    if standalone:
+        fig, ax = plt.subplots(
+            figsize=(120 * (1 / 25.4), 72 * (1 / 25.4)),
+            constrained_layout=True
+        )
+
+    def _arch_text(*args, **kwargs):
+        text_artist = ax.text(*args, **kwargs)
+        text_artist.set_gid("scifig_inplot_label")
+        return text_artist
+
+    colors = palette.get("categorical", ["#2B6CB0", "#D97706", "#0F766E", "#7C3AED", "#DC2626", "#475569"])
+    stage_values = []
+    for node in nodes:
+        stage = meta.get(node, {}).get("stage")
+        if pd.notna(stage) and str(stage).strip():
+            stage_text = str(stage)
+            if stage_text not in stage_values:
+                stage_values.append(stage_text)
+    if not stage_values:
+        stage_values = ["Architecture"]
+    stage_color = {stage: colors[idx % len(colors)] for idx, stage in enumerate(stage_values)}
+
+    box_w = min(0.14, max(0.085, 0.72 / max(1, len(level_keys))))
+    box_h = 0.150 if max(len(v) for v in levels.values()) <= 2 else 0.115
+    label_font = 5.0 if len(level_keys) >= 6 else 5.6
+    detail_font = 4.0 if len(level_keys) >= 6 else 4.25
+    node_line_len = 9 if len(level_keys) >= 6 else 13
+
+    for stage in stage_values:
+        stage_nodes = [node for node in nodes if str(meta.get(node, {}).get("stage") or "Architecture") == stage]
+        if not stage_nodes:
+            continue
+        xs = [position[node][0] for node in stage_nodes if node in position]
+        if not xs:
+            continue
+        x0 = max(0.02, min(xs) - box_w * 0.65)
+        x1 = min(0.98, max(xs) + box_w * 0.65)
+        band = mpatches.FancyBboxPatch(
+            (x0, 0.15), x1 - x0, 0.70,
+            boxstyle="round,pad=0.008,rounding_size=0.02",
+            linewidth=0.55,
+            edgecolor=stage_color.get(stage, "#94A3B8"),
+            facecolor=stage_color.get(stage, "#94A3B8"),
+            alpha=0.08,
+            transform=ax.transAxes,
+            clip_on=True,
+            zorder=0,
+        )
+        ax.add_patch(band)
+        _arch_text(
+            (x0 + x1) / 2, 0.865, _clean_label(stage, 18),
+            ha="center", va="bottom", fontsize=5.2, fontweight="bold",
+            color=stage_color.get(stage, "#475569"), transform=ax.transAxes,
+            clip_on=True, zorder=3,
+        )
+
+    arrow_values = {}
+    if source_col and target_col and value_col in getattr(df, "columns", []):
+        for _, row in df.iterrows():
+            src, tgt = str(row[source_col]), str(row[target_col])
+            if src in position and tgt in position:
+                arrow_values[(src, tgt)] = row.get(value_col)
+
+    for src, tgt in edges:
+        if src not in position or tgt not in position:
+            continue
+        sx, sy = position[src]
+        tx, ty = position[tgt]
+        rad = 0.18 if abs(sy - ty) > 0.12 else 0.02
+        arrow = mpatches.FancyArrowPatch(
+            (sx + box_w / 2, sy), (tx - box_w / 2, ty),
+            arrowstyle="-|>",
+            mutation_scale=8,
+            linewidth=0.85,
+            color="#334155",
+            alpha=0.72,
+            connectionstyle=f"arc3,rad={rad}",
+            transform=ax.transAxes,
+            clip_on=True,
+            zorder=1,
+        )
+        ax.add_patch(arrow)
+        edge_value = arrow_values.get((src, tgt))
+        if edge_value is not None and pd.notna(edge_value):
+            mx, my = (sx + tx) / 2, (sy + ty) / 2
+            _arch_text(
+                mx, my + 0.035, _clean_label(edge_value, 10),
+                ha="center", va="center", fontsize=4.4, color="#475569",
+                transform=ax.transAxes, clip_on=True, zorder=4,
+            )
+
+    for idx, node in enumerate(nodes):
+        cx, cy = position[node]
+        node_meta = meta.get(node, {})
+        stage = str(node_meta.get("stage") or "Architecture")
+        edge_color = stage_color.get(stage, colors[idx % len(colors)])
+        rect = mpatches.FancyBboxPatch(
+            (cx - box_w / 2, cy - box_h / 2), box_w, box_h,
+            boxstyle="round,pad=0.012,rounding_size=0.025",
+            linewidth=1.0,
+            edgecolor=edge_color,
+            facecolor=edge_color,
+            alpha=0.18,
+            transform=ax.transAxes,
+            clip_on=True,
+            zorder=2,
+        )
+        ax.add_patch(rect)
+        _arch_text(
+            cx, cy + box_h * 0.16, _wrap_label(node, line_len=node_line_len, max_lines=2),
+            ha="center", va="center", fontsize=label_font, fontweight="bold",
+            color="#0F172A", transform=ax.transAxes, clip_on=True, zorder=5,
+            linespacing=0.95,
+        )
+        details = []
+        if pd.notna(node_meta.get("type")) and str(node_meta.get("type")).strip():
+            details.append(_clean_label(node_meta.get("type"), 16))
+        if pd.notna(node_meta.get("units")) and str(node_meta.get("units")).strip():
+            details.append(f"units={_clean_label(node_meta.get('units'), 10)}")
+        if pd.notna(node_meta.get("params")) and str(node_meta.get("params")).strip():
+            details.append(f"p={_clean_label(node_meta.get('params'), 10)}")
+        if details:
+            _arch_text(
+                cx, cy - box_h * 0.22, "\n".join(details[:2]),
+                ha="center", va="center", fontsize=detail_font, color="#475569",
+                transform=ax.transAxes, clip_on=True, zorder=5, linespacing=1.0,
+            )
+
+    params_total = None
+    if params_col in getattr(df, "columns", []):
+        numeric_params = pd.to_numeric(df[params_col], errors="coerce")
+        if numeric_params.notna().any():
+            params_total = float(numeric_params.sum())
+    summary_lines = [f"modules={len(nodes)}", f"edges={len(edges)}"]
+    if params_total is not None:
+        summary_lines.append(f"params={params_total:.3g}")
+    _arch_text(
+        0.965, 0.055, "\n".join(summary_lines),
+        ha="right", va="bottom", fontsize=5.0, color="#1E293B",
+        bbox=dict(boxstyle="round,pad=0.25", facecolor="white", edgecolor="#CBD5E1", linewidth=0.55, alpha=0.94),
+        transform=ax.transAxes, clip_on=True, zorder=6,
+    )
+    if chartPlan.get("drawInternalTitle", False):
+        title = chartPlan.get("title") or "AI model architecture"
+        title_text = str(title).strip()
+        if len(title_text) > 42:
+            title_text = title_text[:41] + "..."
+        _arch_text(
+            0.02, 0.955, title_text,
+            ha="left", va="top", fontsize=7.2, fontweight="bold", color="#0F172A",
+            transform=ax.transAxes, clip_on=True, zorder=6,
+        )
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    ax.axis("off")
+    if standalone:
+        apply_chart_polish(ax, "model_architecture")
+    return ax
+
+
 def gen_parallel_coordinates(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=None):
     """Parallel coordinates plot for multivariate profiles.
 

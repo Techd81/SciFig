@@ -3,6 +3,7 @@
 
 import re
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.patches import Ellipse
 
@@ -217,7 +218,7 @@ def infer_chart_family(chart_type):
             "waffle_chart", "marimekko", "stacked_area_comp",
             "nested_donut", "chord_diagram", "parallel_coordinates",
             "sankey", "radar", "pareto_chart", "lollipop_horizontal",
-            "stem_plot", "mosaic_plot", "diverging_bar",
+            "stem_plot", "mosaic_plot", "diverging_bar", "model_architecture",
         },
         "psych_ecology": {
             "species_abundance", "shannon_diversity", "biodiversity_radar",
@@ -361,6 +362,16 @@ def infer_template_motifs(charts, dataProfile=None):
         or ("model" in roles and any(role in roles for role in ("metric", "score", "rmse", "mae", "residual")))
     ):
         add("ml_model_performance_triptych")
+    if (
+        "model_architecture" in chart_keys
+        or "model_architecture" in patterns
+        or "neural_architecture" in patterns
+        or "pipeline_topology" in patterns
+        or any(token in tokens for token in ("layer", "module", "component", "transformer", "attention", "encoder", "decoder"))
+        or (("source" in roles or "from" in roles) and ("target" in roles or "to" in roles))
+    ):
+        add("neural_architecture_topology")
+        add("metric_table_in_panel")
     if (
         "confusion_matrix" in chart_keys
         or "confusion_matrix" in patterns
@@ -1582,6 +1593,37 @@ def _enhance_composition(ax, dataProfile, visualPlan, palette, col_map):
         lines.extend([f"total={total:.3g}", f"items={len(values)}"])
     if group_col and df is not None and group_col in df:
         lines.append(f"categories={df[group_col].nunique()}")
+    if _template_motif_planned(visualPlan, "neural_architecture_topology"):
+        source_col = _role(dataProfile, "source", "from")
+        target_col = _role(dataProfile, "target", "to")
+        node_col = _role(dataProfile, "layer", "module", "node", "component", "block", "label")
+        params_col = _role(dataProfile, "params", "parameters")
+        module_count = None
+        edge_count = None
+        params_total = None
+        if df is not None:
+            if source_col in getattr(df, "columns", []) and target_col in getattr(df, "columns", []):
+                endpoints = list(df[source_col].dropna().astype(str)) + list(df[target_col].dropna().astype(str))
+                module_count = len(set(endpoints))
+                edge_count = int(df[[source_col, target_col]].dropna().shape[0])
+            elif node_col in getattr(df, "columns", []):
+                module_count = int(df[node_col].dropna().astype(str).nunique())
+                edge_count = max(0, module_count - 1)
+            if params_col in getattr(df, "columns", []):
+                params = pd.to_numeric(df[params_col], errors="coerce")
+                if params.notna().any():
+                    params_total = float(params.sum())
+        label = "architecture topology"
+        if module_count is not None:
+            label += f"\nmodules={module_count}"
+            lines.append(f"modules={module_count}")
+        if edge_count is not None:
+            lines.append(f"edges={edge_count}")
+        if params_total is not None:
+            lines.append(f"params={params_total:.3g}")
+        _add_inplot_label(ax, label, visualPlan, loc="upper_right")
+        _record_template_motif(visualPlan, "neural_architecture_topology")
+        enhancements.append("neural_architecture_topology")
     if _template_motif_planned(visualPlan, "explainability_importance_stack"):
         feature_col = _role(dataProfile, "feature_id", "label", "feature")
         importance_col = _role(dataProfile, "importance", "shap_value", "effect", "value")

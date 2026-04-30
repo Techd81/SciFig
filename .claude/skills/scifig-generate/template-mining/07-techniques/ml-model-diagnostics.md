@@ -1,6 +1,6 @@
 # ML Model Diagnostics Technique
 
-Use this deep-dive whenever `templateCasePlan.families` contains `ml_model_diagnostics`, or when the selected bundle key is one of `rf_model_performance_report`, `neural_training_dynamics`, `incremental_feature_selection_curve`, `rf_feature_importance_shap`, `pso_shap_optimization_framework`, or `classifier_validation_board`.
+Use this deep-dive whenever `templateCasePlan.families` contains `ml_model_diagnostics`, or when the selected bundle key is one of `rf_model_performance_report`, `neural_architecture_topology`, `neural_training_dynamics`, `incremental_feature_selection_curve`, `rf_feature_importance_shap`, `pso_shap_optimization_framework`, or `classifier_validation_board`.
 
 ## Anchor Cases
 
@@ -20,6 +20,16 @@ When columns include `model` / `algorithm` plus `Training` / `Testing` / `R2` / 
 
 Layout intent: `ml_model_performance_triptych` uses a 2x2 grid where the benchmark bar spans the top row and parity/residual diagnostics occupy the bottom row.
 Executable fallback: `grouped_bar` renders the sorted RF-highlighted benchmark, standalone `scatter_regression` renders the train/test parity lane as a density-colored marginal joint diagnostic with 1:1 reference and R2/RMSE/MAE box, embedded `scatter_regression` keeps the compact parity lane, and `residual_vs_fitted` renders the residual lane with red zero reference plus bias/SD note.
+
+## Neural Architecture Topology
+
+When columns include `layer`, `module`, `component`, `block`, `source`, `target`, `params`, `units`, `channels`, `heads`, `attention`, `transformer`, `encoder`, or `decoder`, clone an architecture-topology board before falling back to generic flow diagrams:
+
+- Use rounded module blocks rather than plain nodes. Put the layer or module name on the first line and compact type/unit/parameter tags below it.
+- Group modules by stage or block with pale stage bands. Keep all labels inside the axes so the figure survives layout QA.
+- Use directed arrows for source-target edges or sequential layer order. Do not add a legend unless a real categorical mapping is needed outside the plotting area.
+- Pair the architecture hero with `training_curve` or `lollipop_horizontal` support panels when training or explainability fields are also available.
+- Executable fallback: `model_architecture` detects node tables or edge tables, derives a compact DAG/sequential layout, draws stage bands, directed arrows, module blocks, and a module/edge/parameter summary box.
 
 ## Incremental Feature Selection
 
@@ -72,6 +82,7 @@ When columns include `score`, `probability`, `label`, `true_label`, `predicted_l
 ## Routing Rules
 
 - Prefer `rf_model_performance_report` when both model benchmark metrics and actual/predicted or residual fields exist.
+- Prefer `neural_architecture_topology` when layer/module/component or source-target architecture fields exist.
 - Prefer `neural_training_dynamics` when epoch/step training histories include loss, validation loss, accuracy, or learning-rate fields.
 - Prefer `incremental_feature_selection_curve` when feature-count or ablation fields exist.
 - Prefer `rf_feature_importance_shap` when explainability fields exist.
