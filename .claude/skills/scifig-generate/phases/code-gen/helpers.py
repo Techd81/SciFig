@@ -2076,6 +2076,53 @@ def _bbox_area(box):
     return max(0.0, box.width) * max(0.0, box.height)
 
 
+def _metric_table_data_overlap_issues(fig, axes, renderer):
+    issues = []
+    for panel_id, ax in axes.items():
+        tables = [
+            table for table in getattr(ax, "tables", [])
+            if getattr(table, "get_gid", lambda: None)() == "scifig_metric_table"
+            and getattr(table, "get_visible", lambda: True)()
+        ]
+        if not tables:
+            continue
+        data_patches = []
+        for patch in getattr(ax, "patches", []):
+            if not getattr(patch, "get_visible", lambda: True)():
+                continue
+            if getattr(patch, "get_gid", lambda: None)() in {"scifig_density_halo", "scifig_table_cell"}:
+                continue
+            if patch is getattr(ax, "patch", None):
+                continue
+            if patch.__class__.__name__ != "Rectangle":
+                continue
+            try:
+                if abs(float(patch.get_width())) <= 0 or abs(float(patch.get_height())) <= 0:
+                    continue
+                patch_box = patch.get_window_extent(renderer=renderer)
+            except Exception:
+                continue
+            if _bbox_area(patch_box) <= 9:
+                continue
+            data_patches.append(patch_box)
+        for table_index, table in enumerate(tables):
+            try:
+                table_box = table.get_window_extent(renderer=renderer)
+            except Exception:
+                continue
+            for patch_index, patch_box in enumerate(data_patches):
+                if table_box.overlaps(patch_box):
+                    issues.append({
+                        "panel": panel_id,
+                        "tableIndex": table_index,
+                        "dataPatchIndex": patch_index,
+                        "element": "scifig_metric_table",
+                        "conflict": "data_bar",
+                    })
+                    break
+    return issues
+
+
 def audit_figure_layout_contract(fig, axes=None, chartPlan=None, journalProfile=None, strict=False):
     """Check final multi-panel layout for cross-panel text, off-canvas text, and poster-scale typography."""
     axes_map = normalize_axes_map(fig, axes)
@@ -2098,6 +2145,7 @@ def audit_figure_layout_contract(fig, axes=None, chartPlan=None, journalProfile=
     off_canvas_artists = []
     oversized_text = []
     negative_axes_text = []
+    metric_table_data_overlaps = _metric_table_data_overlap_issues(fig, axes_map, renderer)
 
     for panel_id, artist in _iter_layout_artists(axes_map):
         try:
@@ -2147,11 +2195,15 @@ def audit_figure_layout_contract(fig, axes=None, chartPlan=None, journalProfile=
         failures.append("poster_scale_fontsize")
     if negative_axes_text:
         failures.append("negative_axes_text_without_reserved_slot")
+    if metric_table_data_overlaps:
+        failures.append("metric_table_data_overlap")
 
     report = {
         "layoutContractEnforced": True,
         "layoutContractFailures": failures,
         "crossPanelOverlapIssues": cross_panel_overlaps,
+        "metricTableDataOverlapIssues": metric_table_data_overlaps,
+        "metricTableDataOverlapCount": len(metric_table_data_overlaps),
         "offCanvasArtistCount": len(off_canvas_artists),
         "offCanvasArtists": off_canvas_artists,
         "oversizedTextCount": len(oversized_text),

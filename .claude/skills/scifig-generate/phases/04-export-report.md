@@ -121,6 +121,8 @@ render_qa = {
     "layoutContractEnforced": chartPlan.get("crowdingPlan", {}).get("layoutContractEnforced", False),
     "layoutContractFailures": chartPlan.get("crowdingPlan", {}).get("layoutContractFailures", []),
     "crossPanelOverlapIssues": chartPlan.get("crowdingPlan", {}).get("crossPanelOverlapIssues", []),
+    "metricTableDataOverlapIssues": chartPlan.get("crowdingPlan", {}).get("metricTableDataOverlapIssues", []),
+    "metricTableDataOverlapCount": chartPlan.get("crowdingPlan", {}).get("metricTableDataOverlapCount", 0),
     "negativeAxesTextCount": chartPlan.get("crowdingPlan", {}).get("negativeAxesTextCount", 0),
     "oversizedTextCount": chartPlan.get("crowdingPlan", {}).get("oversizedTextCount", 0),
     "figureWhitespaceFraction": chartPlan.get("crowdingPlan", {}).get("figureWhitespaceFraction", 0),
@@ -189,6 +191,9 @@ if render_qa["layoutContractFailures"]:
 
 if render_qa["crossPanelOverlapIssues"]:
     render_qa["overlapFailures"].append("cross_panel_text_or_table_overlap")
+
+if render_qa["metricTableDataOverlapCount"] > 0:
+    render_qa["overlapFailures"].append("metric_table_data_overlap")
 
 if render_qa["negativeAxesTextCount"] > 0:
     render_qa["overlapFailures"].append("negative_axes_text_without_reserved_slot")
