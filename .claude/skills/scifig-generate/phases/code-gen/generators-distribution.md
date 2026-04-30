@@ -4036,6 +4036,147 @@ def gen_heatmap_annotated(df, dataProfile, chartPlan, rcParams, palette, col_map
     return ax
 
 
+def gen_confusion_matrix(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=None):
+    """Row-normalized classifier confusion matrix with count + row-percent labels.
+
+    Accepts true/predicted class columns directly, or derives predicted classes
+    from classifier scores when a threshold is supplied or implied by the plan.
+    """
+    standalone = ax is None
+    plt.rcParams.update(rcParams)
+    roles = dataProfile.get("semanticRoles", {})
+    plan = chartPlan or {}
+    columns_lower = {str(c).lower(): c for c in df.columns}
+
+    def _role_or_col(*names):
+        for name in names:
+            if name in roles and roles[name] in df.columns:
+                return roles[name]
+        for name in names:
+            key = str(name).lower()
+            if key in columns_lower:
+                return columns_lower[key]
+        return None
+
+    def _is_label_like(series):
+        clean = series.dropna()
+        if clean.empty:
+            return False
+        if not pd.api.types.is_numeric_dtype(clean):
+            return True
+        return clean.nunique() <= min(12, max(2, int(np.sqrt(len(clean))) + 1))
+
+    true_col = _role_or_col("true_label", "actual_label", "label", "y_true", "actual", "class")
+    pred_col = _role_or_col("predicted_label", "prediction_label", "predicted_class", "y_pred", "pred_label")
+    loose_pred = _role_or_col("prediction")
+    if pred_col is None and loose_pred is not None and true_col is not None and _is_label_like(df[loose_pred]):
+        pred_col = loose_pred
+    score_col = _role_or_col("score", "probability", "proba", "prediction_score", "y_score")
+    count_col = _role_or_col("count", "n", "support")
+
+    cm = None
+    if true_col and pred_col and true_col in df.columns and pred_col in df.columns:
+        work = df[[true_col, pred_col] + ([count_col] if count_col and count_col not in (true_col, pred_col) else [])].dropna()
+        if work.empty:
+            raise ValueError("confusion_matrix requires non-empty true/predicted labels")
+        if count_col and count_col in work.columns:
+            cm = work.pivot_table(index=true_col, columns=pred_col, values=count_col,
+                                  aggfunc="sum", fill_value=0)
+        else:
+            cm = pd.crosstab(work[true_col], work[pred_col])
+    elif true_col and score_col and true_col in df.columns and score_col in df.columns:
+        work = df[[true_col, score_col]].dropna()
+        if work.empty:
+            raise ValueError("confusion_matrix requires non-empty label/score pairs")
+        template_plan = plan.get("templateCasePlan", {}) if isinstance(plan.get("templateCasePlan"), dict) else {}
+        threshold = plan.get("threshold", template_plan.get("threshold", 0.5))
+        labels = sorted(work[true_col].dropna().unique().tolist(), key=lambda value: str(value))
+        positive_label = plan.get("positiveLabel") or template_plan.get("positiveLabel") or labels[-1]
+        negative_label = [label for label in labels if label != positive_label][0] if len(labels) > 1 else f"not {positive_label}"
+        pred = np.where(work[score_col].astype(float) >= float(threshold), positive_label, negative_label)
+        cm = pd.crosstab(work[true_col], pred)
+    else:
+        numeric = df.select_dtypes(include="number")
+        if numeric.shape[0] >= 2 and numeric.shape[1] >= 2:
+            side = min(numeric.shape[0], numeric.shape[1], 12)
+            cm = numeric.iloc[:side, :side].copy()
+            if cm.index.equals(pd.RangeIndex(start=0, stop=side, step=1)):
+                cm.index = [f"C{i + 1}" for i in range(side)]
+            cm.columns = [str(c) for c in cm.columns[:side]]
+        else:
+            raise ValueError("confusion_matrix requires true/predicted labels, label/score pairs, or a numeric square matrix")
+
+    cm = cm.astype(float).fillna(0)
+    support = cm.sum(axis=1).add(cm.sum(axis=0), fill_value=0)
+    classes = support.sort_values(ascending=False).index.tolist()
+    if len(classes) > 12:
+        keep = classes[:11]
+        other = [c for c in classes if c not in keep]
+        collapsed = cm.reindex(index=keep + other, columns=keep + other, fill_value=0)
+        other_row = collapsed.loc[other].sum(axis=0)
+        collapsed = collapsed.loc[keep]
+        collapsed.loc["Other"] = other_row
+        collapsed["Other"] = collapsed[other].sum(axis=1)
+        cm = collapsed[keep + ["Other"]]
+        classes = keep + ["Other"]
+    else:
+        cm = cm.reindex(index=classes, columns=classes, fill_value=0)
+
+    row_totals = cm.sum(axis=1).replace(0, np.nan)
+    row_pct = cm.div(row_totals, axis=0).fillna(0) * 100
+    annot = cm.round(0).astype(int).astype(str) + "\n" + row_pct.round(0).astype(int).astype(str) + "%"
+    n_classes = max(1, len(cm))
+
+    if standalone:
+        size_mm = max(82, min(130, 14 * n_classes + 36))
+        fig, ax = plt.subplots(figsize=(size_mm / 25.4, size_mm / 25.4),
+                               constrained_layout=True)
+
+    annot_size = max(4.2, min(6.8, 24 / np.sqrt(n_classes)))
+    sns.heatmap(row_pct, annot=annot, fmt="", cmap="Blues", vmin=0, vmax=100,
+                linewidths=0.45, linecolor="white", square=True,
+                annot_kws={"size": annot_size},
+                cbar=standalone,
+                cbar_kws={"shrink": 0.66, "label": "Row %"} if standalone else {},
+                ax=ax)
+
+    for idx in range(n_classes):
+        ax.add_patch(plt.Rectangle((idx, idx), 1, 1, fill=False,
+                                   edgecolor="#111111", linewidth=0.8))
+
+    total = float(cm.to_numpy().sum())
+    accuracy = float(np.trace(cm.to_numpy()) / total) if total else 0.0
+    balanced = float(np.nanmean(np.diag(row_pct.to_numpy()) / 100)) if n_classes else 0.0
+    offdiag = cm.copy()
+    for idx in range(min(offdiag.shape)):
+        offdiag.iat[idx, idx] = 0
+    worst_true, worst_pred, worst_count = "", "", 0.0
+    if offdiag.to_numpy().size and offdiag.to_numpy().max() > 0:
+        worst_pos = np.unravel_index(np.argmax(offdiag.to_numpy()), offdiag.shape)
+        worst_true = str(offdiag.index[worst_pos[0]])
+        worst_pred = str(offdiag.columns[worst_pos[1]])
+        worst_count = float(offdiag.iat[worst_pos])
+
+    metric_lines = [f"accuracy={accuracy:.2f}", f"balanced={balanced:.2f}", f"n={int(total)}"]
+    if worst_count > 0:
+        metric_lines.append(f"max error: {worst_true}->{worst_pred}")
+    ax.text(0.98, 0.03, "\n".join(metric_lines), transform=ax.transAxes,
+            ha="right", va="bottom", fontsize=5.2,
+            bbox={"boxstyle": "round,pad=0.22", "facecolor": "white",
+                  "edgecolor": "#333333", "linewidth": 0.5, "alpha": 0.92})
+
+    xlabels = [str(c) for c in cm.columns]
+    ylabels = [str(c) for c in cm.index]
+    ax.set_xticklabels(xlabels, rotation=35, ha="right", fontsize=5.4)
+    ax.set_yticklabels(ylabels, rotation=0, fontsize=5.4)
+    ax.set_xlabel("Predicted class" if standalone else "")
+    ax.set_ylabel("True class" if standalone else "")
+    ax.tick_params(length=0)
+    if standalone:
+        apply_chart_polish(ax, "confusion_matrix")
+    return ax
+
+
 def gen_heatmap_triangular(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=None):
     """Lower or upper triangular heatmap.
 

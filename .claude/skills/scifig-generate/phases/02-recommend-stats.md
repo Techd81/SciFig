@@ -101,7 +101,7 @@ def recommend_chart_bundle(dataProfile, workflowPreferences):
         "area_stacked", "streamgraph", "gantt", "timeline_annotation", "residual_vs_fitted",
         "scale_location", "cook_distance", "leverage_plot", "pp_plot", "bland_altman",
         "funnel_plot", "pareto_chart", "control_chart", "box_paired", "mean_diff_plot",
-        "ci_plot", "dotplot", "adjacency_matrix", "heatmap_annotated", "heatmap_triangular",
+        "ci_plot", "dotplot", "adjacency_matrix", "heatmap_annotated", "confusion_matrix", "heatmap_triangular",
         "heatmap_mirrored", "cooccurrence_matrix", "circos_karyotype", "gene_structure", "pathway_map",
         "kegg_bar", "go_treemap", "chromosome_coverage", "swimmer_plot", "risk_ratio_plot",
         "caterpillar_plot", "tornado_chart", "nomogram", "decision_curve", "treemap",
@@ -166,6 +166,23 @@ def recommend_chart_bundle(dataProfile, workflowPreferences):
             )
         )
     )
+    has_confusion_matrix_labels = (
+        "confusion_matrix" in patterns
+        or "classification_error" in patterns
+        or (
+            any(role in roles for role in ("label", "true_label", "actual_label", "y_true"))
+            and any(role in roles for role in ("predicted_label", "prediction_label", "predicted_class", "y_pred"))
+        )
+        or (
+            "score" in roles
+            and any(role in roles for role in ("label", "true_label", "actual_label", "y_true"))
+        )
+        or any(token in cols for token in (
+            "confusion", "true_label", "actual_label", "y_true",
+            "predicted_label", "prediction_label", "predicted_class", "y_pred"
+        ))
+    )
+    has_classifier_validation_board = has_classifier_validation_board or has_confusion_matrix_labels
     has_shap_dependence = (
         "shap_dependence" in patterns
         or (
@@ -181,8 +198,10 @@ def recommend_chart_bundle(dataProfile, workflowPreferences):
         label_col = dataProfile["df"][roles["label"]]
         pos_rate = label_col.mean() if pd.api.types.is_numeric_dtype(label_col) else 0.5
         primary = "pr_curve" if n_obs > 0 and pos_rate < DATA_SCALE_POLICY["rare_positive_rate"] else "roc"
-        secondary = ["roc" if primary == "pr_curve" else "pr_curve", "calibration", "forest"]
+        secondary = ["roc" if primary == "pr_curve" else "pr_curve", "calibration", "confusion_matrix", "forest"]
         return primary, secondary
+    if has_confusion_matrix_labels:
+        return "confusion_matrix", ["grouped_bar", "heatmap_annotated"]
     if has_model_performance and has_prediction_fit:
         return "grouped_bar", ["scatter_regression", "residual_vs_fitted"]
     if has_model_performance:
@@ -793,7 +812,8 @@ def resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreference
         "xgboost", "lightgbm", "gbdt", "svm", "knn", "train", "training",
         "test", "testing", "validation", "cv", "auc", "accuracy", "f1",
         "precision", "recall", "r2", "rmse", "mae", "residual", "shap",
-        "feature_importance",
+        "feature_importance", "confusion", "confusion_matrix", "classification_error",
+        "true_label", "actual_label", "predicted_label", "prediction_label", "y_pred",
     }
     feature_selection_tokens = {"n_features", "top_k", "feature_count", "ablation", "feature_selection", "incremental_feature_selection"}
     has_ml_signal = domain_hint == "computer_ai_ml" or bool(profile_tokens & ml_tokens)
@@ -809,6 +829,7 @@ def resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreference
         "dotplot": "shap_composite",
         "nested_donut": "shap_composite",
         "heatmap_annotated": "shap_composite",
+        "confusion_matrix": "ml_model_diagnostics",
         "heatmap_triangular": "heatmap_pairwise",
         "heatmap_symmetric": "heatmap_pairwise",
         "correlation": "heatmap_pairwise",
@@ -860,7 +881,7 @@ def resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreference
             continue
         if family and family not in families:
             families.append(family)
-        if chart in {"roc", "pr_curve", "calibration"} and has_ml_signal and "ml_model_diagnostics" not in families:
+        if chart in {"roc", "pr_curve", "calibration", "confusion_matrix"} and has_ml_signal and "ml_model_diagnostics" not in families:
             families.append("ml_model_diagnostics")
 
     technique_refs = list(selected_bundle.get("techniqueRefs") or [])
@@ -883,7 +904,7 @@ def resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreference
             inferred_bundle_key = "rf_model_performance_report"
         elif "shap_composite" in families and {"lollipop_horizontal", "dotplot", "scatter_regression", "heatmap_annotated"} & chart_set:
             inferred_bundle_key = "rf_feature_importance_shap"
-        elif {"roc", "pr_curve", "calibration"} & chart_set:
+        elif {"roc", "pr_curve", "calibration", "confusion_matrix"} & chart_set:
             inferred_bundle_key = "classifier_validation_board"
     template_match_mode = selected_bundle.get("templateMatchMode") or ("clone_when_known" if families else "best_effort")
     if inferred_bundle_key and families:

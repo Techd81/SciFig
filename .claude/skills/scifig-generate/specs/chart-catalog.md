@@ -2,7 +2,7 @@
 
 Expanded chart taxonomy for `scifig-generate`. Use this as the lookup table during Phase 2.
 
-**Status**: ✅ = implemented (116); every registered chart has a dedicated `gen_` implementation.
+**Status**: ✅ = implemented (117); every registered chart has a dedicated `gen_` implementation.
 
 ## Core Quantitative Charts
 
@@ -103,6 +103,7 @@ Expanded chart taxonomy for `scifig-generate`. Use this as the lookup table duri
 | `dotplot` | ✅ | matrix with dot encoding | Dot matrix |
 | `adjacency_matrix` | ✅ | network adjacency | Graph structure |
 | `heatmap_annotated` | ✅ | matrix with values | Annotated heatmap |
+| `confusion_matrix` | ✅ | true/predicted labels or label + classifier score | Classification error structure |
 | `heatmap_triangular` | ✅ | symmetric matrix | Triangular heatmap |
 | `heatmap_mirrored` | ✅ | symmetric matrix | Mirrored heatmap |
 | `cooccurrence_matrix` | ✅ | co-occurrence data | Co-occurrence heatmap |

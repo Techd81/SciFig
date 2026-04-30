@@ -50,6 +50,7 @@ Domain playbooks bias charting, statistics, panel stories, and color semantics.
 - Support: `scatter_regression` predicted-vs-actual parity panel
 - Support: `residual_vs_fitted` or `line` for residuals, cross-validation, or feature-count curves
 - Explainability: `lollipop_horizontal`, `dotplot`, or `heatmap_annotated` for importance / SHAP fields
+- Classifier errors: `confusion_matrix` when true/predicted labels are present, or label + score can be thresholded
 - Rule: if RF/Random Forest/RFR appears and schema is compatible, use the RF template anchors before generic prediction charts
 
 ### Pharmacology

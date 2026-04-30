@@ -66,7 +66,9 @@ TEMPLATE_MATCH_POLICY = {
         "model", "algorithm", "estimator", "random forest", "rf", "rfr",
         "xgboost", "lightgbm", "gbdt", "svm", "knn", "train", "test",
         "validation", "cv", "auc", "accuracy", "f1", "precision", "recall",
-        "r2", "rmse", "mae", "residual", "shap", "feature_importance"
+        "r2", "rmse", "mae", "residual", "shap", "feature_importance",
+        "confusion", "confusion_matrix", "classification_error",
+        "true_label", "actual_label", "predicted_label", "prediction_label", "y_pred"
     ],
     "preferred_ml_bundle_order": [
         "rf_model_performance_report",

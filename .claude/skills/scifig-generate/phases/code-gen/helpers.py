@@ -190,7 +190,7 @@ def infer_chart_family(chart_type):
             "heatmap_cluster", "heatmap_pure", "heatmap_annotated",
             "heatmap_triangular", "heatmap_mirrored", "heatmap_symmetric",
             "adjacency_matrix", "cooccurrence_matrix", "bubble_matrix",
-            "dotplot", "composition_dotplot",
+            "dotplot", "composition_dotplot", "confusion_matrix",
         },
         "time_series": {
             "line", "line_ci", "spaghetti", "sparkline", "area", "area_stacked",
@@ -361,6 +361,14 @@ def infer_template_motifs(charts, dataProfile=None):
         or ("model" in roles and any(role in roles for role in ("metric", "score", "rmse", "mae", "residual")))
     ):
         add("ml_model_performance_triptych")
+    if (
+        "confusion_matrix" in chart_keys
+        or "confusion_matrix" in patterns
+        or "classification_error" in patterns
+        or any(token in tokens for token in ("true_label", "actual_label", "predicted_label", "prediction_label", "y_pred"))
+    ):
+        add("classification_error_matrix")
+        add("metric_table_in_panel")
     if "model_error_diagnostic" in patterns or any(token in tokens for token in ("rmse", "mae", "percent_error", "percentage_error", "error_pct")):
         add("dual_axis_error_sidecar")
     if "ml_explainability" in patterns or "feature_importance" in patterns or "shap_value" in roles or "importance" in roles:
@@ -1383,6 +1391,11 @@ def _add_matrix_significance_stars(ax, numeric, dataProfile, visualPlan):
 
 def _enhance_matrix(ax, dataProfile, visualPlan, palette, col_map):
     df = _df_from_profile(dataProfile)
+    template_enhancements = []
+    if _template_motif_planned(visualPlan, "classification_error_matrix"):
+        _add_inplot_label(ax, "classification error\nrow-normalized", visualPlan, loc="upper_right")
+        _record_template_motif(visualPlan, "classification_error_matrix")
+        template_enhancements.append("classification_error_matrix")
     numeric = None
     if df is not None:
         try:
@@ -1400,11 +1413,11 @@ def _enhance_matrix(ax, dataProfile, visualPlan, palette, col_map):
                             ha="center", va="center", fontsize=4.5, color="#111111")
             _record_motif(visualPlan, "cell_value_labels")
             _add_matrix_significance_stars(ax, numeric, dataProfile, visualPlan)
-            return ["matrix_summary", "cell_value_labels"]
+            return template_enhancements + ["matrix_summary", "cell_value_labels"]
         _add_matrix_significance_stars(ax, numeric, dataProfile, visualPlan)
-        return ["matrix_summary"]
+        return template_enhancements + ["matrix_summary"]
     _add_metric_box(ax, ["matrix view"], visualPlan)
-    return ["matrix_summary"]
+    return template_enhancements + ["matrix_summary"]
 
 
 def _enhance_time_series(ax, dataProfile, visualPlan, palette, col_map):
