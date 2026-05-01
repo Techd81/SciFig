@@ -2096,86 +2096,239 @@ def gen_sankey(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=N
 
 
 def gen_radar(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=None):
-    """Radar / spider chart for multi-attribute comparison across groups.
+    """Nature-style radar chart — pixel-faithful reproduction of the canonical
+    Nature Vol 626 Fig 3c (semiconductor fibre) and the rest of the radar corpus.
 
-    Expects columns: attribute (axis label), group (series), and value in
-    semanticRoles.  One polygon per group, filled with semi-transparent color.
-    Axes are radial with attribute labels at each spoke.  Nature style: thin
-    lines, no grid fill, publication fonts.
+    Anchor cases (template/articles):
+      - 绝美！Nature 这张雷达图_1777449664 (the canonical reference)
+      - 顶刊复刻 _ 中心挖空 + 立体高光的雷达图_1777451060
+      - 期刊配图：基于极坐标系的多面板雷达图_1777454388
+
+    Required visual grammar (from template-mining/07-techniques/radar.md):
+      1. Polygon dashed grid (NOT default circular) via add_polygon_polar_grid
+      2. theta_offset = pi/2 (north start) + theta_direction = -1 (clockwise)
+      3. Sandwich layering: translucent fill (L1, alpha=0.15) + thick outline
+         (L2, lw=2.5) + errorbar markers (L4, zorder=10)
+      4. Per-axis physical-limit normalization to [0, 1]
+      5. Closed-loop angle array (last angle equals first)
+      6. Hidden radial number ticks (clutter removal)
+      7. Optional max=<limit> annotations on each spoke (Nature-style)
+
+    Data layout — supports BOTH long and wide:
+      Long: rows = (group × attribute); semanticRoles { 'group', 'attribute', 'value', 'error'? }
+      Wide: rows = groups, columns = attributes; semanticRoles { 'group' } and attribute columns
+
+    Per-axis limits priority:
+      1. chartPlan['radarAxisLimits'] dict { attr: limit } if user/Phase 2 supplied
+      2. dataProfile['axisLimits'] dict
+      3. ceil to nearest 'nice' number above max(value + error) per axis
     """
+    from math import pi as _pi
     standalone = ax is None
     plt.rcParams.update(rcParams)
     roles = dataProfile.get("semanticRoles", {})
     attr_col = roles.get("attribute") or roles.get("x")
     group_col = roles.get("group")
     val_col = roles.get("value") or roles.get("y")
+    err_col = roles.get("error") or roles.get("std") or roles.get("se")
 
-    if attr_col is None or val_col is None:
-        raise ValueError("radar requires 'attribute' and 'value' in semanticRoles")
-
-    attributes = df[attr_col].dropna().unique().tolist()
+    long_format = (attr_col is not None and val_col is not None
+                   and attr_col in df.columns and val_col in df.columns)
+    if long_format:
+        attributes = df[attr_col].dropna().unique().tolist()
+    else:
+        # Wide format: attributes are numeric columns excluding group_col
+        attributes = [c for c in df.select_dtypes(include="number").columns
+                      if c != group_col]
     n_attrs = len(attributes)
     if n_attrs < 3:
         raise ValueError("radar requires at least 3 attributes")
 
-    fallback = palette.get("categorical", ["#1F4E79", "#4C956C", "#F2A541",
-                                            "#C8553D", "#7A6C8F", "#2B6F77"])
+    # ─── Palette: prefer Nature radar dual when palette resolves to it ─────
+    fallback = palette.get("categorical", ["#1F3A5F", "#C8553D", "#4C956C",
+                                            "#F2A541", "#7A6C8F", "#2B6F77"])
     cat_map = palette.get("categoryMap", {})
+    template_palette_hex = palette.get("templatePaletteHex") or []
+    palette_family = palette.get("paletteFamily") or ""
+    is_nature_dual = (palette_family == "nature_radar_dual"
+                      or template_palette_hex == ["#1F3A5F", "#C8553D"]
+                      or list(fallback)[:2] == ["#1F3A5F", "#C8553D"])
 
+    # ─── Build closed-loop angles ─────────────────────────────────────────
+    angles = [i / n_attrs * 2 * _pi for i in range(n_attrs)]
+    angles_closed = angles + [angles[0]]
+
+    # ─── Resolve per-axis physical limits ─────────────────────────────────
+    radar_limits = (chartPlan.get("radarAxisLimits")
+                    or chartPlan.get("axisLimits")
+                    or dataProfile.get("axisLimits")
+                    or {})
+    limits = []
+    for attr in attributes:
+        if attr in radar_limits and radar_limits[attr]:
+            limits.append(float(radar_limits[attr]))
+            continue
+        if long_format:
+            col_vals = df[df[attr_col] == attr][val_col].astype(float)
+        else:
+            col_vals = df[attr].astype(float)
+        if err_col and long_format and err_col in df.columns:
+            err_vals = df[df[attr_col] == attr][err_col].astype(float).fillna(0)
+            top_each = (col_vals.values + err_vals.values).tolist() if len(err_vals) == len(col_vals) else col_vals.tolist()
+        else:
+            top_each = col_vals.tolist()
+        cap = float(max(top_each) if top_each else 1.0)
+        # Round up to a 'nice' number (next 1/2/5 × 10^n above cap)
+        if cap <= 0:
+            limits.append(1.0); continue
+        import math as _math
+        exp = _math.floor(_math.log10(cap))
+        scaled = cap / (10 ** exp)
+        nice = next(n for n in (1.0, 2.0, 2.5, 5.0, 10.0) if scaled <= n)
+        limits.append(nice * (10 ** exp))
+
+    def _norm(values, limits):
+        return [float(v) / float(l) if l else 0.0 for v, l in zip(values, limits)]
+
+    # ─── Figure setup (standalone) ────────────────────────────────────────
     if standalone:
-        fig, ax = plt.subplots(figsize=(89 * (1 / 25.4), 80 * (1 / 25.4)),
-                           subplot_kw=dict(polar=True),
-                           constrained_layout=True)
+        fig, ax = plt.subplots(figsize=(89 * (1 / 25.4), 89 * (1 / 25.4)),
+                               subplot_kw=dict(polar=True),
+                               constrained_layout=False)
 
-    angles = np.linspace(0, 2 * np.pi, n_attrs, endpoint=False).tolist()
-    angles += angles[:1]  # close polygon
+    # ─── Polar discipline: north start, clockwise (Nature convention) ─────
+    if hasattr(ax, "set_theta_offset"):
+        ax.set_theta_offset(_pi / 2)
+        ax.set_theta_direction(-1)
 
-    ax.set_xticks(angles[:-1])
-    ax.set_xticklabels(attributes, fontsize=5)
-    if hasattr(ax, 'set_rlabel_position'):
-        ax.set_rlabel_position(30)
-        ax.yaxis.set_tick_params(labelsize=4)
-        ax.grid(linewidth=0.4, color="#CCCCCC")
-        ax.spines["polar"].set_linewidth(0.4)
+    # ─── Polygon dashed grid (replaces matplotlib's default circular grid) ──
+    # Calls template_mining_helpers.add_polygon_polar_grid which is now embedded
+    # in runtime via 03-code-gen-style.md Step 3.6. This is the corpus-anchored
+    # 'polygon_polar_grid' motif required by hero.polar arc.
+    polygon_grid_fn = globals().get("add_polygon_polar_grid")
+    if polygon_grid_fn is not None:
+        polygon_grid_fn(ax, angles_closed, levels=(0.25, 0.5, 0.75, 1.0))
+    else:
+        # Defensive fallback if helpers were not embedded (legacy path)
+        ax.spines["polar"].set_visible(False)
+        ax.grid(False)
+        for level in (0.25, 0.5, 0.75, 1.0):
+            ax.plot(angles_closed, [level] * len(angles_closed),
+                    color="black", linestyle="--", linewidth=0.8,
+                    alpha=0.6, zorder=0)
+        for ang in angles:
+            ax.plot([ang, ang], [0, 1.0], color="black",
+                    linewidth=0.6, alpha=0.4, zorder=0)
 
-    template_rows = []
-    template_colors = []
-    if group_col and group_col in df.columns:
+    # ─── Sandwich layered draw per group ──────────────────────────────────
+    def _plot_group(values_norm, errors_norm, color, label):
+        # L1 cushion: translucent fill
+        ax.fill(angles_closed, values_norm + values_norm[:1],
+                color=color, alpha=0.15, zorder=1)
+        # L2 wrapper: thick outline (the Nature signature: lw=2.5)
+        ax.plot(angles_closed, values_norm + values_norm[:1],
+                color=color, linewidth=2.5, label=label, zorder=5)
+        # L4 markers: errorbar at each spoke (or just markers if no errors)
+        if errors_norm is not None and any(e > 0 for e in errors_norm):
+            ax.errorbar(angles, values_norm, yerr=errors_norm,
+                        fmt="o", color=color, markersize=6, capsize=3,
+                        elinewidth=1.2, zorder=10)
+        else:
+            ax.scatter(angles, values_norm, s=42, color=color,
+                       edgecolor="white", linewidth=0.6, zorder=10)
+
+    template_rows, template_colors = [], []
+    if long_format and group_col and group_col in df.columns:
         groups = df[group_col].dropna().unique().tolist()
         for i, grp in enumerate(groups):
-            subset = df[df[group_col] == grp]
-            values = []
-            for attr in attributes:
-                match = subset[subset[attr_col] == attr][val_col]
-                values.append(match.values[0] if len(match) > 0 else 0)
-            values += values[:1]
+            sub = df[df[group_col] == grp]
+            values = [float(sub[sub[attr_col] == a][val_col].iloc[0])
+                      if not sub[sub[attr_col] == a].empty else 0.0
+                      for a in attributes]
+            errors = ([float(sub[sub[attr_col] == a][err_col].iloc[0])
+                       if (err_col and err_col in df.columns
+                           and not sub[sub[attr_col] == a].empty) else 0.0
+                       for a in attributes]
+                      if err_col else None)
+            values_norm = _norm(values, limits)
+            errors_norm = _norm(errors, limits) if errors else None
             color = cat_map.get(grp, fallback[i % len(fallback)])
-            ax.plot(angles, values, linewidth=0.8, color=color, label=grp)
-            ax.fill(angles, values, alpha=0.15, color=color)
-            template_rows.append(values[:-1])
+            label = display_label(grp, col_map) if col_map else str(grp)
+            _plot_group(values_norm, errors_norm, color, label)
+            template_rows.append(values_norm)
+            template_colors.append(color)
+    elif not long_format and group_col and group_col in df.columns:
+        # Wide: rows are groups, columns are attribute values
+        groups = df[group_col].dropna().unique().tolist()
+        for i, grp in enumerate(groups):
+            sub = df[df[group_col] == grp].iloc[0]
+            values = [float(sub[a]) if a in sub else 0.0 for a in attributes]
+            values_norm = _norm(values, limits)
+            color = cat_map.get(grp, fallback[i % len(fallback)])
+            label = display_label(grp, col_map) if col_map else str(grp)
+            _plot_group(values_norm, None, color, label)
+            template_rows.append(values_norm)
             template_colors.append(color)
     else:
-        values = []
-        for attr in attributes:
-            match = df[df[attr_col] == attr][val_col]
-            values.append(match.values[0] if len(match) > 0 else 0)
-        values += values[:1]
+        # Single series (no group column)
+        if long_format:
+            values = [float(df[df[attr_col] == a][val_col].iloc[0])
+                      if not df[df[attr_col] == a].empty else 0.0
+                      for a in attributes]
+        else:
+            values = [float(df[a].mean()) for a in attributes]
+        values_norm = _norm(values, limits)
         color = fallback[0]
-        ax.plot(angles, values, linewidth=0.8, color=color)
-        ax.fill(angles, values, alpha=0.15, color=color)
-        template_rows.append(values[:-1])
+        _plot_group(values_norm, None, color, "value")
+        template_rows.append(values_norm)
         template_colors.append(color)
 
-    apply_template_radar_signature(
-        ax,
-        angles[:-1],
-        value_rows=template_rows,
-        colors=template_colors,
-        visualPlan=chartPlan.get("visualContentPlan", {}),
-    )
+    # ─── Tick label discipline: hide radial numbers (corpus anchor) ──────
+    ax.set_xticks(angles)
+    label_strings = [str(display_label(a, col_map) if col_map else a)
+                     for a in attributes]
+    ax.set_xticklabels(label_strings, fontsize=8)
+    ax.set_yticks([0.25, 0.5, 0.75, 1.0])
+    ax.set_yticklabels(["", "", "", ""])
+    ax.set_ylim(0, 1.05)
+
+    # ─── Per-spoke physical-limit annotation (Nature signature) ──────────
+    visual_plan = chartPlan.get("visualContentPlan") if isinstance(chartPlan.get("visualContentPlan"), dict) else {}
+    if visual_plan.get("requireInPlotExplanatoryLabels", True):
+        for ang, lim in zip(angles, limits):
+            label_txt = (f"max={int(lim)}" if abs(lim - int(lim)) < 1e-6
+                         else f"max={lim:g}")
+            ax.text(ang, 1.18, label_txt,
+                    ha="center", va="center", fontsize=6, color="#555")
+
+    # ─── Apply zorder recipe via template_mining_helpers when reachable ──
+    apply_zorder = globals().get("apply_zorder_recipe")
+    if apply_zorder is not None:
+        try:
+            apply_zorder("radar", ax, {})
+        except Exception:
+            pass
+
+    # ─── Legacy compatibility: also call apply_template_radar_signature so
+    # downstream visualPlan motif counters still register `polar_comparison_signature`
+    # during the migration window (Phase D will retire the legacy helper).
+    legacy_sig = globals().get("apply_template_radar_signature")
+    if legacy_sig is not None:
+        try:
+            legacy_sig(ax, angles, value_rows=template_rows,
+                       colors=template_colors, visualPlan=visual_plan)
+        except Exception:
+            pass
 
     if standalone:
-        apply_chart_polish(ax, "radar")
+        # NOTE: apply_chart_polish in helpers.py assumes cartesian spines
+        # ('top'/'right'); polar axes only have 'polar' spine. Skip the call
+        # for radar — the polar discipline (spine hiding, grid replacement)
+        # is already enforced by add_polygon_polar_grid above.
+        try:
+            ax.tick_params(axis="x", labelsize=8, pad=4)
+        except Exception:
+            pass
     return ax
 
 
@@ -2813,12 +2966,13 @@ def gen_ordination_plot(df, dataProfile, chartPlan, rcParams, palette, col_map=N
 def gen_biodiversity_radar(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=None):
     """Biodiversity radar: multiple diversity indices on polar axes.
 
-    Expects in semanticRoles: attribute (diversity index name) and value
-    (index value).  Optionally group for comparing communities.  Indices are
-    plotted as radial spokes (e.g. Shannon, Simpson, Richness, Evenness,
-    Chao1).  Values are min-max normalised to [0, 1] for visual comparison.
-    Nature style: thin lines, no grid fill, publication fonts.
+    Anchor: ecological community comparison (Shannon, Simpson, Richness, Evenness, Chao1).
+    Aligned with template-mining/07-techniques/radar.md polygon-grid + sandwich-layer
+    discipline. Calls add_polygon_polar_grid (template_mining_helpers, embedded via
+    Phase A1) for the corpus-anchored polygon grid replacement, with min-max
+    normalisation per index for cross-index comparability.
     """
+    from math import pi as _pi
     standalone = ax is None
     plt.rcParams.update(rcParams)
     roles = dataProfile.get("semanticRoles", {})
@@ -2834,27 +2988,61 @@ def gen_biodiversity_radar(df, dataProfile, chartPlan, rcParams, palette, col_ma
     if n_idx < 3:
         raise ValueError("biodiversity_radar requires at least 3 diversity indices")
 
-    fallback = palette.get("categorical", ["#1F4E79", "#4C956C", "#F2A541",
-                                            "#C8553D", "#7A6C8F", "#2B6F77"])
+    fallback = palette.get("categorical", ["#4A6B8A", "#5FA896", "#D9A75A",
+                                            "#B85B5B", "#7A6C8F", "#2B6F77"])
     cat_map = palette.get("categoryMap", {})
 
     if standalone:
-        fig, ax = plt.subplots(figsize=(89 * (1 / 25.4), 80 * (1 / 25.4)),
-                           subplot_kw=dict(polar=True),
-                           constrained_layout=True)
+        fig, ax = plt.subplots(figsize=(89 * (1 / 25.4), 89 * (1 / 25.4)),
+                               subplot_kw=dict(polar=True),
+                               constrained_layout=False)
 
-    angles = np.linspace(0, 2 * np.pi, n_idx, endpoint=False).tolist()
-    angles += angles[:1]
+    angles = [i / n_idx * 2 * _pi for i in range(n_idx)]
+    angles_closed = angles + [angles[0]]
 
-    ax.set_xticks(angles[:-1])
-    ax.set_xticklabels(indices, fontsize=5)
-    if hasattr(ax, 'set_rlabel_position'):
-        ax.set_rlabel_position(30)
-        ax.yaxis.set_tick_params(labelsize=4)
-        ax.grid(linewidth=0.4, color="#CCCCCC")
-        ax.spines["polar"].set_linewidth(0.4)
+    # ─── Polar discipline: north start, clockwise (matches gen_radar) ─────
+    if hasattr(ax, "set_theta_offset"):
+        ax.set_theta_offset(_pi / 2)
+        ax.set_theta_direction(-1)
 
-    # Normalise values per index to [0, 1] for cross-index comparability
+    # ─── Polygon dashed grid via template_mining_helpers (Phase A1) ──────
+    polygon_grid_fn = globals().get("add_polygon_polar_grid")
+    if polygon_grid_fn is not None:
+        polygon_grid_fn(ax, angles_closed, levels=(0.25, 0.5, 0.75, 1.0))
+    else:
+        # Defensive fallback
+        ax.spines["polar"].set_visible(False)
+        ax.grid(False)
+        for level in (0.25, 0.5, 0.75, 1.0):
+            ax.plot(angles_closed, [level] * len(angles_closed),
+                    color="black", linestyle="--", linewidth=0.8,
+                    alpha=0.6, zorder=0)
+
+    ax.set_xticks(angles)
+    label_strings = [str(display_label(i, col_map) if col_map else i)
+                     for i in indices]
+    ax.set_xticklabels(label_strings, fontsize=8)
+    ax.set_yticks([0.25, 0.5, 0.75, 1.0])
+    ax.set_yticklabels(["", "", "", ""])
+    ax.set_ylim(0, 1.05)
+
+    # Normalise values per index to [0, 1] across all groups for proper cross-group
+    # cmp. Compute global min/max per index across rows.
+    per_index_min = {}
+    per_index_max = {}
+    for idx_name in indices:
+        sub = df[df[attr_col] == idx_name][val_col].dropna().astype(float)
+        per_index_min[idx_name] = float(sub.min()) if len(sub) else 0.0
+        per_index_max[idx_name] = float(sub.max()) if len(sub) else 1.0
+
+    def _norm_vals(vals, idxs):
+        out = []
+        for v, i_name in zip(vals, idxs):
+            lo, hi = per_index_min[i_name], per_index_max[i_name]
+            rng = (hi - lo) if hi != lo else 1.0
+            out.append((float(v) - lo) / rng)
+        return out
+
     if group_col and group_col in df.columns:
         groups = df[group_col].dropna().unique().tolist()
         for i, grp in enumerate(groups):
@@ -2862,29 +3050,28 @@ def gen_biodiversity_radar(df, dataProfile, chartPlan, rcParams, palette, col_ma
             vals = []
             for idx_name in indices:
                 match = subset[subset[attr_col] == idx_name][val_col]
-                vals.append(match.values[0] if len(match) > 0 else 0)
-            # Min-max normalise
-            vmin, vmax = min(vals), max(vals)
-            rng = vmax - vmin if vmax != vmin else 1.0
-            vals = [(v - vmin) / rng for v in vals]
-            vals += vals[:1]
+                vals.append(float(match.values[0]) if len(match) > 0 else 0.0)
+            vals_norm = _norm_vals(vals, indices)
             color = cat_map.get(grp, fallback[i % len(fallback)])
-            ax.plot(angles, vals, linewidth=0.8, color=color, label=grp)
-            ax.fill(angles, vals, alpha=0.15, color=color)
-        ax.legend(loc="upper right", bbox_to_anchor=(1.3, 1.1),
-                  frameon=False, fontsize=5)
+            label = display_label(grp, col_map) if col_map else str(grp)
+            # Sandwich layers: fill + thick outline + markers (matches gen_radar)
+            ax.fill(angles_closed, vals_norm + vals_norm[:1],
+                    alpha=0.15, color=color, zorder=1)
+            ax.plot(angles_closed, vals_norm + vals_norm[:1],
+                    linewidth=2.5, color=color, label=label, zorder=5)
+            ax.scatter(angles, vals_norm, s=42, color=color,
+                       edgecolor="white", linewidth=0.6, zorder=10)
     else:
         vals = []
         for idx_name in indices:
             match = df[df[attr_col] == idx_name][val_col]
-            vals.append(match.values[0] if len(match) > 0 else 0)
-        vmin, vmax = min(vals), max(vals)
-        rng = vmax - vmin if vmax != vmin else 1.0
-        vals = [(v - vmin) / rng for v in vals]
-        vals += vals[:1]
+            vals.append(float(match.values[0]) if len(match) > 0 else 0.0)
+        vals_norm = _norm_vals(vals, indices)
         color = fallback[0]
-        ax.plot(angles, vals, linewidth=0.8, color=color)
-        ax.fill(angles, vals, alpha=0.15, color=color)
+        ax.fill(angles_closed, vals_norm + vals_norm[:1],
+                alpha=0.15, color=color, zorder=1)
+        ax.plot(angles_closed, vals_norm + vals_norm[:1],
+                linewidth=2.5, color=color, zorder=5)
 
     if standalone:
         apply_chart_polish(ax, "biodiversity_radar")
@@ -3158,43 +3345,132 @@ def gen_km(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=None)
 
 
 def gen_forest(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=None):
-    """Forest plot for effect sizes with confidence intervals."""
+    """Forest plot for effect sizes with confidence intervals.
+
+    Anchor cases (template/articles):
+      - Python科研绘图复现_绘制多面板分组森林图展示生存分析风险比(HR)_1777453520
+      - 期刊配图复现_Python绘制机器学习预测-实验对比图 (clinical forest panels)
+
+    Required visual grammar (from template-mining/02-zorder-recipes.md § forest +
+    template_mining_helpers.add_forest_panel):
+      1. Dashed reference line at null effect (HR=1, OR=1, β=0)
+      2. Log-scale x axis when effect_kind in ('hr', 'or', 'rr')
+      3. Per-row HR (CI) annotation column at right edge using axes-fraction
+      4. Marker size large enough for hero panels (markersize=9)
+      5. White marker edge for separation (markeredgecolor='white', mew=0.6)
+      6. Light dotted x grid (zorder=0)
+
+    Defers to template_mining_helpers.add_forest_panel when reachable; falls
+    back to inline drawing if helpers were not embedded.
+    """
     standalone = ax is None
     roles = dataProfile.get("semanticRoles", {})
     label_col = roles.get("label") or roles.get("group")
-    estimate_col = roles.get("estimate") or roles.get("value")
-    ci_low_col = roles.get("ci_low")
-    ci_high_col = roles.get("ci_high")
+    estimate_col = roles.get("estimate") or roles.get("value") or roles.get("hr") or roles.get("ratio")
+    ci_low_col = roles.get("ci_low") or roles.get("lower")
+    ci_high_col = roles.get("ci_high") or roles.get("upper")
+    se_col = roles.get("se")
 
     if label_col is None or estimate_col is None:
         raise ValueError("forest requires 'label' and 'estimate' in semanticRoles")
 
-    if standalone:
-        fig, ax = plt.subplots(figsize=(89 * (1 / 25.4), max(40, len(df) * 8) * (1 / 25.4)),
-                           constrained_layout=False)
-
-    y_pos = range(len(df))
-    estimates = df[estimate_col].values
-
-    if ci_low_col and ci_high_col:
-        ci_low = df[ci_low_col].values
-        ci_high = df[ci_high_col].values
-    else:
-        # Use SE-based approximate CI
-        se = df[roles.get("se", estimate_col)].values if roles.get("se") else estimates * 0.1
+    estimates = df[estimate_col].astype(float).values
+    if ci_low_col and ci_high_col and ci_low_col in df.columns and ci_high_col in df.columns:
+        ci_low = df[ci_low_col].astype(float).values
+        ci_high = df[ci_high_col].astype(float).values
+    elif se_col and se_col in df.columns:
+        se = df[se_col].astype(float).values
         ci_low = estimates - 1.96 * se
         ci_high = estimates + 1.96 * se
+    else:
+        se = np.maximum(np.abs(estimates) * 0.1, 1e-9)
+        ci_low = estimates - 1.96 * se
+        ci_high = estimates + 1.96 * se
+    labels = [display_label(v, col_map) if col_map else str(v)
+              for v in df[label_col].values]
 
-    ax.errorbar(estimates, y_pos,
-                xerr=[estimates - ci_low, ci_high - estimates],
-                fmt="o", color="#000000", markersize=4, capsize=3,
-                elinewidth=0.6, capthick=0.6, linewidth=0.6)
+    # ─── Detect effect kind: HR/OR/RR (positive only, log-scale + ref=1)
+    # vs. β / mean diff (signed, linear scale + ref=0).
+    effect_kind = (chartPlan.get("forestEffectKind")
+                   or dataProfile.get("forestEffectKind") or "").lower()
+    if not effect_kind:
+        col_lower = str(estimate_col).lower()
+        if any(token in col_lower for token in ("hr", "ratio", "rr", "or", "odds", "hazard")):
+            effect_kind = "hr"
+        elif np.all(estimates > 0) and np.all(ci_low > 0):
+            effect_kind = "hr"
+        else:
+            effect_kind = "beta"
+    log_scale = (effect_kind == "hr")
+    reference_line = 1.0 if log_scale else 0.0
 
-    ax.axvline(0, color="#999999", lw=0.5, ls="--", alpha=0.7)
-    ax.set_yticks(list(y_pos))
-    ax.set_yticklabels(df[label_col].values, fontsize=5)
-    ax.set_xlabel("Effect size (95% CI)")
+    if standalone:
+        fig, ax = plt.subplots(figsize=(89 * (1 / 25.4),
+                                         max(40, len(df) * 9) * (1 / 25.4)),
+                               constrained_layout=False)
+
+    # Resolve color from palette plan first (chart-aware -> npg_4 default)
+    color = (palette.get("categoryMap", {}).get("default")
+             or (palette.get("categorical") or ["#3C5488"])[0])
+
+    # ─── Defer to template_mining_helpers when reachable (Phase A1) ────────
+    add_forest_panel = globals().get("add_forest_panel")
+    if add_forest_panel is not None:
+        try:
+            annotation_format = ("{hr:.2f} ({lo:.2f}-{hi:.2f})" if log_scale
+                                  else "{hr:+.2f} ({lo:+.2f},{hi:+.2f})")
+            add_forest_panel(
+                ax, estimates, ci_low, ci_high, labels,
+                color=color,
+                reference_line=reference_line,
+                log_scale=log_scale,
+                show_yticklabels=True,
+                annotation_format=annotation_format,
+                title=None,
+            )
+            ax.set_xlabel(("Hazard ratio (95% CI)" if effect_kind == "hr"
+                            else "Effect size (95% CI)"))
+            if standalone:
+                fig = ax.figure
+                try:
+                    if hasattr(fig, "set_layout_engine"):
+                        fig.set_layout_engine(None)
+                    else:
+                        fig.set_constrained_layout(False)
+                except Exception:
+                    pass
+                fig.subplots_adjust(left=0.30, right=0.92, top=0.94, bottom=0.20)
+                apply_chart_polish(ax, "forest")
+            return ax
+        except Exception:
+            pass  # fall through to inline path
+
+    # ─── Inline fallback (when helpers were not embedded) ─────────────────
+    y_pos = np.arange(len(df))
+    ax.xaxis.grid(True, linestyle=":", color="#E0E0E0", linewidth=0.6, zorder=0)
+    ax.set_axisbelow(True)
+    ax.axvline(reference_line, color="#888888", lw=1.0, ls="--", zorder=1)
+    xerr = [estimates - ci_low, ci_high - estimates]
+    ax.errorbar(estimates, y_pos, xerr=xerr, fmt="o",
+                color=color, ecolor=color,
+                elinewidth=2, capsize=4, markersize=9,
+                markeredgecolor="white", markeredgewidth=0.6, zorder=10)
+    ann_fmt = ("{hr:.2f} ({lo:.2f}-{hi:.2f})" if log_scale
+                else "{hr:+.2f} ({lo:+.2f},{hi:+.2f})")
+    for i, (hr, lo, hi) in enumerate(zip(estimates, ci_low, ci_high)):
+        ax.text(0.99, y_pos[i], ann_fmt.format(hr=hr, lo=lo, hi=hi),
+                transform=ax.get_yaxis_transform(),
+                ha="right", va="center", fontsize=6, color="#222",
+                family="monospace", zorder=15,
+                bbox=dict(boxstyle="round,pad=0.15", fc="white",
+                          ec="none", alpha=0.85))
+    if log_scale:
+        ax.set_xscale("log")
+    ax.set_yticks(y_pos)
+    ax.set_yticklabels(labels, fontsize=6)
     ax.invert_yaxis()
+    ax.set_xlabel("Hazard ratio (95% CI)" if effect_kind == "hr"
+                   else "Effect size (95% CI)")
     if standalone:
         fig = ax.figure
         try:
@@ -3204,7 +3480,7 @@ def gen_forest(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=N
                 fig.set_constrained_layout(False)
         except Exception:
             pass
-        fig.subplots_adjust(left=0.24, right=0.96, top=0.92, bottom=0.30)
+        fig.subplots_adjust(left=0.30, right=0.92, top=0.94, bottom=0.20)
         apply_chart_polish(ax, "forest")
     return ax
 
@@ -3829,6 +4105,17 @@ def gen_scatter_regression(df, dataProfile, chartPlan, rcParams, palette, col_ma
     if standalone:
         fig, ax = plt.subplots(figsize=(89 * (1 / 25.4), 65 * (1 / 25.4)),
                            constrained_layout=True)
+
+    # ─── L0 floor: light dashed grid + despine (corpus anchor: GAM scatter+
+    # residual Nature, R² scatter, distance-decay scatter). Phase A1 made
+    # apply_scatter_regression_floor reachable from generated runtime; prefer
+    # the canonical template_mining_helpers version over inline ax.grid calls.
+    floor_fn = globals().get("apply_scatter_regression_floor")
+    if floor_fn is not None:
+        try:
+            floor_fn(ax, despine=True, grid_axis="both")
+        except Exception:
+            pass
 
     plot_cols = [x_col, y_col]
     for optional_col in (split_col, interaction_col if is_shap_dependence else None, feature_name_col if is_shap_dependence else None):
@@ -5111,11 +5398,22 @@ def gen_rf_classifier_report_board(df, dataProfile, chartPlan, rcParams, palette
 
 
 def gen_heatmap_triangular(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=None):
-    """Lower or upper triangular heatmap.
+    """Triangular correlation/distance heatmap aligned with corpus discipline.
 
-    Masks the upper triangle to display only the lower half (or vice versa).
-    Common for correlation or distance matrices to avoid redundancy.
+    Anchor cases (template/articles):
+      - 期刊复现：Nature同款皮尔逊热力图_1777451326
+      - 进阶绘图：解决多变量拥挤痛点—Python 绘制带显著性星号与斜向色条的三角热图_1777452320
+      - 期刊配图：基于机器学习的Spearman相关性热力图_1777456565
+
+    Required visual grammar (from template-mining/07-techniques/heatmap-pairwise.md):
+      1. RdBu_r diverging cmap (not coolwarm) — corpus anchor
+      2. TwoSlopeNorm(vmin=-1, vcenter=0, vmax=1) when value range is correlation-like
+      3. Mask discipline: hide upper triangle (k=1) to show lower triangle only
+      4. Significance stars overlay (when p-value column supplied — never invented)
+      5. Compact colorbar (shrink=0.6) with label
+      6. Square cells (square=True) and tight tick label rotation (45°)
     """
+    from matplotlib.colors import TwoSlopeNorm
     standalone = ax is None
     roles = dataProfile.get("semanticRoles", {})
     group_col = roles.get("group") or roles.get("x")
@@ -5129,22 +5427,50 @@ def gen_heatmap_triangular(df, dataProfile, chartPlan, rcParams, palette, col_ma
     else:
         numeric_cols = df.select_dtypes(include="number").columns
         pivot = df[numeric_cols] if len(numeric_cols) >= 2 else df.select_dtypes(include="number")
+        # When correlation matrix is the natural interpretation
+        if pivot.shape[0] != pivot.shape[1] and len(numeric_cols) >= 2:
+            pivot = df[numeric_cols].corr()
 
-    # Ensure square for triangular masking
+    # ─── Triangular mask: keep lower triangle only (k=1 hides diagonal too
+    # only when caller wants pure off-diagonal; default k=1 keeps diagonal)
     if pivot.shape[0] == pivot.shape[1]:
-        mask = np.triu(np.ones_like(pivot, dtype=bool), k=0)
+        mask = np.triu(np.ones_like(pivot, dtype=bool), k=1)
     else:
         mask = np.zeros_like(pivot, dtype=bool)
 
     if standalone:
         fig, ax = plt.subplots(figsize=(89 * (1 / 25.4), 89 * (1 / 25.4)),
-                           constrained_layout=True)
+                               constrained_layout=True)
 
-    sns.heatmap(pivot, mask=mask, cmap="coolwarm", center=0,
-                linewidths=0.3, linecolor="white", square=True,
-                cbar_kws={"shrink": 0.6, "label": value_col or "Value"}, ax=ax)
+    # ─── Detect correlation-like range to apply TwoSlopeNorm + RdBu_r
+    pivot_arr = pivot.values
+    finite = pivot_arr[np.isfinite(pivot_arr)]
+    is_correlation = (finite.size > 0
+                      and float(np.nanmin(finite)) >= -1.05
+                      and float(np.nanmax(finite)) <= 1.05)
+    if is_correlation:
+        norm = TwoSlopeNorm(vmin=-1.0, vcenter=0.0, vmax=1.0)
+        cmap_name = "RdBu_r"  # Corpus anchor — matches Nature/Cell heatmap-pairwise
+        cbar_label = value_col or "Correlation"
+    else:
+        # Fall back to centered diverging palette anchor from template_mining_helpers
+        red_blue = (palette.get("diverging")
+                    or globals().get("PALETTES", {}).get("red_blue_correlation")
+                    or ["#3B6FB6", "#F7F7F7", "#B5403A"])
+        norm = None
+        cmap_name = "RdBu_r"
+        cbar_label = value_col or "Value"
+
+    sns.heatmap(pivot, mask=mask, cmap=cmap_name, center=0 if norm is None else None,
+                norm=norm, linewidths=0.3, linecolor="white", square=True,
+                cbar_kws={"shrink": 0.6, "label": cbar_label, "pad": 0.02},
+                ax=ax)
+    # Tick discipline (corpus anchor): 45° xrotation, smaller fonts
+    ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha="right", fontsize=6)
+    ax.set_yticklabels(ax.get_yticklabels(), rotation=0, fontsize=6)
+
     pvalue_lookup = {}
-    if pvalue_col and group_col and feature_col and pvalue_col in df:
+    if pvalue_col and group_col and feature_col and pvalue_col in df.columns:
         for _, row in df[[feature_col, group_col, pvalue_col]].dropna().iterrows():
             pvalue_lookup[(row[feature_col], row[group_col])] = row[pvalue_col]
     apply_template_triangular_heatmap_signature(
@@ -5154,8 +5480,8 @@ def gen_heatmap_triangular(df, dataProfile, chartPlan, rcParams, palette, col_ma
         pvalue_lookup=pvalue_lookup,
         visualPlan=chartPlan.get("visualContentPlan", {}),
     )
-    ax.set_xlabel(group_col or "Column")
-    ax.set_ylabel(feature_col or "Row")
+    ax.set_xlabel(group_col or "")
+    ax.set_ylabel(feature_col or "")
     if standalone:
         apply_chart_polish(ax, "heatmap_triangular")
     return ax

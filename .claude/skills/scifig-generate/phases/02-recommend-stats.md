@@ -1500,6 +1500,39 @@ def build_palette_plan(primaryChart, dataProfile, workflowPreferences, templateC
     if color_mode == "strict_grayscale_safe":
         plan["categoricalPreset"] = "journal_muted_6"
 
+    # Chart-family aware palette routing — corpus-anchored choices (template-mining/03-palette-bank.md).
+    # These mirror the Nature/Cell/CEJ reference cases: a 2-condition radar should look like the
+    # Vol 626 fibre paper (#1F3A5F navy + #C8553D crimson), a 6-feature SHAP composite should use
+    # cool_summer_4, etc. Chart-family wins over domain because the corpus binds palettes by chart
+    # family, not by domain. Templates from case-index (handled below) still take final precedence.
+    n_groups_estimate = int(dataProfile.get("nGroups") or 0)
+    chart_norm = str(primaryChart or "").lower()
+    if chart_norm in ("radar", "biodiversity_radar", "polar_comparison"):
+        if n_groups_estimate <= 2:
+            plan["categoricalPreset"] = "nature_radar_dual"
+            plan["paletteFamily"] = "nature_radar_dual"
+            plan["semanticMap"].update({
+                "control":   "#1F3A5F", "ge":         "#1F3A5F", "navy":  "#1F3A5F",
+                "treatment": "#C8553D", "si":         "#C8553D", "crimson": "#C8553D",
+            })
+        elif n_groups_estimate <= 6:
+            plan["categoricalPreset"] = "morandi_sci_4"
+            plan["paletteFamily"] = "morandi_sci_4"
+        else:
+            plan["categoricalPreset"] = "tableau10_classic"
+    elif chart_norm in ("forest", "caterpillar_plot", "risk_ratio_plot"):
+        plan["categoricalPreset"] = "npg_4"
+        plan["paletteFamily"] = "npg_4"
+    elif chart_norm in ("heatmap_triangular", "heatmap_pairwise", "correlation"):
+        plan["divergingPreset"] = "red_blue_correlation"
+        plan["paletteFamily"] = "red_blue_correlation"
+    elif chart_norm in ("violin_split", "violin_paired", "box_paired", "dumbbell", "paired_lines"):
+        # Bipolar / paired comparisons benefit from the bipolar_ALE diverging anchors
+        plan["divergingPreset"] = "bipolar_ALE"
+    elif chart_norm in ("shap_composite", "ridge", "joyplot"):
+        plan["categoricalPreset"] = "cool_summer_4"
+        plan["paletteFamily"] = "cool_summer_4"
+
     template_render_plan = (templateCasePlan or {}).get("templateRenderPlan", {})
     template_palette = list(template_render_plan.get("paletteHex", []) or [])
     template_cmaps = list(template_render_plan.get("cmaps", []) or [])

@@ -318,6 +318,7 @@ Read `templates/palette-presets.md` and convert `palettePlan` into a chart-ready
 
 ```python
 PALETTES = {
+    # Local journal-safe presets
     "journal_muted_8": ["#1F4E79", "#4C956C", "#F2A541", "#C8553D", "#7A6C8F", "#2B6F77", "#BC4749", "#6C757D"],
     "journal_muted_6": ["#1F4E79", "#4C956C", "#F2A541", "#C8553D", "#7A6C8F", "#6C757D"],
     "wong_8": ["#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7"],
@@ -328,7 +329,28 @@ PALETTES = {
     "seq_cool": ["#F7FBFF", "#D6EAF8", "#A9CCE3", "#5DADE2", "#21618C"],
     "seq_warm": ["#FFF6E8", "#FBD38D", "#F6AD55", "#DD6B20", "#9C4221"],
     "div_centered": ["#3B6FB6", "#8FBCE6", "#F7F7F7", "#E6A0A0", "#B5403A"],
-    "div_expression": ["#2D5AA7", "#9CC4E4", "#F5F5F5", "#F4A582", "#B2182B"]
+    "div_expression": ["#2D5AA7", "#9CC4E4", "#F5F5F5", "#F4A582", "#B2182B"],
+    # Template-mining anchored palettes (mirror template_mining_helpers.PALETTES so
+    # that build_palette_plan can set categoricalPreset='nature_radar_dual' etc. and
+    # resolve_color_system can resolve the hex via PALETTES[name] without going
+    # through templatePaletteHex). Source: template-mining/03-palette-bank.md.
+    "nature_radar_dual": ["#1F3A5F", "#C8553D"],
+    "morandi_sci_4": ["#4A6B8A", "#5FA896", "#D9A75A", "#B85B5B"],
+    "cej_vibrant_3": ["#00CED1", "#FF0000", "#1E90FF"],
+    "cell_high_contrast_6": ["#1B1B1B", "#D73027", "#4575B4", "#1A9850", "#FDAE61", "#7570B3"],
+    "materials_porosity_terracotta": ["#CFE2F3", "#9BC2E6", "#F48E66"],
+    "npg_4": ["#E64B35", "#4DBBD5", "#00A087", "#3C5488"],
+    "cool_summer_4": ["#8DA0CB", "#FC8D62", "#66C2A5", "#FBC15E"],
+    "tableau10_classic": ["#1F77B4", "#FF7F0E", "#2CA02C", "#D62728", "#9467BD", "#8C564B", "#E377C2", "#7F7F7F", "#BCBD22", "#17BECF"],
+    "seq_cool_5": ["#F7FBFF", "#D6EAF8", "#A9CCE3", "#5DADE2", "#21618C"],
+    "seq_warm_5": ["#FFF6E8", "#FBD38D", "#F6AD55", "#DD6B20", "#9C4221"],
+    "bipolar_ALE": ["#4F81BD", "#FFFFFF", "#C0504D"],
+    "red_blue_correlation": ["#3B6FB6", "#F7F7F7", "#B5403A"],
+    # Defensive: when build_palette_plan sets categoricalPreset='template_case_hex'
+    # and supplies templatePaletteHex, resolve_color_system bypasses this dict.
+    # Provide a safe 4-color fallback so a bare PALETTES['template_case_hex']
+    # lookup never KeyErrors in legacy paths.
+    "template_case_hex": ["#1F3A5F", "#C8553D", "#4C956C", "#F2A541"],
 }
 
 
@@ -815,6 +837,15 @@ helper_source = Path(".claude/skills/scifig-generate/phases/code-gen/helpers.py"
 helper_source = helper_source.replace("```python", "", 1).rsplit("```", 1)[0].strip()
 multipanel_source = Path(".claude/skills/scifig-generate/phases/code-gen/generators-multipanel.py").read_text(encoding="utf-8").strip()
 multipanel_source = multipanel_source.replace("```python", "", 1).rsplit("```", 1)[0].strip()
+# Template-mining helpers: the canonical operational layer for radar polygon grid,
+# nature_radar_dual palette, sandwich z-order recipes, perfect-fit diagonals, etc.
+# Without this, generated scripts cannot call apply_journal_kernel, resolve_palette,
+# add_polygon_polar_grid, add_perfect_fit_diagonal, density_color_scatter,
+# add_forest_panel, bootstrap_chart, apply_zorder_recipe — leaving 77-case knowledge
+# unreachable at runtime. Must be embedded BEFORE helpers.py so generators can resolve
+# template_mining_helpers public API symbols.
+template_mining_helpers_source = Path(".claude/skills/scifig-generate/phases/code-gen/template_mining_helpers.py").read_text(encoding="utf-8").strip()
+template_mining_helpers_source = template_mining_helpers_source.replace("```python", "", 1).rsplit("```", 1)[0].strip()
 
 # Build generator call code
 # Check if multi-panel composition is needed
@@ -923,6 +954,17 @@ def record_render_contract_report(figure_id, chart_plan, legend_contract_report)
 # Load data
 df = pd.read_csv("{dataProfile.get('filePath', 'data.csv')}")
 
+# Embedded template-mining helpers (canonical 顶刊 operational layer)
+# Loaded BEFORE helpers.py so apply_template_*_signature in helpers.py can co-exist
+# during the migration window, and so gen_xxx generators can call the canonical
+# template_mining_helpers APIs (resolve_palette('nature_radar_dual'),
+# add_polygon_polar_grid, add_perfect_fit_diagonal, density_color_scatter,
+# add_forest_panel, bootstrap_chart, apply_zorder_recipe, ...).
+ccc = """
+{template_mining_helpers_source}
+"""
+exec(ccc, globals())
+
 # Embedded helper source from the skill package
 aaa = """
 {helper_source}
@@ -961,6 +1003,7 @@ codeReview = {
     "layoutContractMetadataPresent": "layoutContractFailures" in full_code_string and "audit_figure_layout_contract" in full_code_string,
     "colorbarContractMetadataPresent": "colorbarReflowCount" in full_code_string and "colorbarPanelOverlapCount" in full_code_string,
     "embeddedHelperSourcePresent": "# Embedded helper source from the skill package" in full_code_string and "exec(aaa, globals())" in full_code_string,
+    "embeddedTemplateMiningHelpersPresent": "# Embedded template-mining helpers" in full_code_string and "exec(ccc, globals())" in full_code_string and "add_polygon_polar_grid" in full_code_string,
     "singleLegendContractDefinition": full_code_string.count("def enforce_figure_legend_contract(") == 1,
     "negativeLegendAnchorScan": re.search(r"bbox_to_anchor\s*=\s*\([^)]*-\d", full_code_string) is None,
     "negativeAxesTextScan": re.search(r"(risk_table_y|table_y|footnote_y|label_y)\s*=\s*-\d", full_code_string) is None,
@@ -992,6 +1035,10 @@ if "colorbarReflowCount" not in full_code_string or "colorbarPanelOverlapCount" 
     codeReview["blockingFindings"].append("missing_colorbar_reflow_gate")
 if "# Embedded helper source from the skill package" not in full_code_string or "exec(aaa, globals())" not in full_code_string:
     codeReview["blockingFindings"].append("missing_embedded_skill_helper_source")
+if "# Embedded template-mining helpers" not in full_code_string or "exec(ccc, globals())" not in full_code_string:
+    codeReview["blockingFindings"].append("missing_embedded_template_mining_helpers")
+if "add_polygon_polar_grid" not in full_code_string or "resolve_palette" not in full_code_string:
+    codeReview["blockingFindings"].append("template_mining_helpers_api_unreferenced_after_embed")
 if full_code_string.count("def enforce_figure_legend_contract(") != 1:
     codeReview["blockingFindings"].append("custom_or_duplicate_legend_contract_finalizer")
 if re.search(r"bbox_to_anchor\s*=\s*\([^)]*-\d", full_code_string):

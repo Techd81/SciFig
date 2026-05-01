@@ -111,9 +111,21 @@ def sanitize_columns(df):
 
 
 def apply_chart_polish(ax, chart_type):
-    """Apply publication-quality post-processing to any axes."""
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
+    """Apply publication-quality post-processing to any axes.
+
+    Polar-safe: matplotlib's polar Axes only owns a 'polar' spine, not
+    'top'/'right'. Guard the cartesian spine hiding so radar / polar charts
+    can call this generically without KeyError.
+    """
+    spines = getattr(ax, "spines", None)
+    is_polar = getattr(ax, "name", "") == "polar" or (
+        hasattr(spines, "__contains__") and "polar" in spines and "top" not in spines
+    )
+    if not is_polar and spines is not None:
+        if "top" in spines:
+            ax.spines["top"].set_visible(False)
+        if "right" in spines:
+            ax.spines["right"].set_visible(False)
     ax.tick_params(direction="out", length=3, width=0.6, pad=2)
 
     if chart_type in ("violin_strip", "violin_paired", "violin_split", "violin_grouped"):
@@ -789,32 +801,65 @@ def _add_marginal_distribution_axes(ax, x, y, visualPlan, color="#4C78A8"):
 
 
 def apply_template_radar_signature(ax, angles, value_rows=None, colors=None, visualPlan=None):
-    """Apply template/articles radar polish: polygon grid plus glass markers."""
+    """Legacy radar polish: polygon grid plus glass markers.
+
+    DEPRECATED MIGRATION TARGET: New radar code (gen_radar in
+    generators-distribution.md, post-Phase C1) calls
+    template_mining_helpers.add_polygon_polar_grid + apply_zorder_recipe('radar')
+    directly. This shim remains for:
+      1. Backward compatibility with legacy code paths still importing it
+      2. visualPlan motif counter wiring (polar_comparison_signature, sample
+         encoding count) which downstream gates depend on
+
+    When add_polygon_polar_grid is reachable in globals (Phase A1 embedded
+    template_mining_helpers), this shim delegates the grid replacement to that
+    canonical implementation and only owns the glass-marker overlay + motif
+    counter updates. Otherwise it falls back to the inline grid-drawing logic
+    preserved below.
+    """
     angles = np.asarray(list(angles), dtype=float)
     if len(angles) < 3 or not hasattr(ax, "set_theta_offset"):
         return {"polygonGrid": False, "glassMarkers": 0}
-    ax.grid(False)
-    try:
-        ax.spines["polar"].set_visible(False)
-    except Exception:
-        pass
-    r0, r1 = ax.get_ylim()
-    if not np.isfinite(r0) or not np.isfinite(r1) or r1 <= r0:
-        r0, r1 = 0.0, 1.0
-        ax.set_ylim(r0, r1)
-    closed_angles = np.r_[angles, angles[0]]
-    for frac in np.linspace(0.2, 1.0, 5):
-        radius = r0 + (r1 - r0) * frac
-        ax.plot(
-            closed_angles,
-            np.full_like(closed_angles, radius),
-            color="#C8CED6",
-            lw=0.45,
-            ls=(0, (2.0, 2.0)),
-            zorder=0,
-        )
-    for theta in angles:
-        ax.plot([theta, theta], [r0, r1], color="#D5D9DF", lw=0.35, zorder=0)
+
+    # ─── Prefer template_mining_helpers when reachable (Phase A1) ─────────
+    canonical_grid = globals().get("add_polygon_polar_grid")
+    if canonical_grid is not None:
+        try:
+            closed_angles = np.r_[angles, angles[0]]
+            r0, r1 = ax.get_ylim()
+            if not np.isfinite(r0) or not np.isfinite(r1) or r1 <= r0:
+                r0, r1 = 0.0, 1.0
+                ax.set_ylim(r0, r1)
+            # Use the canonical 4-level polygon grid (matches radar.md spec)
+            canonical_grid(ax, closed_angles, levels=(0.25, 0.5, 0.75, 1.0))
+        except Exception:
+            # Fall through to inline fallback
+            canonical_grid = None
+
+    if canonical_grid is None:
+        # Inline fallback (legacy path, used when template_mining_helpers not embedded)
+        ax.grid(False)
+        try:
+            ax.spines["polar"].set_visible(False)
+        except Exception:
+            pass
+        r0, r1 = ax.get_ylim()
+        if not np.isfinite(r0) or not np.isfinite(r1) or r1 <= r0:
+            r0, r1 = 0.0, 1.0
+            ax.set_ylim(r0, r1)
+        closed_angles = np.r_[angles, angles[0]]
+        for frac in np.linspace(0.2, 1.0, 5):
+            radius = r0 + (r1 - r0) * frac
+            ax.plot(
+                closed_angles,
+                np.full_like(closed_angles, radius),
+                color="#C8CED6",
+                lw=0.45,
+                ls=(0, (2.0, 2.0)),
+                zorder=0,
+            )
+        for theta in angles:
+            ax.plot([theta, theta], [r0, r1], color="#D5D9DF", lw=0.35, zorder=0)
     marker_count = 0
     if value_rows is not None:
         colors = list(colors or ["#1F4E79"] * len(value_rows))

@@ -17,6 +17,67 @@ This contract governs how `template/articles` examples become executable `scifig
 11. Each autonomous cycle must execute at least one generated-script-shaped probe in a fresh process. Direct smoke-harness helper calls cannot be the only source of runtime contract evidence.
 12. Legend validation must compare `legendInputEntryCount` with the final figure legend. If labeled handles existed and no bottom-center shared legend survived, the figure fails.
 13. Density validation must use rendered evidence. Low `figureInkFraction` or excessive `figureWhitespaceFraction` fails even if planned motif counters look complete.
+14. **Template-mining helpers reachability is mandatory.** The runtime assembly in `phases/03-code-gen-style.md` Step 3.6 must embed `phases/code-gen/template_mining_helpers.py` source into the generated script BEFORE `helpers.py` and BEFORE generator function bodies. The `codeReview.embeddedTemplateMiningHelpersPresent` gate must remain `True` for every generated script. Adding a new chart family without updating that embedding is a contract violation.
+15. **Generator → template-mining helper binding is mandatory.** Each chart family with a `template-mining/07-techniques/<family>.md` deep-dive must have its `gen_<family>` generator call the corresponding canonical template_mining_helpers API. The static binding map (Section "Generator Binding Contract" below) must be honored; any new generator added to `registry.py` for a family with a deep-dive doc must wire the canonical helper before the cycle report is accepted.
+16. **Palette routing must be chart-family aware.** `build_palette_plan` in `phases/02-recommend-stats.md` must contain explicit branches for chart families anchored to specific palettes (radar→`nature_radar_dual`/`morandi_sci_4`, forest→`npg_4`, heatmap_pairwise→`red_blue_correlation`, shap_composite→`cool_summer_4`, etc.). Adding a new chart family with a palette-bank anchor without adding the matching `build_palette_plan` branch is a contract violation.
+
+## Generator Binding Contract
+
+Each entry maps a chart family to (1) its registered generator function, (2) the canonical
+template_mining_helpers API it must call, and (3) the deep-dive reference. Autonomous
+distillation cycles must verify these bindings via static scan of generator source.
+
+| Chart family          | Registered generator           | Required template_mining_helpers calls                                              | Deep-dive reference                     |
+|-----------------------|--------------------------------|-------------------------------------------------------------------------------------|------------------------------------------|
+| `radar`               | `gen_radar`                    | `add_polygon_polar_grid` + `apply_zorder_recipe('radar', ...)`                      | `07-techniques/radar.md`                |
+| `biodiversity_radar`  | `gen_biodiversity_radar`       | `add_polygon_polar_grid` + `apply_zorder_recipe('radar', ...)`                      | `07-techniques/radar.md`                |
+| `forest`              | `gen_forest`                   | `add_forest_panel`                                                                   | `02-zorder-recipes.md § forest`          |
+| `scatter_regression`  | `gen_scatter_regression`       | `apply_scatter_regression_floor` + `add_perfect_fit_diagonal` (when prediction)     | `02-zorder-recipes.md § scatter-regression` + `05-annotation-idioms.md § I1, I2` |
+| `marginal_joint`      | (via `gen_scatter_regression`) | `density_color_scatter` + `add_perfect_fit_diagonal` + marginal axes setup          | `07-techniques/marginal-joint.md`        |
+| `heatmap_triangular`  | `gen_heatmap_triangular`       | `TwoSlopeNorm(vmin=-1, vcenter=0, vmax=1)` + `RdBu_r` cmap (corpus anchor)          | `07-techniques/heatmap-pairwise.md`      |
+| `dual_axis`           | (axis pair generator)          | `apply_zorder_recipe('dual_axis', ...)` + corpus-anchored color spines              | `07-techniques/dual-axis.md`             |
+| `shap_composite`      | (via composite board)          | `add_zero_reference` + `add_group_dividers` + bipolar palette                       | `07-techniques/shap-composite.md`        |
+
+### Static-scan probe (autonomous cycle requirement)
+
+Every autonomous distillation cycle must run the binding probe and persist its output
+to the cycle report. Pseudo-spec:
+
+```python
+import re
+from pathlib import Path
+SOURCE_FILES = [
+    "phases/code-gen/generators-distribution.md",
+    "phases/code-gen/generators-clinical.md",
+    "phases/code-gen/generators-psychology.md",
+    "phases/code-gen/generators-distribution.py",
+]
+BINDINGS = {
+    "gen_radar":               ["add_polygon_polar_grid"],
+    "gen_biodiversity_radar":  ["add_polygon_polar_grid"],
+    "gen_forest":              ["add_forest_panel"],
+    "gen_heatmap_triangular":  ["TwoSlopeNorm", "RdBu_r"],
+    "gen_scatter_regression":  ["apply_scatter_regression_floor"],
+}
+text = "\n".join(Path(p).read_text(encoding="utf-8") for p in SOURCE_FILES if Path(p).exists())
+violations = []
+for fn_name, required_calls in BINDINGS.items():
+    fn_pattern = re.compile(rf"^def {re.escape(fn_name)}\([\s\S]*?(?=^def |\Z)", re.M)
+    m = fn_pattern.search(text)
+    if not m:
+        violations.append(f"missing_generator:{fn_name}")
+        continue
+    body = m.group(0)
+    for required in required_calls:
+        if required not in body:
+            violations.append(f"unbound:{fn_name}:{required}")
+# violations must be empty for the cycle to be accepted.
+```
+
+The cycle report's `templateMiningHelperBindings` field must include both the per-generator
+binding status and the violation list. A non-empty violation list is a hard block — the cycle
+must not commit until either (a) the generator is updated to call the required helper, or
+(b) the binding contract is amended in this file (with a recorded reason and ticket reference).
 
 ## Classification
 
