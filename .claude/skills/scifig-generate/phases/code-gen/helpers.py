@@ -27,13 +27,15 @@ VISUAL_CONTENT_DEFAULTS = {
     "useMetricTableFallbackBox": True,
     "useDensityHalos": True,
     "useDensityColorEncoding": True,
-    "useMarginalAxes": False,
+    "useMarginalAxes": True,
     "usePerfectFitReference": True,
     "useSampleShapeEncoding": True,
     "useSignificanceStarLayer": True,
     "useDualAxisErrorBars": True,
     "templateMotifsRequired": False,
     "minTemplateMotifsPerFigure": 0,
+    "exactMotifCoverageRequired": True,
+    "useTemplateMotifs": True,
     "noInventedStats": True,
     "statProvenanceRequired": True,
     "outsideLayoutElements": True,
@@ -2440,6 +2442,54 @@ def audit_figure_layout_contract(fig, axes=None, chartPlan=None, journalProfile=
     plan.setdefault("crowdingPlan", {}).update(report)
     if strict and failures:
         raise RuntimeError("Figure layout contract failed: " + ", ".join(failures))
+    return report
+
+
+def audit_visual_density_contract(chartPlan, strict=True):
+    """Require the planned template/reference motifs to appear in runtime metadata."""
+    plan = chartPlan if isinstance(chartPlan, dict) else {}
+    visual = plan.setdefault("visualContentPlan", {})
+    template_case = plan.get("templateCasePlan", {}) or {}
+    applied_enhancements = list(visual.get("appliedEnhancements", []))
+    planned_template = {str(m) for m in visual.get("templateMotifs", []) if m}
+    applied_template = {str(m) for m in visual.get("templateMotifsApplied", []) if m}
+    planned_reference = {str(m) for m in visual.get("visualGrammarMotifs", []) if m}
+    applied_reference = {str(m) for m in visual.get("visualGrammarMotifsApplied", []) if m}
+
+    failures = []
+    if len(applied_enhancements) < visual.get("minTotalEnhancements", 0):
+        failures.append("visual_enhancement_count_below_minimum")
+    if visual.get("inPlotExplanatoryLabelCount", 0) < visual.get("minInPlotLabelsPerFigure", 0):
+        failures.append("inplot_explanatory_labels_below_minimum")
+    if visual.get("referenceMotifsRequired", True):
+        if visual.get("referenceMotifCount", 0) < visual.get("minReferenceMotifsPerFigure", 0):
+            failures.append("reference_visual_motif_count_below_minimum")
+        if visual.get("exactMotifCoverageRequired", True) and planned_reference - applied_reference:
+            failures.append("missing_required_visual_grammar_motifs")
+    template_required = (
+        visual.get("templateMotifsRequired", False)
+        or visual.get("exactTemplateReplicationRequired", False)
+        or template_case.get("exactTemplateReplicationRequired", False)
+        or template_case.get("templateMatchMode") == "clone_when_known"
+    )
+    if template_required:
+        if visual.get("templateMotifCount", 0) < visual.get("minTemplateMotifsPerFigure", 0):
+            failures.append("template_visual_motif_count_below_minimum")
+        if visual.get("exactMotifCoverageRequired", True) and planned_template - applied_template:
+            failures.append("missing_required_template_motifs")
+
+    report = {
+        "visualDensityContractEnforced": True,
+        "contentDensityFailures": failures,
+        "missingTemplateMotifs": sorted(planned_template - applied_template),
+        "missingVisualGrammarMotifs": sorted(planned_reference - applied_reference),
+        "visualEnhancementCount": len(applied_enhancements),
+        "templateMotifCount": visual.get("templateMotifCount", 0),
+        "referenceMotifCount": visual.get("referenceMotifCount", 0),
+    }
+    visual.update(report)
+    if strict and failures:
+        raise RuntimeError("Visual density contract failed: " + ", ".join(failures))
     return report
 
 

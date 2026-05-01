@@ -115,17 +115,29 @@ def recommend_chart_bundle(dataProfile, workflowPreferences):
         "violin+strip", "box+strip", "heatmap+cluster"
     }
 
+    CHART_KEY_ALIASES = {
+        "violin+strip": "violin_strip",
+        "box+strip": "box_strip",
+        "heatmap+cluster": "heatmap_cluster",
+        "dot+box": "box_strip",
+    }
+
+    def _canonical_chart_key(chart):
+        raw = str(chart or "")
+        return CHART_KEY_ALIASES.get(raw, CHART_KEY_ALIASES.get(raw.replace("+", "_"), raw.replace("+", "_")))
+
     def _safe(chart):
         """Return chart if implemented, else closest fallback."""
-        key = str(chart or "").replace("+", "_")
-        if chart in IMPLEMENTED_CHARTS or key in IMPLEMENTED_CHARTS:
-            return chart
+        key = _canonical_chart_key(chart)
+        if key in IMPLEMENTED_CHARTS:
+            return key
         FALLBACKS = {
             # Keep only non-registry aliases here; registered keys should not be downgraded.
             "ridgeline": "ridge",
-            "dot+box": "box+strip"
+            "dot+box": "box_strip",
+            "dot_box": "box_strip",
         }
-        return FALLBACKS.get(key, "box+strip")
+        return FALLBACKS.get(key, "box_strip")
 
     selected_bundle = workflowPreferences.get("selectedChartBundle") or {}
     if isinstance(selected_bundle, dict) and selected_bundle.get("primaryChart"):
@@ -333,40 +345,40 @@ def recommend_chart_bundle(dataProfile, workflowPreferences):
         return "pareto_chart", ["scatter_regression", "parallel_coordinates"]
     if "embedding" in patterns:
         primary = "umap" if any(c.startswith("umap") for c in cols) else _safe("tsne")
-        return primary, [_safe("composition_dotplot"), "violin+strip", "heatmap_pure"]
+        return primary, [_safe("composition_dotplot"), "violin_strip", "heatmap_pure"]
     if "differential" in patterns:
         if any("basemean" in c or "mean" in c for c in cols):
-            return _safe("ma_plot"), ["volcano", "enrichment_dotplot", "heatmap+cluster"]
-        return "volcano", ["heatmap+cluster", "enrichment_dotplot", "pca"]
+            return _safe("ma_plot"), ["volcano", "enrichment_dotplot", "heatmap_cluster"]
+        return "volcano", ["heatmap_cluster", "enrichment_dotplot", "pca"]
 
     # Domain-aware defaults
     if "dose" in roles and "response" in roles:
-        return "dose_response", ["waterfall", "violin+strip"]
+        return "dose_response", ["waterfall", "violin_strip"]
     if "effect" in roles and "ci_low" in roles and "ci_high" in roles:
-        return "forest", ["km" if "event" in roles else "box+strip"]
+        return "forest", ["km" if "event" in roles else "box_strip"]
     if "score" in roles and "label" in roles:
         label_col = dataProfile["df"][roles["label"]]
         if pd.api.types.is_numeric_dtype(label_col):
             pos_rate = label_col.mean()
-            return "pr_curve" if n_obs > 0 and pos_rate < DATA_SCALE_POLICY["rare_positive_rate"] else "roc", ["calibration", "box+strip"]
-        return "roc", ["calibration", "box+strip"]
+            return "pr_curve" if n_obs > 0 and pos_rate < DATA_SCALE_POLICY["rare_positive_rate"] else "roc", ["calibration", "box_strip"]
+        return "roc", ["calibration", "box_strip"]
     if "subject_id" in roles and "time" in roles:
         return "spaghetti", ["line_ci", "paired_lines"]
     if "subject_id" in roles and n_groups == 2 and "value" in roles:
         return "paired_lines", ["dumbbell", "beeswarm"]
     if "time" in roles and "value" in roles:
-        return "line_ci" if any("ci" in c or "conf" in c for c in cols) else "line_ci", ["beeswarm", "box+strip"]
+        return "line_ci" if any("ci" in c or "conf" in c for c in cols) else "line_ci", ["beeswarm", "box_strip"]
     if dataProfile["structure"] == "matrix":
-        return "heatmap+cluster" if n_obs <= 500 else "heatmap_pure", ["pca", "correlation"]
+        return "heatmap_cluster" if n_obs <= 500 else "heatmap_pure", ["pca", "correlation"]
 
     # Publication-quality grouped defaults
     if "group" in roles and "value" in roles:
         if n_obs <= 80:
-            primary = "raincloud" if domain in ("immunology_cell_biology", "general_biomedical") else "violin+strip"
+            primary = "raincloud" if domain in ("immunology_cell_biology", "general_biomedical") else "violin_strip"
         elif n_obs <= 250:
-            primary = "violin+strip"
+            primary = "violin_strip"
         else:
-            primary = "box+strip"
+            primary = "box_strip"
         secondary = ["beeswarm", "paired_lines" if "subject_id" in roles else "line_ci"]
         return primary, secondary
 
@@ -386,7 +398,7 @@ def select_statistical_plan(dataProfile, primaryChart, workflowPreferences):
     if rigor == "descriptive":
         return {"method": "none", "correction": None, "notes": ["descriptive_only"]}
 
-    if primaryChart in ("volcano", "ma_plot", "heatmap+cluster", "heatmap_pure", "umap", "tsne", "pca", "spatial_feature", "training_curve", "model_architecture", "model_architecture_board"):
+    if primaryChart in ("volcano", "ma_plot", "heatmap_cluster", "heatmap_pure", "umap", "tsne", "pca", "spatial_feature", "training_curve", "model_architecture", "model_architecture_board"):
         return {"method": "none", "correction": None, "notes": ["exploratory_primary_chart"]}
 
     if primaryChart in ("rf_classifier_report_board", "classifier_validation_board", "roc", "pr_curve", "calibration"):
@@ -422,7 +434,7 @@ def select_statistical_plan(dataProfile, primaryChart, workflowPreferences):
 ```python
 def configure_annotations(dataProfile, primaryChart, statPlan):
     annotations = {
-        "showIndividualPoints": primaryChart not in ("heatmap+cluster", "heatmap_pure", "volcano", "umap", "tsne", "pca", "manhattan", "qq"),
+        "showIndividualPoints": primaryChart not in ("heatmap_cluster", "heatmap_pure", "volcano", "umap", "tsne", "pca", "manhattan", "qq"),
         "showSignificance": statPlan["method"] not in ("none", "effect_estimate_only"),
         "significanceDisplay": "exact_p",
         "showN": True,
@@ -781,6 +793,10 @@ def build_crowding_plan(primaryChart, secondaryCharts, dataProfile, workflowPref
 ### Step 2.7: Build `visualContentPlan`
 
 ```python
+import json
+from pathlib import Path
+
+
 def infer_visual_chart_family(chart_type):
     key = str(chart_type or "").replace("+", "_").lower()
     family_map = {
@@ -987,6 +1003,90 @@ def infer_template_visual_motifs(charts, dataProfile):
     }
 
 
+_TEMPLATE_CASE_INDEX_CACHE = None
+_TEMPLATE_CASE_INDEX_PATH = Path(".claude/skills/scifig-generate/template-mining/case-index.json")
+
+
+def _normalize_template_token(value):
+    return str(value or "").replace("+", "_").replace("-", "_").lower().strip()
+
+
+def load_template_case_index(path=None):
+    """Load mined template cases as UTF-8 data for recommendation routing."""
+    global _TEMPLATE_CASE_INDEX_CACHE
+    if _TEMPLATE_CASE_INDEX_CACHE is not None and path is None:
+        return _TEMPLATE_CASE_INDEX_CACHE
+    index_path = Path(path or _TEMPLATE_CASE_INDEX_PATH)
+    try:
+        cases = json.loads(index_path.read_text(encoding="utf-8"))
+    except Exception:
+        cases = []
+    if path is None:
+        _TEMPLATE_CASE_INDEX_CACHE = cases
+    return cases
+
+
+def _case_search_text(case):
+    parts = [
+        case.get("id", ""),
+        case.get("file", ""),
+        case.get("title", ""),
+        case.get("narrative_arc", ""),
+        case.get("preamble", ""),
+        " ".join(case.get("chart_families", []) or []),
+        " ".join(case.get("signature_tricks", []) or []),
+    ]
+    return _normalize_template_token(" ".join(str(part) for part in parts))
+
+
+def _family_query_terms(family):
+    terms_by_family = {
+        "ml_model_diagnostics": {
+            "machine", "learning", "model", "random", "forest", "rf", "training",
+            "testing", "prediction", "residual", "rmse", "mae", "auc", "feature",
+            "shap", "scatter_regression", "forest", "shap_composite",
+        },
+        "marginal_joint": {"marginal", "density", "kde", "scatter_regression", "subgrid", "parity"},
+        "shap_composite": {"shap", "feature", "importance", "beeswarm", "waterfall", "shap_composite"},
+        "heatmap_pairwise": {"heatmap", "correlation", "matrix", "pairwise"},
+        "radar": {"radar", "spider", "polar"},
+        "dual_axis": {"dual", "axis", "twin", "secondary", "spectrum", "dose"},
+        "time_series_pi": {"time", "series", "prediction", "interval", "training", "testing"},
+        "forest": {"forest", "hazard", "odds", "confidence", "interval"},
+        "pareto": {"pareto", "optimization", "front", "tradeoff"},
+    }
+    return terms_by_family.get(family, {_normalize_template_token(family)})
+
+
+def rank_template_cases_for_family(family, profile_tokens=None, limit=3):
+    """Return case-index-backed anchors before static-anchor fallback."""
+    terms = {_normalize_template_token(term) for term in _family_query_terms(family)}
+    profile_terms = {_normalize_template_token(term) for term in (profile_tokens or set()) if term}
+    scored = []
+    for case in load_template_case_index():
+        text = _case_search_text(case)
+        families = {_normalize_template_token(item) for item in case.get("chart_families", []) or []}
+        score = 0
+        score += 4 * len(terms & families)
+        score += sum(1 for term in terms if term and term in text)
+        score += min(4, sum(1 for token in profile_terms if token and token in text))
+        if family == "ml_model_diagnostics" and {"forest", "scatter_regression", "shap_composite"} & families:
+            score += 3
+        if score > 0:
+            scored.append((score, case))
+    scored.sort(key=lambda item: (-item[0], item[1].get("file", "")))
+    return [
+        {
+            "file": case.get("file"),
+            "id": case.get("id"),
+            "chartFamilies": case.get("chart_families", []),
+            "score": score,
+        }
+        for score, case in scored[:limit]
+        if case.get("file")
+    ]
+
+
 def resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreferences, dataProfile=None):
     """Bind selected or detected chart families to template-mining cases and technique refs."""
     selected_bundle = workflowPreferences.get("selectedChartBundle") or {}
@@ -1101,6 +1201,15 @@ def resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreference
             technique_refs.append(ref)
 
     anchors = list(selected_bundle.get("templateAnchors") or [])
+    case_index_matches = {}
+    for family in families:
+        matches = rank_template_cases_for_family(family, profile_tokens=profile_tokens, limit=3)
+        if matches:
+            case_index_matches[family] = matches
+        for match in matches:
+            anchor = match.get("file")
+            if anchor and anchor not in anchors:
+                anchors.append(anchor)
     for family in families:
         for anchor in anchor_by_family.get(family, []):
             if anchor not in anchors:
@@ -1134,6 +1243,8 @@ def resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreference
         "label": selected_bundle.get("label"),
         "templateMatchMode": template_match_mode,
         "exactTemplateReplicationRequired": bool(families),
+        "caseIndexResolverUsed": bool(case_index_matches),
+        "caseIndexMatches": case_index_matches,
         "primaryChart": primaryChart,
         "secondaryCharts": list(secondaryCharts or []),
         "families": families,
@@ -1264,7 +1375,7 @@ def build_palette_plan(primaryChart, dataProfile, workflowPreferences):
         "mode": color_mode,
         "categoricalPreset": "journal_muted_8",
         "sequentialPreset": "seq_cool",
-        "divergingPreset": "div_expression" if primaryChart in ("volcano", "heatmap+cluster", "heatmap_pure", "correlation") else "div_centered",
+        "divergingPreset": "div_expression" if primaryChart in ("volcano", "heatmap_cluster", "heatmap_pure", "correlation") else "div_centered",
         "semanticMap": {
             "control": "#1F4E79",
             "treatment": "#C8553D",

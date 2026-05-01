@@ -544,6 +544,18 @@ CHART_GENERATORS = {
     "heatmap_symmetric": "gen_heatmap_symmetric",
     "violin_grouped": "gen_violin_grouped"
 }
+
+CHART_KEY_ALIASES = {
+    "violin+strip": "violin_strip",
+    "box+strip": "box_strip",
+    "heatmap+cluster": "heatmap_cluster",
+    "dot+box": "box_strip",
+}
+
+
+def normalize_chart_key(chart):
+    raw = str(chart or "")
+    return CHART_KEY_ALIASES.get(raw, CHART_KEY_ALIASES.get(raw.replace("+", "_"), raw.replace("+", "_")))
 ```
 
 Each generator should:
@@ -775,6 +787,8 @@ def _build_generator_code(needed_names):
     return "\n\n".join(line for line in lines if line)
 
 # Build executable Python code
+chartPlan["primaryChart"] = normalize_chart_key(chartPlan["primaryChart"])
+chartPlan["secondaryCharts"] = [normalize_chart_key(chart) for chart in chartPlan.get("secondaryCharts", [])]
 primary_gen = CHART_GENERATORS.get(chartPlan["primaryChart"], "")
 secondary_gens = [CHART_GENERATORS.get(c, "") for c in chartPlan.get("secondaryCharts", [])]
 
@@ -811,7 +825,9 @@ chartPlan = {{"primaryChart": "{chartPlan['primaryChart']}", "secondaryCharts": 
 palette = {repr(colorSystem)}
 
 fig = gen_multipanel(chartPlan, journalProfile, palette, dataProfile_dict, rcParams, col_map=col_map)
+visual_density_report = audit_visual_density_contract(chartPlan, strict=True)
 legend_contract_report = enforce_figure_legend_contract(fig, fig.axes, chartPlan, journalProfile)
+record_render_contract_report("figure1", chartPlan, legend_contract_report)
 {savefig_lines}
 plt.close()
 """
@@ -827,7 +843,9 @@ single_height = journalProfile.get("canvas_height_mm", {}).get("single", 62)
 fig, ax = plt.subplots(figsize=({journalProfile['single_width_mm']}*MM, single_height*MM), constrained_layout=False)
 ax = {primary_gen}(df, dataProfile, chartPlan, rcParams, palette, col_map=col_map, ax=ax)
 apply_visual_content_pass(fig, {{"A": ax}}, chartPlan, dataProfile, journalProfile, palette, col_map=col_map)
+visual_density_report = audit_visual_density_contract(chartPlan, strict=True)
 legend_contract_report = enforce_figure_legend_contract(fig, {{"A": ax}}, chartPlan, journalProfile)
+record_render_contract_report("figure1", chartPlan, legend_contract_report)
 {savefig_lines}
 plt.close()
 """
@@ -848,7 +866,9 @@ single_height = journalProfile.get("canvas_height_mm", {}).get("single", 62)
 fig, ax = plt.subplots(figsize=({journalProfile['single_width_mm']}*MM, single_height*MM), constrained_layout=False)
 ax = {sec_gen}(df, dataProfile, secondaryPlan, rcParams, palette, col_map=col_map, ax=ax)
 apply_visual_content_pass(fig, {{"A": ax}}, secondaryPlan, dataProfile, journalProfile, palette, col_map=col_map)
+visual_density_report = audit_visual_density_contract(secondaryPlan, strict=True)
 legend_contract_report = enforce_figure_legend_contract(fig, {{"A": ax}}, secondaryPlan, journalProfile)
+record_render_contract_report("{sec_chart}", secondaryPlan, legend_contract_report)
 {sec_savefig_lines}
 plt.close()
 """
@@ -862,6 +882,7 @@ _GENERATOR_FUNCTIONS = _build_generator_code(_needed_gens)
 full_code_string = f"""import numpy as np
 import pandas as pd
 import re
+import json
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -873,6 +894,27 @@ MM = 1/25.4
 
 # rcParams (publication quality)
 plt.rcParams.update({repr(rcParams)})
+
+_render_contract_reports = []
+
+
+def record_render_contract_report(figure_id, chart_plan, legend_contract_report):
+    report_path = Path("output/reports/render_contracts.json")
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    record = {{
+        "figureId": figure_id,
+        "primaryChart": chart_plan.get("primaryChart"),
+        "secondaryCharts": chart_plan.get("secondaryCharts", []),
+        "crowdingPlan": chart_plan.get("crowdingPlan", {{}}),
+        "visualContentPlan": chart_plan.get("visualContentPlan", {{}}),
+        "legendContractReport": legend_contract_report,
+    }}
+    _render_contract_reports.append(record)
+    report_path.write_text(
+        json.dumps(_render_contract_reports, indent=2, ensure_ascii=False, default=str),
+        encoding="utf-8",
+    )
+    return record
 
 # Load data
 df = pd.read_csv("{dataProfile.get('filePath', 'data.csv')}")
@@ -911,6 +953,7 @@ codeReview = {
     "axisLegendGatePresent": "axisLegendRemainingCount" in full_code_string,
     "legendContractFinalizerPresent": "legend_contract_report = enforce_figure_legend_contract(" in full_code_string,
     "legendContractMetadataPresent": "legendContractEnforced" in full_code_string,
+    "legendContractReportPersistencePresent": "record_render_contract_report(" in full_code_string and "render_contracts.json" in full_code_string,
     "layoutContractMetadataPresent": "layoutContractFailures" in full_code_string and "audit_figure_layout_contract" in full_code_string,
     "colorbarContractMetadataPresent": "colorbarReflowCount" in full_code_string and "colorbarPanelOverlapCount" in full_code_string,
     "embeddedHelperSourcePresent": "# Embedded helper source from the skill package" in full_code_string and "exec(aaa, globals())" in full_code_string,
@@ -919,7 +962,7 @@ codeReview = {
     "negativeAxesTextScan": re.search(r"(risk_table_y|table_y|footnote_y|label_y)\s*=\s*-\d", full_code_string) is None,
     "posterScaleFontScan": re.search(r"(font\.size['\"]?\s*:\s*(1[2-9]|[2-9]\d)|fontsize\s*=\s*(1[3-9]|[2-9]\d))", full_code_string) is None,
     "directAxesLegendCalls": len(re.findall(r"\b[a-zA-Z_]\w*\.legend\s*\(", full_code_string)),
-    "visualDensityGatePresent": "minTotalEnhancements" in full_code_string and "inPlotExplanatoryLabelCount" in full_code_string,
+    "visualDensityGatePresent": "audit_visual_density_contract(" in full_code_string and "minTotalEnhancements" in full_code_string and "inPlotExplanatoryLabelCount" in full_code_string,
     "referenceGrammarGatePresent": "minReferenceMotifsPerFigure" in full_code_string and "visualGrammarMotifsApplied" in full_code_string,
     "predictionDiagnosticGatePresent": "metricTableCount" in full_code_string and "densityHaloCount" in full_code_string,
     "hasSourceDataHooks": "source_data" in full_code_string,
@@ -936,6 +979,8 @@ if "legend_contract_report = enforce_figure_legend_contract(" not in full_code_s
     codeReview["blockingFindings"].append("missing_legend_contract_finalizer_before_savefig")
 if "legendContractEnforced" not in full_code_string:
     codeReview["blockingFindings"].append("missing_legend_contract_metadata")
+if "record_render_contract_report(" not in full_code_string or "render_contracts.json" not in full_code_string:
+    codeReview["blockingFindings"].append("missing_render_contract_report_persistence")
 if "layoutContractFailures" not in full_code_string or "audit_figure_layout_contract" not in full_code_string:
     codeReview["blockingFindings"].append("missing_layout_contract_metadata")
 if "colorbarReflowCount" not in full_code_string or "colorbarPanelOverlapCount" not in full_code_string:
@@ -952,7 +997,7 @@ if re.search(r"(font\.size['\"]?\s*:\s*(1[2-9]|[2-9]\d)|fontsize\s*=\s*(1[3-9]|[
     codeReview["blockingFindings"].append("poster_scale_fontsize")
 if codeReview["directAxesLegendCalls"] and "legend_contract_report = enforce_figure_legend_contract(" not in full_code_string:
     codeReview["blockingFindings"].append("direct_axes_legend_without_finalizer")
-if "inPlotExplanatoryLabelCount" not in full_code_string or "minTotalEnhancements" not in full_code_string:
+if "audit_visual_density_contract(" not in full_code_string or "inPlotExplanatoryLabelCount" not in full_code_string or "minTotalEnhancements" not in full_code_string:
     codeReview["blockingFindings"].append("missing_visual_density_gate")
 if "minReferenceMotifsPerFigure" not in full_code_string or "visualGrammarMotifsApplied" not in full_code_string:
     codeReview["blockingFindings"].append("missing_reference_visual_grammar_gate")
@@ -991,7 +1036,7 @@ styledCode = {
 > 3. Generated code includes output directory creation, source-data hooks, and metadata writing
 > 4. Panel labels, legends, and colorbars are resolved once at figure scope where possible
 > 5. `codeReview.blockingFindings` is empty after syntax/import drift, missing generator coverage, forbidden `loc="best"`, missing embedded helper source, custom legend finalizer, negative axes text/table slots, poster-scale font sizes, source-data/metadata hooks, reference visual grammar gates, and panelBlueprint checks
-> 6. `full_code_string` embeds helper source from `phases/code-gen/helpers.py` and multi-panel source from `phases/code-gen/generators-multipanel.py`, keeps `crowdingPlan` and `visualContentPlan` attached to `chartPlan`, passes `ax` and `col_map` to generators, runs `apply_visual_content_pass(...)` before `enforce_figure_legend_contract(...)`, tracks `legendContractEnforced`, `layoutContractEnforced`, `layoutContractFailures`, `colorbarReflowCount`, `colorbarPanelOverlapCount`, `metricTableDataOverlapCount`, `metricTableRelocatedCount`, `metricTableSuppressedCount`, `metricTableFallbackBoxCount`, `axisLegendRemainingCount`, `visualGrammarMotifsApplied`, `templateMotifsApplied`, `metricTableCount`, `referenceLineCount`, `densityHaloCount`, `marginalAxesCount`, and `densityColorEncodingCount`, and writes `savefig` calls for all `workflowPreferences["exportFormats"]`, using `workflowPreferences["rasterDpi"]` for raster outputs
+> 6. `full_code_string` embeds helper source from `phases/code-gen/helpers.py` and multi-panel source from `phases/code-gen/generators-multipanel.py`, keeps `crowdingPlan` and `visualContentPlan` attached to `chartPlan`, passes `ax` and `col_map` to generators, runs `apply_visual_content_pass(...)` before `enforce_figure_legend_contract(...)`, persists each `legend_contract_report` to `output/reports/render_contracts.json` before `savefig`, tracks `legendContractEnforced`, `layoutContractEnforced`, `layoutContractFailures`, `colorbarReflowCount`, `colorbarPanelOverlapCount`, `metricTableDataOverlapCount`, `metricTableRelocatedCount`, `metricTableSuppressedCount`, `metricTableFallbackBoxCount`, `axisLegendRemainingCount`, `visualGrammarMotifsApplied`, `templateMotifsApplied`, `metricTableCount`, `referenceLineCount`, `densityHaloCount`, `marginalAxesCount`, and `densityColorEncodingCount`, and writes `savefig` calls for all `workflowPreferences["exportFormats"]`, using `workflowPreferences["rasterDpi"]` for raster outputs
 
 
 > **Generator code**: Read [code-gen/generators-distribution.md](code-gen/generators-distribution.md) for distribution chart generators (violin_paired, violin_split, dot_strip, histogram, density, ecdf, joyplot, ridge, and 40+ additional chart types across genomics, engineering, ecology, and more).
