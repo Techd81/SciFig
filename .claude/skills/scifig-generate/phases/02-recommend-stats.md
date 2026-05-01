@@ -292,7 +292,10 @@ def recommend_chart_bundle(dataProfile, workflowPreferences):
 
     # Direct pattern matches
     if has_architecture_metrics:
-        return "model_architecture_board", ["model_architecture", "parallel_coordinates"]
+        secondary = ["model_architecture", "parallel_coordinates"]
+        if has_training_curve:
+            secondary = ["training_curve", "model_architecture", "parallel_coordinates"]
+        return "model_architecture_board", secondary
     if has_model_architecture:
         return "model_architecture", ["training_curve", "confusion_matrix", "lollipop_horizontal"]
     if has_training_curve:

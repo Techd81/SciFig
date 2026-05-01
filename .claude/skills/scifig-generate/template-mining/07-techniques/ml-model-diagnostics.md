@@ -29,6 +29,7 @@ When columns include `layer`, `module`, `component`, `block`, `source`, `target`
 - Group modules by stage or block with pale stage bands. Keep all labels inside the axes so the figure survives layout QA.
 - Use directed arrows for source-target edges or sequential layer order. Encode supplied edge weights with line width and keep legends out unless a real categorical mapping is needed outside the plotting area.
 - If edge/module metrics such as latency, FLOPs, memory, throughput, cost, parameters, or edge weights exist, prefer `model_architecture_board`: topology spans the top row, metric profile occupies panel B, and edge signal occupies panel C.
+- If the same AI/ML profile also includes epoch/step training history, keep `training_curve` as the first support recommendation for the architecture board. Do not degrade architecture-plus-training requests into generic grouped bars or plain line charts.
 - Use the compact in-panel metric dashboard only for plain `model_architecture` single-panel fallback.
 - Pair the architecture hero with `training_curve` or `lollipop_horizontal` support panels only when training or explainability fields are also available.
 - Executable fallback: `model_architecture_board` creates a three-axis architecture metric storyboard from one edge table; `model_architecture` detects node tables or edge tables, derives a compact DAG/sequential layout, draws stage bands, directed arrows, module blocks, edge-weight strokes, a module/edge/parameter summary box, and an edge/module metric dashboard when metric columns exist.
