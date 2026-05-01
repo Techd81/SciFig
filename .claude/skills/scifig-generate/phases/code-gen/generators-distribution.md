@@ -4838,6 +4838,15 @@ def gen_rf_classifier_report_board(df, dataProfile, chartPlan, rcParams, palette
                 return model
         return model_values[0] if model_values else None
 
+    def _rf_model_matches(value, target):
+        value_text = str(value).strip().lower()
+        target_text = str(target).strip().lower()
+        if not value_text or value_text in {"nan", "none"} or not target_text or target_text in {"nan", "none"}:
+            return False
+        if value_text == target_text or value_text in target_text or target_text in value_text:
+            return True
+        return _is_rf_model(value) and _is_rf_model(target)
+
     model_values = _ordered_models(prediction_df)
     selected_model = _choose_selected_model(model_values, prediction_df) if model_values else None
     selected_prediction_df = prediction_df
@@ -4879,10 +4888,20 @@ def gen_rf_classifier_report_board(df, dataProfile, chartPlan, rcParams, palette
 
     colors = palette.get("categorical", ["#1F4E79", "#D55E00", "#009E73", "#7A6C8F"])
     importance_model_df = importance_source_df
+    missing_selected_importance = False
     if selected_model and model_col and model_col in importance_source_df.columns:
-        importance_model_mask = importance_source_df[model_col].astype(str).eq(str(selected_model))
-        if importance_model_mask.any():
-            importance_model_df = importance_source_df[importance_model_mask].copy()
+        model_labels = importance_source_df[model_col].astype(str).str.strip()
+        labeled_importance_mask = importance_source_df[model_col].notna() & ~model_labels.str.lower().isin({"", "nan", "none"})
+        selected_importance_mask = pd.Series(
+            [_rf_model_matches(value, selected_model) for value in importance_source_df[model_col]],
+            index=importance_source_df.index,
+        )
+        unlabeled_importance_mask = ~labeled_importance_mask
+        if selected_importance_mask.any():
+            importance_model_df = importance_source_df[selected_importance_mask | unlabeled_importance_mask].copy()
+        elif labeled_importance_mask.any():
+            importance_model_df = importance_source_df.iloc[0:0].copy()
+            missing_selected_importance = True
     if feature_col and importance_col and feature_col in importance_model_df.columns and importance_col in importance_model_df.columns:
         feature_df = importance_model_df[[feature_col, importance_col]].dropna().copy()
         feature_df[importance_col] = pd.to_numeric(feature_df[importance_col], errors="coerce")
@@ -5012,7 +5031,8 @@ def gen_rf_classifier_report_board(df, dataProfile, chartPlan, rcParams, palette
         for yi, value, frac in zip(y, values, scaled):
             importance_ax.text(min(frac + 0.025, 1.03), yi, f"{value:.2g}", va="center", ha="left", fontsize=4.6)
     else:
-        importance_ax.text(0.5, 0.55, "Feature importance\nnot supplied", ha="center", va="center",
+        empty_message = "Selected RF importance\nnot supplied" if missing_selected_importance and selected_model else "Feature importance\nnot supplied"
+        importance_ax.text(0.5, 0.55, empty_message, ha="center", va="center",
                            fontsize=5.6, color="#555555", transform=importance_ax.transAxes)
         importance_ax.set_xticks([])
         importance_ax.set_yticks([])

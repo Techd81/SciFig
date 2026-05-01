@@ -91,6 +91,7 @@ When RF/Random Forest classifier probability and label columns appear together w
 - Use the feature importance values supplied by the data; do not fabricate importances from labels alone.
 - Accept stacked long tables that separate prediction rows from feature-importance rows using `table_type`, `record_type`, `row_type`, or similar source columns.
 - When multiple classifier models appear in the same table (RF, XGBoost, SVM, etc.), select the explicit `selected_model` / `is_selected` model when supplied, otherwise prefer RF as the report anchor; never mix probability rows from competing models in the validation sub-board.
+- Never borrow competitor-only importance rows for the selected RF report. If RF is selected but only XGBoost/SVM/other importance rows are present, keep the validation board and model-competition strip, but render a compact "selected RF importance not supplied" lane instead of relabeling competitor explanations as RF evidence.
 - Use a compact model-competition strip and bottom-centered figure legend to keep model colors/selection semantics outside the plotting area.
 - Wrap long feature names into compact two-line labels before truncating so dense importance lanes remain legible.
 - Add a compact model summary with n, positive count, best threshold, best F1, and number of ranked features.
