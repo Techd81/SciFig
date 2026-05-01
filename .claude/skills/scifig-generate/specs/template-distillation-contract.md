@@ -11,16 +11,19 @@ This contract governs how `template/articles` examples become executable `scifig
 5. Every promoted visual effect must expose a QA signal: a counter, `gid`, render metadata field, or testable artifact.
 6. Article code may be normalized to print-scale typography and current legend/layout contracts. Do not copy poster-scale font sizes, outside-right legends, or `loc="best"`.
 7. Autonomous distillation cycles must leave generated smoke artifacts under the ignored output root, then commit only tracked skill/package changes after validation.
+8. Autonomous smoke validation must read runtime evidence, not planned defaults. Every saved figure must produce or be represented in `output/reports/render_contracts.json`, and the cycle report must fail missing runtime contract reports.
+9. Template alignment is exact. If Phase 2 plans template or reference motifs, validation must compare planned motifs with applied motifs and report the exact missing motif names.
+10. Template routing is metadata-backed. When `case-index.json` contains cases for a selected family, the cycle report must show the case-index matches and anchors used before static fallback anchors are accepted.
 
 ## Classification
 
 | Class | Destination | Required Validation |
 |-------|-------------|---------------------|
-| `motif` | `specs/template-visual-motifs.md` + Phase 2 motif inference | motif counter and Phase 4 hard gate when planned |
-| `layout` | `templates/panel-layout-recipes.md` or `template-mining/04-grid-recipes.md` | no cross-panel overlap; reserved slots for outside elements |
-| `helper` | `phases/code-gen/helpers.py` or `template_mining_helpers.py` | targeted unit/render test plus QA metadata |
+| `motif` | `specs/template-visual-motifs.md` + Phase 2 motif inference | exact planned-vs-applied motif coverage plus Phase 4 hard gate |
+| `layout` | `templates/panel-layout-recipes.md` or `template-mining/04-grid-recipes.md` | no cross-panel overlap; reserved slots for outside elements; runtime contract report persisted |
+| `helper` | `phases/code-gen/helpers.py` or `template_mining_helpers.py` | targeted unit/render test plus runtime QA metadata |
 | `generator` | split generator file + `registry.py` + chart catalog | registry completeness test and smoke/render test |
-| `policy` | `specs/workflow-policies.md` + Phase 4 | failing output blocks completion |
+| `policy` | `specs/workflow-policies.md` + Phase 4 | failing output blocks completion via runtime `render_contracts.json` evidence |
 
 ## High-Value Article Patterns
 
@@ -34,7 +37,9 @@ This contract governs how `template/articles` examples become executable `scifig
 ## Non-Negotiables
 
 - Keep legend finalization in `enforce_figure_legend_contract(...)`.
+- Persist legend/layout runtime evidence through `render_contracts.json`; do not infer pass/fail from `chartPlan` defaults.
 - Keep layout finalization in `audit_figure_layout_contract(...)`.
+- Keep density finalization in `audit_visual_density_contract(...)` whenever template or reference motifs are planned.
 - Never invent statistics for visual impact.
 - Prefer one strong article-derived motif plus one support motif over many weak decorations.
 - Keep all generated output source-data friendly and reproducible.
