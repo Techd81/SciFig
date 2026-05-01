@@ -149,6 +149,12 @@ skills/
 !.claude/skills/
 !.claude/skills/**
 
+# Re-ignore Python bytecode under skills (the broad !.claude/skills/**
+# above would otherwise unignore __pycache__/ directories — and Python's
+# import machinery regenerates these on every run, polluting git status).
+.claude/skills/**/__pycache__/
+.claude/skills/**/*.py[cod]
+
 # Bundled font payloads — user-supplied, NEVER commit
 # Most journal-anchor typefaces (Arial, Helvetica, Times New Roman, SimHei) are
 # commercial fonts that cannot be legally redistributed; keep them out of the
