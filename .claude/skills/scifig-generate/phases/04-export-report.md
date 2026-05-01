@@ -197,6 +197,7 @@ render_qa = {
     "figureWhitespaceFraction": _runtime_crowding("figureWhitespaceFraction", 0),
     "axisLegendRemovedCount": _runtime_crowding("axisLegendRemovedCount", 0),
     "axisLegendRemainingCount": _runtime_crowding("axisLegendRemainingCount", None),
+    "legendInputEntryCount": _runtime_crowding("legendInputEntryCount", 0),
     "figureLegendCount": _runtime_crowding("figureLegendCount", None),
     "legendModeUsed": _runtime_crowding("legendModeUsed", None),
     "legendAllowedModes": _runtime_crowding("legendAllowedModes", ["bottom_center"]),
@@ -231,6 +232,9 @@ render_qa = {
     "sampleEncodingCount": _runtime_visual("sampleEncodingCount", 0),
     "significanceStarLayerCount": _runtime_visual("significanceStarLayerCount", 0),
     "dualAxisEncodingCount": _runtime_visual("dualAxisEncodingCount", 0),
+    "figureInkFraction": _runtime_crowding("figureInkFraction", 0),
+    "minFigureInkFraction": _runtime_crowding("minFigureInkFraction", 0.04),
+    "maxFigureWhitespaceFraction": _runtime_crowding("maxFigureWhitespaceFraction", 0.82),
     "paletteContrastCheck": chartPlan.get("palettePlan", {}).get("contrastAuditRequired", True),
     "editableTextCheck": "required_for_svg_pdf",
     "overlapFailures": [],
@@ -289,6 +293,8 @@ legend_mode = render_qa["legendModeUsed"]
 legend_exists = legend_mode not in (None, "none") or (legend_count is not None and legend_count > 0)
 if render_qa["figureLegendCount"] is None:
     render_qa["overlapFailures"].append("figure_legend_count_missing")
+if render_qa["legendInputEntryCount"] > 0 and not legend_exists:
+    render_qa["overlapFailures"].append("figure_legend_missing_for_handles")
 if legend_exists and render_qa["figureLegendCount"] != 1:
     render_qa["overlapFailures"].append("figure_legend_count_invalid")
 
@@ -306,6 +312,12 @@ if render_qa["visualEnhancementCount"] < render_qa["minVisualEnhancementCount"]:
 
 if render_qa["inPlotExplanatoryLabelCount"] < render_qa["minInPlotExplanatoryLabels"]:
     render_qa["contentDensityFailures"].append("inplot_explanatory_labels_below_minimum")
+
+if render_qa["figureWhitespaceFraction"] > render_qa["maxFigureWhitespaceFraction"]:
+    render_qa["contentDensityFailures"].append("figure_whitespace_fraction_above_maximum")
+
+if render_qa["figureInkFraction"] < render_qa["minFigureInkFraction"]:
+    render_qa["contentDensityFailures"].append("figure_ink_fraction_below_minimum")
 
 if chartPlan.get("visualContentPlan", {}).get("referenceMotifsRequired", True):
     if render_qa["referenceMotifCount"] < render_qa["minReferenceMotifCount"]:
@@ -378,6 +390,7 @@ Hard failures:
 - any axis-level legend remains after crowding management
 - any final legend is outside `bottom_center`, missing its rounded frame, or placed outside-right
 - visual content is under-dense: too few data-derived enhancements or no in-plot explanatory labels
+- rendered content is visibly sparse: figure ink fraction is below `minFigureInkFraction` or whitespace exceeds `maxFigureWhitespaceFraction`
 - required reference visual grammar is missing: too few data-supported motif layers such as metric tables, perfect-fit/reference lines, density halos, matrix labels, p-value stars, sample-shape overlays, or dual-axis error bars
 - required template visual grammar is missing: planned motif layers such as joint marginal axes, density-colored scatter, prediction diagnostic matrix, correlation evidence matrix, interval band, or dual-axis error sidecar were not applied
 - output artifact is missing, blank, or implausibly small

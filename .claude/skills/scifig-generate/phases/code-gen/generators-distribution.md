@@ -1025,8 +1025,6 @@ def gen_pareto_chart(df, dataProfile, chartPlan, rcParams, palette, col_map=None
         ax.set_ylabel(display_label(objective_y, col_map) if (standalone and col_map) else (str(objective_y) if standalone else ""))
         ax.xaxis.grid(True, linestyle="--", linewidth=0.3, alpha=0.25, zorder=0)
         ax.yaxis.grid(True, linestyle="--", linewidth=0.3, alpha=0.25, zorder=0)
-        if bool(highlight_mask.any()) or iter_col:
-            ax.legend(frameon=False, fontsize=5, loc="best")
         if standalone:
             apply_chart_polish(ax, "pareto_chart")
         return ax
@@ -3567,7 +3565,7 @@ def _place_classifier_validation_legend(ax, standalone=False, ncol=2):
         sp = ax.figure.subplotpars
         ax.figure.subplots_adjust(left=max(sp.left, 0.20), bottom=max(sp.bottom, 0.32), right=min(sp.right, 0.96))
         return legend
-    return ax.legend(frameon=False, fontsize=5, loc="best")
+    return None
 
 
 def gen_roc(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=None):

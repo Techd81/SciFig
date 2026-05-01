@@ -15,6 +15,8 @@ This contract governs how `template/articles` examples become executable `scifig
 9. Template alignment is exact. If Phase 2 plans template or reference motifs, validation must compare planned motifs with applied motifs and report the exact missing motif names.
 10. Template routing is metadata-backed. When `case-index.json` contains cases for a selected family, the cycle report must show the case-index matches and anchors used before static fallback anchors are accepted.
 11. Each autonomous cycle must execute at least one generated-script-shaped probe in a fresh process. Direct smoke-harness helper calls cannot be the only source of runtime contract evidence.
+12. Legend validation must compare `legendInputEntryCount` with the final figure legend. If labeled handles existed and no bottom-center shared legend survived, the figure fails.
+13. Density validation must use rendered evidence. Low `figureInkFraction` or excessive `figureWhitespaceFraction` fails even if planned motif counters look complete.
 
 ## Classification
 
@@ -39,6 +41,7 @@ This contract governs how `template/articles` examples become executable `scifig
 
 - Keep legend finalization in `enforce_figure_legend_contract(...)`.
 - Persist legend/layout runtime evidence through `render_contracts.json`; do not infer pass/fail from `chartPlan` defaults.
+- Persist `legendInputEntryCount`, `figureLegendCount`, `figureInkFraction`, and `figureWhitespaceFraction` for every saved figure.
 - Prove at least one `render_contracts.json` record per cycle came from a generated-script-shaped probe, not a synthesized harness report.
 - Keep layout finalization in `audit_figure_layout_contract(...)`.
 - Keep density finalization in `audit_visual_density_contract(...)` whenever template or reference motifs are planned.

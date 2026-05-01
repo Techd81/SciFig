@@ -1080,11 +1080,77 @@ def rank_template_cases_for_family(family, profile_tokens=None, limit=3):
             "file": case.get("file"),
             "id": case.get("id"),
             "chartFamilies": case.get("chart_families", []),
+            "paletteHex": case.get("palette_hex", []) or [],
+            "cmaps": case.get("cmaps", []) or [],
+            "grid": case.get("grid", {}) or {},
+            "counts": case.get("counts", {}) or {},
+            "signatureTricks": case.get("signature_tricks", []) or [],
+            "narrativeArc": case.get("narrative_arc"),
             "score": score,
         }
         for score, case in scored[:limit]
         if case.get("file")
     ]
+
+
+def build_template_render_plan(case_index_matches, families, bundle_key=None):
+    """Promote matched case-index metadata into rendering constraints."""
+    selected_cases = []
+    palette_hex = []
+    cmaps = []
+    grid_recipes = []
+    signature_tricks = []
+    max_zorder = 0
+    max_zorder_distinct = 0
+    total_insets = 0
+    total_twin_axes = 0
+
+    for family in families:
+        for match in list(case_index_matches.get(family, []) or [])[:1]:
+            selected_cases.append({
+                "family": family,
+                "id": match.get("id"),
+                "file": match.get("file"),
+                "score": match.get("score"),
+                "chartFamilies": match.get("chartFamilies", []),
+            })
+            for color in match.get("paletteHex", []) or []:
+                if color not in palette_hex:
+                    palette_hex.append(color)
+            for cmap in match.get("cmaps", []) or []:
+                if cmap not in cmaps:
+                    cmaps.append(cmap)
+            grid = match.get("grid", {}) or {}
+            if grid and grid not in grid_recipes:
+                grid_recipes.append(grid)
+            for trick in match.get("signatureTricks", []) or []:
+                if trick not in signature_tricks:
+                    signature_tricks.append(trick)
+            counts = match.get("counts", {}) or {}
+            max_zorder = max(max_zorder, int(counts.get("zorder_max", 0) or 0))
+            max_zorder_distinct = max(max_zorder_distinct, int(counts.get("zorder_distinct_levels", 0) or 0))
+            total_insets += int(counts.get("inset_axes", 0) or 0)
+            total_twin_axes += int(counts.get("twinx", 0) or 0) + int(counts.get("twiny", 0) or 0)
+
+    return {
+        "caseIndexBacked": bool(selected_cases),
+        "bundleKey": bundle_key,
+        "selectedCases": selected_cases,
+        "selectedCaseIds": [case["id"] for case in selected_cases if case.get("id")],
+        "paletteHex": palette_hex,
+        "cmaps": cmaps,
+        "gridRecipes": grid_recipes,
+        "signatureTricks": signature_tricks,
+        "annotationIdioms": signature_tricks,
+        "zorderFamily": {
+            "maxZorder": max_zorder,
+            "minDistinctLevels": max_zorder_distinct,
+        },
+        "layoutRecipe": grid_recipes[0] if grid_recipes else {},
+        "requiresInsetAxes": total_insets > 0,
+        "requiresTwinAxes": total_twin_axes > 0,
+        "requiredTemplateMotifs": signature_tricks,
+    }
 
 
 def resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreferences, dataProfile=None):
@@ -1236,6 +1302,7 @@ def resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreference
     template_match_mode = selected_bundle.get("templateMatchMode") or ("clone_when_known" if families else "best_effort")
     if inferred_bundle_key and families:
         template_match_mode = "clone_when_known"
+    template_render_plan = build_template_render_plan(case_index_matches, families, inferred_bundle_key)
     return {
         "selectedByUser": bool(selected_bundle),
         "bundleKey": inferred_bundle_key,
@@ -1245,6 +1312,7 @@ def resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreference
         "exactTemplateReplicationRequired": bool(families),
         "caseIndexResolverUsed": bool(case_index_matches),
         "caseIndexMatches": case_index_matches,
+        "templateRenderPlan": template_render_plan,
         "primaryChart": primaryChart,
         "secondaryCharts": list(secondaryCharts or []),
         "families": families,
@@ -1307,6 +1375,10 @@ def build_visual_content_plan(primaryChart, secondaryCharts, dataProfile, workfl
         "templateMotifCount": 0,
         "minTemplateMotifsPerFigure": template_density_bonus,
         "templateCasePlan": template_case_plan,
+        "templateRenderPlan": template_case_plan.get("templateRenderPlan", {}),
+        "templateCaseIds": template_case_plan.get("templateRenderPlan", {}).get("selectedCaseIds", []),
+        "templatePaletteHex": template_case_plan.get("templateRenderPlan", {}).get("paletteHex", []),
+        "templateAnnotationIdioms": template_case_plan.get("templateRenderPlan", {}).get("annotationIdioms", []),
         "templateCaseAnchors": template_case_plan["anchors"],
         "templateTechniqueRefs": template_case_plan["techniqueRefs"],
         "templateMatchMode": template_case_plan["templateMatchMode"],
@@ -1366,7 +1438,7 @@ def build_visual_content_plan(primaryChart, secondaryCharts, dataProfile, workfl
 ### Step 2.8: Build `palettePlan`
 
 ```python
-def build_palette_plan(primaryChart, dataProfile, workflowPreferences):
+def build_palette_plan(primaryChart, dataProfile, workflowPreferences, templateCasePlan=None):
     domain = dataProfile["domainHints"]["primary"]
     patterns = set(dataProfile.get("specialPatterns", []))
     color_mode = workflowPreferences.get("colorMode", "journal_safe_muted")
@@ -1428,6 +1500,18 @@ def build_palette_plan(primaryChart, dataProfile, workflowPreferences):
     if color_mode == "strict_grayscale_safe":
         plan["categoricalPreset"] = "journal_muted_6"
 
+    template_render_plan = (templateCasePlan or {}).get("templateRenderPlan", {})
+    template_palette = list(template_render_plan.get("paletteHex", []) or [])
+    template_cmaps = list(template_render_plan.get("cmaps", []) or [])
+    if template_palette:
+        plan["categoricalPreset"] = "template_case_hex"
+        plan["templatePaletteHex"] = template_palette
+        plan["paletteSource"] = "case_index"
+        plan["templateCaseIds"] = template_render_plan.get("selectedCaseIds", [])
+        plan["semanticMap"].update({f"template_case_{idx}": color for idx, color in enumerate(template_palette)})
+    if template_cmaps:
+        plan["templateCmaps"] = template_cmaps
+
     return plan
 ```
 
@@ -1442,7 +1526,7 @@ panelBlueprint = build_panel_blueprint(primaryChart, secondaryCharts, dataProfil
 crowdingPlan = build_crowding_plan(primaryChart, secondaryCharts, dataProfile, workflowPreferences, panelBlueprint)
 visualContentPlan = build_visual_content_plan(primaryChart, secondaryCharts, dataProfile, workflowPreferences)
 templateCasePlan = visualContentPlan.get("templateCasePlan", resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreferences, dataProfile))
-palettePlan = build_palette_plan(primaryChart, dataProfile, workflowPreferences)
+palettePlan = build_palette_plan(primaryChart, dataProfile, workflowPreferences, templateCasePlan)
 
 delegationReports = {
     "stats": chartPlanReview.get("stats") if "chartPlanReview" in globals() else None,
@@ -1464,6 +1548,7 @@ chartPlan = {
     "visualContentPlan": visualContentPlan,
     "templateMotifs": visualContentPlan.get("templateMotifs", []),
     "templateCasePlan": templateCasePlan,
+    "templateRenderPlan": templateCasePlan.get("templateRenderPlan", {}),
     "palettePlan": palettePlan,
     "delegationReports": delegationReports,
     "journalOverrides": {},

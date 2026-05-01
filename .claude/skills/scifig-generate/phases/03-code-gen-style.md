@@ -337,7 +337,8 @@ def resolve_color_system(chartPlan, dataProfile):
     roles = dataProfile["semanticRoles"]
     df = dataProfile["df"]
 
-    categorical = PALETTES[palettePlan["categoricalPreset"]]
+    template_palette = list(palettePlan.get("templatePaletteHex", []) or [])
+    categorical = template_palette or PALETTES[palettePlan["categoricalPreset"]]
     sequential = PALETTES[palettePlan["sequentialPreset"]]
     diverging = PALETTES[palettePlan["divergingPreset"]]
 
@@ -357,6 +358,9 @@ def resolve_color_system(chartPlan, dataProfile):
         "sequential": sequential,
         "diverging": diverging,
         "categoryMap": category_map,
+        "paletteSource": palettePlan.get("paletteSource", "preset"),
+        "templateCaseIds": palettePlan.get("templateCaseIds", []),
+        "templatePaletteHex": template_palette,
         "grayscaleCheck": palettePlan.get("grayscaleCheck", True),
         "sharedAcrossPanels": palettePlan.get("sharedAcrossPanels", True)
     }
@@ -821,7 +825,7 @@ if is_multipanel:
     # Multi-panel mode: use gen_multipanel to create a single figure with shared axes
     primary_call = f"""# Multi-panel figure
 dataProfile_dict = {{"semanticRoles": {{{roles_code}}}, "df": df}}
-chartPlan = {{"primaryChart": "{chartPlan['primaryChart']}", "secondaryCharts": {chartPlan.get("secondaryCharts", [])}, "panelBlueprint": {repr(chartPlan.get("panelBlueprint", {}))}, "crowdingPlan": {repr(chartPlan.get("crowdingPlan", {}))}, "visualContentPlan": {repr(chartPlan.get("visualContentPlan", {}))}, "templateCasePlan": {repr(chartPlan.get("templateCasePlan", {}))}}}
+chartPlan = {{"primaryChart": "{chartPlan['primaryChart']}", "secondaryCharts": {chartPlan.get("secondaryCharts", [])}, "panelBlueprint": {repr(chartPlan.get("panelBlueprint", {}))}, "crowdingPlan": {repr(chartPlan.get("crowdingPlan", {}))}, "visualContentPlan": {repr(chartPlan.get("visualContentPlan", {}))}, "templateCasePlan": {repr(chartPlan.get("templateCasePlan", {}))}, "templateRenderPlan": {repr(chartPlan.get("templateRenderPlan", {}))}}}
 palette = {repr(colorSystem)}
 
 fig = gen_multipanel(chartPlan, journalProfile, palette, dataProfile_dict, rcParams, col_map=col_map)
@@ -836,7 +840,7 @@ else:
     # Single panel mode: generate individual figures
     primary_call = f"""# Primary chart: {chartPlan['primaryChart']}
 dataProfile = {{"semanticRoles": {{{roles_code}}}, "df": df}}
-chartPlan = {{"primaryChart": "{chartPlan['primaryChart']}", "secondaryCharts": {chartPlan.get("secondaryCharts", [])}, "panelBlueprint": {{"layout": {{"recipe": "single", "grid": "1x1"}}, "panels": [{{"id": "A", "role": "hero", "chart": "{chartPlan['primaryChart']}", "source": "primary"}}], "requestedLayout": "single", "finalLayout": "single", "sharedLegend": False, "sharedColorbar": False}}, "crowdingPlan": {repr(chartPlan.get("crowdingPlan", {}))}, "visualContentPlan": {repr(chartPlan.get("visualContentPlan", {}))}, "templateCasePlan": {repr(chartPlan.get("templateCasePlan", {}))}}}
+chartPlan = {{"primaryChart": "{chartPlan['primaryChart']}", "secondaryCharts": {chartPlan.get("secondaryCharts", [])}, "panelBlueprint": {{"layout": {{"recipe": "single", "grid": "1x1"}}, "panels": [{{"id": "A", "role": "hero", "chart": "{chartPlan['primaryChart']}", "source": "primary"}}], "requestedLayout": "single", "finalLayout": "single", "sharedLegend": False, "sharedColorbar": False}}, "crowdingPlan": {repr(chartPlan.get("crowdingPlan", {}))}, "visualContentPlan": {repr(chartPlan.get("visualContentPlan", {}))}, "templateCasePlan": {repr(chartPlan.get("templateCasePlan", {}))}, "templateRenderPlan": {repr(chartPlan.get("templateRenderPlan", {}))}}}
 palette = {repr(colorSystem)}
 
 single_height = journalProfile.get("canvas_height_mm", {}).get("single", 62)
@@ -965,6 +969,7 @@ codeReview = {
     "visualDensityGatePresent": "audit_visual_density_contract(" in full_code_string and "minTotalEnhancements" in full_code_string and "inPlotExplanatoryLabelCount" in full_code_string,
     "referenceGrammarGatePresent": "minReferenceMotifsPerFigure" in full_code_string and "visualGrammarMotifsApplied" in full_code_string,
     "predictionDiagnosticGatePresent": "metricTableCount" in full_code_string and "densityHaloCount" in full_code_string,
+    "templateRenderPlanPresent": "templateRenderPlan" in full_code_string and "templateCaseIds" in full_code_string,
     "hasSourceDataHooks": "source_data" in full_code_string,
     "hasMetadataHooks": "metadata" in full_code_string,
     "panelBlueprintMatched": True,
@@ -1003,6 +1008,8 @@ if "minReferenceMotifsPerFigure" not in full_code_string or "visualGrammarMotifs
     codeReview["blockingFindings"].append("missing_reference_visual_grammar_gate")
 if "metricTableCount" not in full_code_string or "densityHaloCount" not in full_code_string:
     codeReview["blockingFindings"].append("missing_prediction_diagnostic_gate")
+if "templateRenderPlan" not in full_code_string or "templateCaseIds" not in full_code_string:
+    codeReview["blockingFindings"].append("missing_template_render_plan")
 if "savefig" not in full_code_string:
     codeReview["blockingFindings"].append("missing_savefig")
 if "savefig" in full_code_string and "legend_contract_report = enforce_figure_legend_contract(" not in full_code_string:

@@ -80,6 +80,8 @@ CROWDING_DEFAULTS = {
     "maxTextFontSizePt": 12,
     "maxPanelLabelFontSizePt": 12,
     "forbidNegativeAxesText": True,
+    "maxFigureWhitespaceFraction": 0.82,
+    "minFigureInkFraction": 0.04,
     "legendReflowStrategy": ["margin_adjust", "height_increase", "entry_reduction"],
     "legendMaxHeightMultiplier": 1.3,
     "simplificationsApplied": [],
@@ -2408,6 +2410,16 @@ def audit_figure_layout_contract(fig, axes=None, chartPlan=None, journalProfile=
     whitespace_fraction = 1.0
     if axes_union is not None and _bbox_area(fig_box):
         whitespace_fraction = 1.0 - min(1.0, _bbox_area(axes_union) / _bbox_area(fig_box))
+    ink_fraction = 0.0
+    try:
+        get_cached_renderer(fig, force=True)
+        rgba = np.asarray(fig.canvas.buffer_rgba())
+        if rgba.size:
+            visible = rgba[..., 3] > 8 if rgba.shape[-1] == 4 else np.ones(rgba.shape[:2], dtype=bool)
+            ink = np.any(rgba[..., :3] < 245, axis=-1) & visible
+            ink_fraction = float(np.mean(ink))
+    except Exception:
+        ink_fraction = 0.0
 
     failures = []
     if cross_panel_overlaps:
@@ -2422,6 +2434,10 @@ def audit_figure_layout_contract(fig, axes=None, chartPlan=None, journalProfile=
         failures.append("metric_table_data_overlap")
     if colorbar_panel_overlaps:
         failures.append("colorbar_panel_overlap")
+    if whitespace_fraction > crowdingPlan.get("maxFigureWhitespaceFraction", 0.82):
+        failures.append("figure_whitespace_fraction_above_maximum")
+    if ink_fraction < crowdingPlan.get("minFigureInkFraction", 0.04):
+        failures.append("figure_ink_fraction_below_minimum")
 
     report = {
         "layoutContractEnforced": True,
@@ -2438,6 +2454,9 @@ def audit_figure_layout_contract(fig, axes=None, chartPlan=None, journalProfile=
         "negativeAxesTextCount": len(negative_axes_text),
         "negativeAxesText": negative_axes_text,
         "figureWhitespaceFraction": whitespace_fraction,
+        "figureInkFraction": ink_fraction,
+        "maxFigureWhitespaceFraction": crowdingPlan.get("maxFigureWhitespaceFraction", 0.82),
+        "minFigureInkFraction": crowdingPlan.get("minFigureInkFraction", 0.04),
     }
     plan.setdefault("crowdingPlan", {}).update(report)
     if strict and failures:
@@ -2758,6 +2777,7 @@ def apply_crowding_management(fig, axes, chartPlan, journalProfile):
     handles, labels = collect_legend_entries(axes)
     figure_handles, figure_labels = collect_figure_legend_entries(fig)
     handles, labels = dedupe_handles_labels(handles + figure_handles, labels + figure_labels)
+    legend_input_entry_count = len(labels)
     for existing in list(fig.legends):
         existing.remove()
     removed_axis_legends = remove_axis_legends(axes)
@@ -2885,6 +2905,7 @@ def apply_crowding_management(fig, axes, chartPlan, journalProfile):
     crowdingPlan["legendFrameStyle"] = legend_info.get("legendFrameStyle", CROWDING_DEFAULTS["legendFrameStyle"])
     crowdingPlan["axisLegendRemovedCount"] = removed_axis_legends
     crowdingPlan["axisLegendRemainingCount"] = remaining_axis_legends
+    crowdingPlan["legendInputEntryCount"] = legend_input_entry_count
     crowdingPlan["figureLegendCount"] = len(fig.legends)
     crowdingPlan["legendNColumns"] = legend_info.get("legendNColumns", 0)
     crowdingPlan["legendLabelsShortened"] = legend_info.get("legendLabelsShortened", False)
@@ -2913,6 +2934,7 @@ def apply_crowding_management(fig, axes, chartPlan, journalProfile):
         "hasFigureLegend": legend is not None,
         "axisLegendRemovedCount": removed_axis_legends,
         "axisLegendRemainingCount": remaining_axis_legends,
+        "legendInputEntryCount": legend_input_entry_count,
         "figureLegendCount": len(fig.legends),
         "legendOutsidePlotArea": legend_info.get("legendOutsidePlotArea", True),
         "legendLabelsShortened": legend_info.get("legendLabelsShortened", False),
@@ -2958,8 +2980,11 @@ def enforce_figure_legend_contract(fig, axes=None, chartPlan=None, journalProfil
     report = apply_crowding_management(fig, axes_map, plan, profile)
     failures = []
     legend_exists = bool(report.get("hasFigureLegend")) or len(fig.legends) > 0
+    legend_input_entry_count = report.get("legendInputEntryCount", 0)
     if report.get("axisLegendRemainingCount", 0) > 0:
         failures.append("axis_legend_remaining")
+    if legend_input_entry_count > 0 and not legend_exists:
+        failures.append("figure_legend_missing_for_handles")
     if legend_exists and len(fig.legends) != 1:
         failures.append("figure_legend_count_not_one")
     if legend_exists and report.get("legendModeUsed") != "bottom_center":
