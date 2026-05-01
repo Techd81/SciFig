@@ -256,7 +256,7 @@ Keep exactly one active phase. Expand the active phase into concrete sub-tasks, 
 - Before Phase 3, ensure the panel blueprint and palette plan are explicit.
 - Before Phase 3, resolve blocking chart/stat/layout/palette agent findings.
 - Before Phase 4, ensure code generation includes source-data, render-QA, and metadata hooks.
-- Before completion, require `renderQa.hardFail == false`, `legendContractEnforced == true`, `layoutContractEnforced == true`, `legendOutsidePlotArea == true`, `axisLegendRemainingCount == 0`, `layoutContractFailures == []`, `metricTableDataOverlapCount == 0`, `legendModeUsed in ["bottom_center", "none"]`, exactly one rounded-frame shared bottom-center legend when a legend exists, and enough data-derived visual content to satisfy `visualContentPlan.minTotalEnhancements` and `visualContentPlan.minInPlotLabelsPerFigure`.
+- Before completion, require `renderQa.hardFail == false`, `legendContractEnforced == true`, `layoutContractEnforced == true`, `legendOutsidePlotArea == true`, `axisLegendRemainingCount == 0`, `layoutContractFailures == []`, `metricTableDataOverlapCount == 0`, metric-table relocation/suppression counts recorded when used, `legendModeUsed in ["bottom_center", "none"]`, exactly one rounded-frame shared bottom-center legend when a legend exists, and enough data-derived visual content to satisfy `visualContentPlan.minTotalEnhancements` and `visualContentPlan.minInPlotLabelsPerFigure`.
 
 ## Related Commands
 

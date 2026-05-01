@@ -1018,6 +1018,48 @@ def _add_metric_box(ax, lines, visualPlan):
     return artist
 
 
+def _metric_table_data_patch_bboxes(ax, renderer):
+    data_patches = []
+    for patch in getattr(ax, "patches", []):
+        if not getattr(patch, "get_visible", lambda: True)():
+            continue
+        if getattr(patch, "get_gid", lambda: None)() in {"scifig_density_halo", "scifig_table_cell"}:
+            continue
+        if patch is getattr(ax, "patch", None):
+            continue
+        if patch.__class__.__name__ != "Rectangle":
+            continue
+        try:
+            if abs(float(patch.get_width())) <= 0 or abs(float(patch.get_height())) <= 0:
+                continue
+            patch_box = patch.get_window_extent(renderer=renderer)
+        except Exception:
+            continue
+        if _bbox_area(patch_box) <= 9:
+            continue
+        data_patches.append(patch_box)
+    return data_patches
+
+
+def _metric_table_overlaps_data_marks(ax, table):
+    fig = getattr(ax, "figure", None)
+    if fig is None:
+        return False
+    try:
+        fig.canvas.draw()
+        renderer = get_cached_renderer(fig, force=True)
+    except Exception:
+        try:
+            renderer = fig.canvas.get_renderer()
+        except Exception:
+            return False
+    try:
+        table_box = table.get_window_extent(renderer=renderer)
+    except Exception:
+        return False
+    return any(table_box.overlaps(patch_box) for patch_box in _metric_table_data_patch_bboxes(ax, renderer))
+
+
 def _add_metric_table(ax, rows, visualPlan, loc="lower_right"):
     if not visualPlan.get("useMetricTables", True):
         return None
@@ -1028,27 +1070,67 @@ def _add_metric_table(ax, rows, visualPlan, loc="lower_right"):
         "lower_right": [0.58, 0.05, 0.38, 0.20],
         "lower_left": [0.04, 0.05, 0.38, 0.20],
         "upper_right": [0.58, 0.74, 0.38, 0.20],
+        "upper_left": [0.04, 0.74, 0.38, 0.20],
+        "mid_right": [0.68, 0.39, 0.29, 0.22],
+        "upper_center": [0.31, 0.74, 0.38, 0.20],
+        "lower_center": [0.31, 0.05, 0.38, 0.20],
         "sidecar_right": [0.70, 0.06, 0.27, 0.22],
     }
-    table = ax.table(
-        cellText=[[label, value] for label, value in clean[:4]],
-        cellLoc="center",
-        bbox=boxes.get(loc, boxes["lower_right"]),
-    )
-    table.auto_set_font_size(False)
-    table.set_fontsize(4.6)
-    table.set_zorder(10)
-    table.set_gid("scifig_metric_table")
-    for (row, col), cell in table.get_celld().items():
-        cell.set_linewidth(0.25)
-        cell.set_edgecolor("#B8B8B8")
-        cell.set_facecolor("#FFFFFF" if row % 2 else "#F7F7F7")
-        if col == 0:
-            cell.get_text().set_fontweight("bold")
+    requested = loc if loc in boxes else "lower_right"
+    fallback_locations = ["upper_right", "lower_right", "upper_left", "lower_left", "upper_center", "lower_center"]
+    if requested == "sidecar_right":
+        fallback_locations = ["sidecar_right", "mid_right"] + fallback_locations
+    location_priority = visualPlan.get("metricTableLocationPriority") or [requested] + fallback_locations
+    location_priority = [name for i, name in enumerate(location_priority) if name in boxes and name not in location_priority[:i]]
+
+    def _make_table(location):
+        table = ax.table(
+            cellText=[[label, value] for label, value in clean[:4]],
+            cellLoc="center",
+            bbox=boxes.get(location, boxes["lower_right"]),
+        )
+        table.auto_set_font_size(False)
+        table.set_fontsize(4.6)
+        table.set_zorder(10)
+        table.set_gid("scifig_metric_table")
+        for (row, col), cell in table.get_celld().items():
+            cell.set_linewidth(0.25)
+            cell.set_edgecolor("#B8B8B8")
+            cell.set_facecolor("#FFFFFF" if row % 2 else "#F7F7F7")
+            if col == 0:
+                cell.get_text().set_fontweight("bold")
+        return table
+
+    selected_table = None
+    selected_location = requested
+    attempts = []
+    for location in location_priority:
+        table = _make_table(location)
+        overlaps_data = _metric_table_overlaps_data_marks(ax, table)
+        attempts.append({"location": location, "overlapsData": bool(overlaps_data)})
+        if not overlaps_data:
+            selected_table = table
+            selected_location = location
+            break
+        try:
+            table.remove()
+        except Exception:
+            pass
+    visualPlan.setdefault("metricTablePlacementAttempts", []).append(attempts)
+    if selected_table is None:
+        _visual_count(visualPlan, "metricTableSuppressedCount")
+        return None
+    if selected_location != requested:
+        _visual_count(visualPlan, "metricTableRelocatedCount")
+        visualPlan.setdefault("metricTableRelocationEvents", []).append({
+            "from": requested,
+            "to": selected_location,
+            "reason": "avoid_data_bar_overlap",
+        })
     _visual_count(visualPlan, "metricTableCount")
     _record_motif(visualPlan, "prediction_metric_table")
     _record_template_motif(visualPlan, "metric_table_in_panel")
-    return table
+    return selected_table
 
 
 def _r2_from_actual_pred(actual, predicted):
@@ -1802,6 +1884,8 @@ def apply_visual_content_pass(fig, axes, chartPlan, dataProfile, journalProfile,
         "inPlotExplanatoryLabelCount": visualPlan.get("inPlotExplanatoryLabelCount", 0),
         "metricBoxCount": visualPlan.get("metricBoxCount", 0),
         "metricTableCount": visualPlan.get("metricTableCount", 0),
+        "metricTableRelocatedCount": visualPlan.get("metricTableRelocatedCount", 0),
+        "metricTableSuppressedCount": visualPlan.get("metricTableSuppressedCount", 0),
         "insetCount": visualPlan.get("insetCount", 0),
         "referenceLineCount": visualPlan.get("referenceLineCount", 0),
         "densityHaloCount": visualPlan.get("densityHaloCount", 0),
@@ -2086,25 +2170,7 @@ def _metric_table_data_overlap_issues(fig, axes, renderer):
         ]
         if not tables:
             continue
-        data_patches = []
-        for patch in getattr(ax, "patches", []):
-            if not getattr(patch, "get_visible", lambda: True)():
-                continue
-            if getattr(patch, "get_gid", lambda: None)() in {"scifig_density_halo", "scifig_table_cell"}:
-                continue
-            if patch is getattr(ax, "patch", None):
-                continue
-            if patch.__class__.__name__ != "Rectangle":
-                continue
-            try:
-                if abs(float(patch.get_width())) <= 0 or abs(float(patch.get_height())) <= 0:
-                    continue
-                patch_box = patch.get_window_extent(renderer=renderer)
-            except Exception:
-                continue
-            if _bbox_area(patch_box) <= 9:
-                continue
-            data_patches.append(patch_box)
+        data_patches = _metric_table_data_patch_bboxes(ax, renderer)
         for table_index, table in enumerate(tables):
             try:
                 table_box = table.get_window_extent(renderer=renderer)

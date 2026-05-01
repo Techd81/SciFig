@@ -149,6 +149,8 @@ render_qa = {
     "visualGrammarMotifs": chartPlan.get("visualContentPlan", {}).get("visualGrammarMotifs", []),
     "visualGrammarMotifsApplied": chartPlan.get("visualContentPlan", {}).get("visualGrammarMotifsApplied", []),
     "metricTableCount": chartPlan.get("visualContentPlan", {}).get("metricTableCount", 0),
+    "metricTableRelocatedCount": chartPlan.get("visualContentPlan", {}).get("metricTableRelocatedCount", 0),
+    "metricTableSuppressedCount": chartPlan.get("visualContentPlan", {}).get("metricTableSuppressedCount", 0),
     "referenceLineCount": chartPlan.get("visualContentPlan", {}).get("referenceLineCount", 0),
     "densityHaloCount": chartPlan.get("visualContentPlan", {}).get("densityHaloCount", 0),
     "marginalAxesCount": chartPlan.get("visualContentPlan", {}).get("marginalAxesCount", 0),
@@ -274,6 +276,7 @@ Hard failures:
 - generated code saves a figure without `enforce_figure_legend_contract(...)`
 - `legendContractEnforced` is false or `legendContractFailures` is non-empty
 - `layoutContractEnforced` is false or `layoutContractFailures` is non-empty
+- `metricTableDataOverlapCount > 0` after helper relocation attempts
 - risk tables, footnotes, or outside summaries are drawn with negative axes coordinates instead of a reserved GridSpec/subfigure slot
 - generated typography is poster-scale (`font.size >= 12`, `fontsize >= 13`, or panel labels above 12 pt)
 - any title, risk table, text box, or statistical bracket overlaps another panel's rendered layout box
