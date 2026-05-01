@@ -94,6 +94,7 @@ When RF/Random Forest classifier probability and label columns appear together w
 - Use a compact model-competition strip and bottom-centered figure legend to keep model colors/selection semantics outside the plotting area.
 - Wrap long feature names into compact two-line labels before truncating so dense importance lanes remain legible.
 - Add a compact model summary with n, positive count, best threshold, best F1, and number of ranked features.
+- Generator-level acceptance fixture: a single long table may interleave RF, XGBoost, and SVM prediction rows with RF feature-importance rows, separated only by `table_type`, `record_type`, or `row_type`. With no `selected_model` / `is_selected` flag, the registered generator must still anchor RF, filter the embedded validation board to RF rows, retain competitor semantics in the model strip or bottom legend, and draw the ranked RF importance lane from supplied importance values.
 - Executable fallback: `rf_classifier_report_board` splits validation rows from importance rows when a source/type column exists, filters the validation board to the selected/RF model in multi-model tables, embeds `classifier_validation_board`, draws a top-12 relative importance lane with wrapped feature labels, adds model-competition semantics, and records both classifier-validation and explainability motifs for render QA.
 
 ## Routing Rules
