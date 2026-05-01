@@ -2072,17 +2072,56 @@ def normalize_axes_map(fig, axes=None):
 
 
 def remove_axis_legends(axes):
+    """Robust removal of every Legend artist on each Axes.
+
+    matplotlib's ``ax.get_legend()`` only returns the *most recent* legend
+    attached as ``ax._legend``. When a generator calls ``ax.legend(...)``
+    multiple times — or when a Legend was attached via ``ax.add_artist(...)``
+    — the older Legend artists remain in ``ax.get_children()`` even though
+    ``get_legend()`` no longer sees them. They still render, producing the
+    "ghost legend" occlusion users observe in multi-panel figures.
+
+    This sweep enumerates every child of each Axes and removes any
+    matplotlib.legend.Legend instance, then also removes the canonical
+    ``ax._legend`` to leave a clean slate.
+
+    Returns the total number of Legend artists removed.
+    """
+    from matplotlib.legend import Legend
     removed = 0
     for ax in axes.values():
-        legend = ax.get_legend()
-        if legend is not None:
-            legend.remove()
-            removed += 1
+        # Strategy 1: clean stale legends hidden in the children list first
+        for child in list(ax.get_children()):
+            if isinstance(child, Legend):
+                try:
+                    child.remove()
+                    removed += 1
+                except Exception:  # noqa: BLE001 — keep sweeping
+                    pass
+        # Strategy 2: clean canonical ax._legend if anything still lingers
+        primary = ax.get_legend()
+        if primary is not None:
+            try:
+                primary.remove()
+                removed += 1
+            except Exception:
+                pass
     return removed
 
 
 def count_axis_legends(axes):
-    return sum(1 for ax in axes.values() if ax.get_legend() is not None)
+    """Count every Legend artist on each Axes (not just ax._legend).
+
+    Mirrors :func:`remove_axis_legends` so the contract verifier sees the
+    same Legend instances the renderer actually paints.
+    """
+    from matplotlib.legend import Legend
+    count = 0
+    for ax in axes.values():
+        for child in ax.get_children():
+            if isinstance(child, Legend):
+                count += 1
+    return count
 
 
 def shorten_legend_labels(labels, max_chars=32):
@@ -2100,6 +2139,14 @@ def shorten_legend_labels(labels, max_chars=32):
 
 def trim_excess_text_annotations(ax, max_keep):
     if max_keep is None:
+        return 0
+    # Heatmap bypass: an Axes hosting a QuadMesh (sns.heatmap / pcolormesh)
+    # has one Text per cell — N×N can easily reach hundreds. Trimming those
+    # would destroy the heatmap's quantitative annotations. The
+    # post-finalizer ``_shrink_heatmap_cell_labels`` is the right reformer
+    # for that case; this trim only applies to free-standing direct labels.
+    from matplotlib.collections import QuadMesh
+    if any(isinstance(c, QuadMesh) for c in ax.collections):
         return 0
     protected_gids = {"scifig_metric_box", "scifig_inplot_label"}
     trim_candidates = []
@@ -2271,6 +2318,397 @@ def _metric_table_data_overlap_issues(fig, axes, renderer):
     return issues
 
 
+def _text_data_overlap_issues(fig, axes, renderer, threshold=0.30):
+    """Detect annotations that are visually buried under data artists.
+
+    For each Axes, intersect every Text artist's display-coord bbox with
+    the bboxes of every Line2D / Collection / Patch on the same Axes.
+    When the overlap area exceeds ``threshold`` * text bbox area, the
+    text is being painted on top of a data layer with significant
+    coverage — readers cannot resolve the label cleanly.
+
+    Excludes:
+      * Panel labels (single uppercase letters A-Z) — they live in axis-coord
+        margin slots and are intended to be free-floating.
+      * Texts whose ``gid`` marks them as already-managed metric-box content.
+      * Texts that already carry an opaque-enough bbox patch (i.e., the
+        ``_promote_inaxes_text_safety`` retrofit applied a white bbox).
+        Such labels have visual occlusion already resolved by the bbox
+        — the geometric bbox-vs-line overlap is not a usability problem.
+
+    Returns a list of issue dicts compatible with the
+    ``layoutContractFailures`` aggregation.
+    """
+    from matplotlib.text import Text as _Text
+
+    issues = []
+    panel_label_set = {chr(code) for code in range(65, 91)}
+    managed_gids = {"scifig_metric_box", "scifig_metric_table"}
+
+    def _has_opaque_bbox(text_artist):
+        """True if the Text artist has a bbox patch with white-ish opaque fill.
+
+        Visual occlusion is only "resolved" when the bbox is both:
+          * White-ish (R, G, B all > 0.85) — a coloured bbox would still
+            blend with the underlying line and require contrast checking.
+          * Sufficiently opaque (alpha >= 0.5).
+
+        Anything else (transparent box, coloured semantic-encoding bbox,
+        decorative tinted background) is treated as NOT occlusion-safe so
+        the audit still flags the geometric overlap.
+        """
+        patch = text_artist.get_bbox_patch()
+        if patch is None:
+            return False
+        try:
+            face = patch.get_facecolor()
+            if not face or len(face) < 3:
+                return False
+            r, g, b = float(face[0]), float(face[1]), float(face[2])
+            alpha = float(face[3]) if len(face) >= 4 else 1.0
+            if alpha < 0.5:
+                return False
+            # Whitish heuristic: each channel above 0.85 (corpus default
+            # is pure white 1.0, so this allows minor off-white tints).
+            return r > 0.85 and g > 0.85 and b > 0.85
+        except Exception:
+            return False
+
+    for panel_id, ax in axes.items():
+        # Collect text artists worth checking
+        text_artists = []
+        for child in ax.get_children():
+            if not isinstance(child, _Text):
+                continue
+            raw = str(child.get_text()).strip()
+            if not raw:
+                continue
+            if raw in panel_label_set:
+                continue
+            gid = getattr(child, "get_gid", lambda: None)()
+            if gid in managed_gids:
+                continue
+            # Skip artists that already have an opaque bbox — visual
+            # occlusion resolved by the bbox itself.
+            if _has_opaque_bbox(child):
+                continue
+            try:
+                tbox = child.get_window_extent(renderer=renderer)
+                if tbox.width <= 0 or tbox.height <= 0:
+                    continue
+            except Exception:
+                continue
+            text_artists.append((child, tbox, raw))
+
+        if not text_artists:
+            continue
+
+        # Collect data artist bboxes (lines / collections / patches)
+        data_bboxes = []
+        for artist in list(ax.lines) + list(ax.collections) + list(ax.patches):
+            try:
+                if not artist.get_visible():
+                    continue
+                bbox = artist.get_window_extent(renderer=renderer)
+                if bbox is None or bbox.width <= 0 or bbox.height <= 0:
+                    continue
+                data_bboxes.append((artist, bbox))
+            except Exception:
+                continue
+
+        if not data_bboxes:
+            continue
+
+        for text_artist, tbox, raw in text_artists:
+            tbox_area = max(tbox.width * tbox.height, 1.0)
+            for artist, dbox in data_bboxes:
+                if not tbox.overlaps(dbox):
+                    continue
+                # Compute intersection area
+                x0 = max(tbox.x0, dbox.x0); x1 = min(tbox.x1, dbox.x1)
+                y0 = max(tbox.y0, dbox.y0); y1 = min(tbox.y1, dbox.y1)
+                if x1 <= x0 or y1 <= y0:
+                    continue
+                overlap_area = (x1 - x0) * (y1 - y0)
+                ratio = overlap_area / tbox_area
+                if ratio < threshold:
+                    continue
+                issues.append({
+                    "panel": panel_id,
+                    "element": "annotation_text",
+                    "conflict": type(artist).__name__.lower(),
+                    "text": raw[:32],
+                    "overlap_ratio": round(ratio, 3),
+                })
+                break  # one overlap per text is enough to flag
+    return issues
+
+
+def _promote_inaxes_text_safety(axes, *, target_zorder=20, alpha=0.85, pad=0.25):
+    """Zero-touch retrofit: enforce occlusion-safe state on every in-axes Text.
+
+    Generators historically call ``ax.text(...)`` / ``ax.annotate(...)`` with
+    matplotlib defaults (zorder=3, no bbox), which leaves the label silently
+    buried under any line drawn afterward (default zorder=2 but cumulative
+    fills/scatter often raise the data layer above 3).
+
+    Rather than rewriting 100+ scattered call sites in
+    ``generators-*.md / .py``, this function — invoked once near the end of
+    ``enforce_figure_legend_contract`` — sweeps every Axes and:
+
+      * Promotes the Text artist's zorder to ``target_zorder`` (default 20)
+        if it is currently lower.
+      * Adds a rounded white bbox (alpha=0.85) if the artist has no bbox.
+
+    Excludes infrastructure text that should NOT carry a white bbox:
+      * Panel labels (single uppercase A-Z),
+      * Axis title, axis x/y labels,
+      * Tick labels,
+      * Anything carrying a managed gid (metric box, inplot label, panel label),
+      * **Heatmap cell labels** (text inside an Axes hosting a QuadMesh) —
+        a white bbox would obliterate the cell colour and defeat the heatmap.
+
+    Returns a counter dict for diagnostics::
+
+        {"promoted_zorder": int, "promoted_bbox": int}
+    """
+    from matplotlib.text import Text as _Text
+    from matplotlib.collections import QuadMesh
+
+    panel_label_set = {chr(c) for c in range(65, 91)}
+    managed_gids = {
+        "scifig_metric_box",
+        "scifig_metric_table",
+        "scifig_inplot_label",
+        "scifig_panel_label",
+        "scifig_no_safety_bbox",   # M2: explicit opt-out for generators that need
+                                    # raw text (LaTeX equations, arrow callouts,
+                                    # decorative labels with custom backgrounds)
+    }
+    promoted_zorder = 0
+    promoted_bbox = 0
+
+    for ax in axes.values():
+        # Detect heatmap-style Axes (skip bbox addition for cell labels)
+        is_heatmap = any(isinstance(c, QuadMesh) for c in ax.collections)
+
+        # Build a "do not touch" set of Text artist ids belonging to axis chrome
+        protected_ids = set()
+        try:
+            protected_ids.add(id(ax.title))
+        except Exception:
+            pass
+        try:
+            protected_ids.add(id(ax.xaxis.label))
+        except Exception:
+            pass
+        try:
+            protected_ids.add(id(ax.yaxis.label))
+        except Exception:
+            pass
+        try:
+            for tick_label in list(ax.get_xticklabels()) + list(ax.get_yticklabels()):
+                protected_ids.add(id(tick_label))
+        except Exception:
+            pass
+
+        for child in ax.get_children():
+            if not isinstance(child, _Text):
+                continue
+            if id(child) in protected_ids:
+                continue
+            raw = str(child.get_text()).strip()
+            if not raw:
+                continue
+            if raw in panel_label_set:
+                continue
+            gid = getattr(child, "get_gid", lambda: None)()
+            if gid in managed_gids:
+                continue
+
+            current_z = child.get_zorder() or 0
+            if current_z < target_zorder:
+                child.set_zorder(target_zorder)
+                promoted_zorder += 1
+
+            # Skip bbox addition on heatmap cell labels — the cell's
+            # face colour is the visual signal; a white bbox would erase it.
+            if is_heatmap:
+                continue
+
+            if child.get_bbox_patch() is None:
+                child.set_bbox(dict(
+                    boxstyle=f"round,pad={pad}",
+                    facecolor="white",
+                    alpha=alpha,
+                    edgecolor="none",
+                    linewidth=0,
+                ))
+                promoted_bbox += 1
+
+    return {"promoted_zorder": promoted_zorder, "promoted_bbox": promoted_bbox}
+
+
+def _shrink_heatmap_cell_labels(axes, fig, *, font_size_pt=5.0, char_width_factor=0.55):
+    """Re-format heatmap cell label text strings to fit cell physical width.
+
+    For each Axes hosting a QuadMesh (i.e., a heatmap), compute the cell
+    physical width from ``ax.get_position()`` and ``fig.get_size_inches()``
+    divided by the mesh column count, then call ``choose_heatmap_fmt`` to
+    pick the longest format string that fits. Existing numeric-text artists
+    in ``ax.texts`` are reformatted in place (e.g., "−0.873" → "−0.9");
+    when the cell is too tiny for any digit fmt, every numeric label is
+    removed (the heatmap colour itself remains the only signal).
+
+    This is a zero-touch retrofit — generators continue to call
+    ``sns.heatmap(annot=True, fmt=".2f")`` as today; the corrective pass
+    here adapts to the final layout once the figure size is known.
+
+    Returns a counter dict::
+
+        {"reformatted": int, "removed": int, "skipped_axes": int}
+    """
+    from matplotlib.collections import QuadMesh
+
+    reformatted = 0
+    removed = 0
+    skipped_axes = 0
+
+    fig_w_in, _ = fig.get_size_inches()
+
+    for ax in axes.values():
+        meshes = [c for c in ax.collections if isinstance(c, QuadMesh)]
+        if not meshes:
+            continue
+        qm = meshes[0]
+        # Detect column count.
+        # M3: prefer the public API (Path count) before falling back to the
+        # internal `_meshWidth` / `_coordinates` attributes which may be
+        # renamed in future matplotlib versions.
+        n_cols = None
+        try:
+            n_paths = len(qm.get_paths())
+            if n_paths > 0:
+                root = int(round(n_paths ** 0.5))
+                if root * root == n_paths:
+                    n_cols = root  # square mesh
+        except Exception:
+            pass
+        if n_cols is None:
+            for attr in ("_meshWidth", "_coordinates"):
+                val = getattr(qm, attr, None)
+                if val is None:
+                    continue
+                if attr == "_meshWidth" and isinstance(val, (int, float)):
+                    n_cols = int(val)
+                    break
+                if attr == "_coordinates":
+                    try:
+                        n_cols = val.shape[1] - 1
+                        break
+                    except Exception:
+                        continue
+        if n_cols is None:
+            try:
+                arr = qm.get_array()
+                if arr.ndim == 2:
+                    n_cols = arr.shape[1]
+                elif arr.ndim == 1:
+                    n_cols = int(np.sqrt(arr.size))
+            except Exception:
+                pass
+        if n_cols is None or n_cols <= 0:
+            skipped_axes += 1
+            continue
+
+        try:
+            position = ax.get_position()
+            cell_width_in = position.width * fig_w_in / n_cols
+        except Exception:
+            skipped_axes += 1
+            continue
+
+        try:
+            arr = qm.get_array()
+            vmin = float(np.nanmin(arr)); vmax = float(np.nanmax(arr))
+        except Exception:
+            vmin, vmax = -1.0, 1.0
+
+        # Use the function from template_mining_helpers if available; otherwise
+        # reproduce the calculation locally so this works even when not embedded.
+        try:
+            tmh_choose = globals().get("choose_heatmap_fmt")
+            if tmh_choose is None:
+                # Inline duplicate of choose_heatmap_fmt
+                int_digits = max(
+                    len(str(int(abs(vmin)))) + (1 if vmin < 0 else 0),
+                    len(str(int(abs(vmax)))) + (1 if vmax < 0 else 0),
+                    1,
+                )
+                char_width_in = (font_size_pt * char_width_factor) / 72.0
+                available_in = cell_width_in * 0.85
+                fmt = ""
+                for decimals in (3, 2, 1, 0):
+                    text_chars = int_digits if decimals == 0 else int_digits + 1 + decimals
+                    if text_chars * char_width_in <= available_in:
+                        fmt = f".{decimals}f"
+                        break
+            else:
+                fmt = tmh_choose(cell_width_in, font_size_pt=font_size_pt,
+                                  value_range=(vmin, vmax))
+        except Exception:
+            skipped_axes += 1
+            continue
+
+        # Reformat / remove text artists.
+        # M1: skip texts that contain scientific notation ('e'/'E') or significance
+        # markers ('*' / '†' / '‡' / '§') — generators may have intentional formats.
+        # P1: when fmt == '.0f' (heavy density), apply graceful degradation —
+        # remove non-diagonal cells with |value| < 0.5 so the remaining numbers
+        # carry real information rather than a forest of "0" / "-0".
+        graceful_threshold = 0.5
+        for txt in list(ax.texts):
+            raw = str(txt.get_text()).strip()
+            if not raw:
+                continue
+            # M1 — preserve generator-supplied special formats
+            lowered = raw.lower()
+            if "e" in lowered and any(ch.isdigit() for ch in lowered):
+                # could be scientific notation like '1.2e-3'
+                if any(marker in raw for marker in ("e+", "e-", "E+", "E-")):
+                    continue
+            if any(marker in raw for marker in ("*", "†", "‡", "§", "ns", "n.s.")):
+                continue
+            try:
+                val = float(raw.replace("−", "-"))
+            except ValueError:
+                continue
+            if fmt == "":
+                txt.remove()
+                removed += 1
+                continue
+            # P1 — graceful degradation when fmt forced to '.0f'
+            if fmt == ".0f":
+                try:
+                    x_pos, y_pos = txt.get_position()
+                    col = int(round(x_pos - 0.5))
+                    row = int(round(y_pos - 0.5))
+                    is_diagonal = (col == row)
+                except Exception:
+                    is_diagonal = False
+                if not is_diagonal and abs(val) < graceful_threshold:
+                    txt.remove()
+                    removed += 1
+                    continue
+            new_text = format(val, fmt)
+            if new_text != raw:
+                txt.set_text(new_text)
+                reformatted += 1
+
+    return {"reformatted": reformatted, "removed": removed,
+            "skipped_axes": skipped_axes}
+
+
 def _colorbar_axes(fig, axes):
     return [
         colorbar_ax
@@ -2423,6 +2861,10 @@ def audit_figure_layout_contract(fig, axes=None, chartPlan=None, journalProfile=
     negative_axes_text = []
     metric_table_data_overlaps = _metric_table_data_overlap_issues(fig, axes_map, renderer)
     colorbar_panel_overlaps = _colorbar_panel_overlap_issues(fig, axes_map, renderer)
+    text_data_overlaps = _text_data_overlap_issues(
+        fig, axes_map, renderer,
+        threshold=float(crowdingPlan.get("textDataOverlapThreshold", 0.30)),
+    )
 
     for panel_id, artist in _iter_layout_artists(axes_map):
         try:
@@ -2486,6 +2928,8 @@ def audit_figure_layout_contract(fig, axes=None, chartPlan=None, journalProfile=
         failures.append("metric_table_data_overlap")
     if colorbar_panel_overlaps:
         failures.append("colorbar_panel_overlap")
+    if text_data_overlaps:
+        failures.append("annotation_text_buried_under_data")
     if whitespace_fraction > crowdingPlan.get("maxFigureWhitespaceFraction", 0.82):
         failures.append("figure_whitespace_fraction_above_maximum")
     if ink_fraction < crowdingPlan.get("minFigureInkFraction", 0.04):
@@ -2499,6 +2943,8 @@ def audit_figure_layout_contract(fig, axes=None, chartPlan=None, journalProfile=
         "metricTableDataOverlapCount": len(metric_table_data_overlaps),
         "colorbarPanelOverlapIssues": colorbar_panel_overlaps,
         "colorbarPanelOverlapCount": len(colorbar_panel_overlaps),
+        "textDataOverlapIssues": text_data_overlaps,
+        "textDataOverlapCount": len(text_data_overlaps),
         "offCanvasArtistCount": len(off_canvas_artists),
         "offCanvasArtists": off_canvas_artists,
         "oversizedTextCount": len(oversized_text),
@@ -3052,6 +3498,26 @@ def enforce_figure_legend_contract(fig, axes=None, chartPlan=None, journalProfil
     colorbar_reflow_count = reflow_colorbars_outside_panels(fig, axes_map, plan["crowdingPlan"])
     plan["crowdingPlan"]["colorbarReflowCount"] = colorbar_reflow_count
     report["colorbarReflowCount"] = colorbar_reflow_count
+
+    # Zero-touch retrofit: every in-axes annotation gets zorder>=20 + white bbox
+    # (cycle-22 anti-occlusion) BEFORE layout audit so the audit sees the
+    # post-promotion state and reports buried-text overlaps accurately.
+    text_safety = _promote_inaxes_text_safety(axes_map)
+    plan["crowdingPlan"]["textSafetyPromotedZorder"] = text_safety["promoted_zorder"]
+    plan["crowdingPlan"]["textSafetyPromotedBbox"] = text_safety["promoted_bbox"]
+    report["textSafetyPromotedZorder"] = text_safety["promoted_zorder"]
+    report["textSafetyPromotedBbox"] = text_safety["promoted_bbox"]
+
+    # Zero-touch heatmap fmt adaptation: cell labels are reformatted to fit
+    # actual cell physical width (cycle-22). Generators continue to use
+    # sns.heatmap(annot=True, fmt=".2f"); this pass overrides the literal
+    # fmt at finalize time so high-density matrices switch to ".1f" / ".0f"
+    # / no-annot automatically.
+    heatmap_shrink = _shrink_heatmap_cell_labels(axes_map, fig)
+    plan["crowdingPlan"]["heatmapCellLabelsReformatted"] = heatmap_shrink["reformatted"]
+    plan["crowdingPlan"]["heatmapCellLabelsRemoved"] = heatmap_shrink["removed"]
+    report["heatmapCellLabelsReformatted"] = heatmap_shrink["reformatted"]
+    report["heatmapCellLabelsRemoved"] = heatmap_shrink["removed"]
 
     layout_report = audit_figure_layout_contract(fig, axes_map, plan, profile, strict=False)
     if layout_report.get("layoutContractFailures"):

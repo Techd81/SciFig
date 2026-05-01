@@ -71,6 +71,39 @@ fig, axes, palette = bootstrap_chart(arc="hero", panel_count=1,
                                      journalProfile=journalProfile)
 ```
 
+## Finalizer Auto-corrections (cycle-22)
+
+`enforce_figure_legend_contract(...)` runs three **zero-touch retrofit passes** before `audit_figure_layout_contract` so common occlusion modes are repaired automatically without modifying generator source. Generators do not need to call these helpers explicitly — they fire from inside the contract finalizer.
+
+| Pass | What it does | Generator-visible side effect |
+|------|--------------|------------------------------|
+| `_promote_inaxes_text_safety` | Promotes every in-axes `Text` artist to `zorder>=20` and adds a rounded white bbox (alpha 0.85) when none exists. | `ax.text(... fontsize=10)` at default zorder=3 will be silently lifted to zorder=20 with a white background. |
+| `_shrink_heatmap_cell_labels` | Detects `QuadMesh` axes (sns.heatmap / pcolormesh) and reformats numeric cell labels to fit physical cell width via `choose_heatmap_fmt`. When fmt forced to `.0f` (very dense), applies graceful degradation: keeps only diagonal cells and `\|val\| ≥ 0.5`, removing the noise. | `sns.heatmap(annot=True, fmt=".3f")` may have its labels reformatted to `.2f` / `.1f` / `.0f` and some non-significant cells may lose their annotation entirely. |
+| `_text_data_overlap_issues` (audit) | Reports text-vs-line/scatter/patch geometric overlap > 30%. White-bbox text is treated as already-resolved and skipped. | `audit["textDataOverlapCount"]` and the `annotation_text_buried_under_data` failure flag. |
+
+### Excluded artists (never modified)
+
+- Axis chrome: title, x/y axis labels, tick labels.
+- Panel labels (single uppercase A-Z).
+- Heatmap cell labels (white bbox would erase the cell colour).
+- Anything carrying a managed `gid`:
+  `scifig_metric_box`, `scifig_metric_table`, `scifig_inplot_label`, `scifig_panel_label`.
+
+### Generator opt-outs
+
+| If you need... | Use... |
+|----------------|--------|
+| Raw text without a white bbox (LaTeX equation, decorative callout, custom-coloured background) | `ax.text(... gid="scifig_no_safety_bbox")` |
+| Scientific notation cell labels in a heatmap (`1.2e-3`) | The shrink pass auto-skips text containing `e+` / `e-` / `E+` / `E-` |
+| Significance markers in a heatmap (`*`, `**`, `ns`, `n.s.`) | The shrink pass auto-skips text containing `*`, `†`, `‡`, `§`, `ns`, `n.s.` |
+
+### Handcrafted helpers (manual invocation)
+
+Helpers in `template_mining_helpers.py` Section 10 that are **available but not auto-invoked**:
+
+- `safe_annotate(ax, text, xy, ...)` — drop-in replacement for `ax.annotate` / `ax.text` that pre-applies the same zorder + bbox guards as the retrofit. Use when you want explicit control instead of relying on the retrofit.
+- `auto_relocate_annotations(ax, ...)` — heavyweight collision-avoidance relocator (probes 12 candidate offsets in display coords). Use only when annotation density is high enough that bbox alone is not enough; the default retrofit covers most cases.
+
 ## Bundled Fonts (assets/fonts/)
 
 Templates anchor `font.family` to commercial typefaces (Arial / Helvetica / Times New Roman / SimHei) that the skill **cannot legally redistribute**. On Linux servers, Docker containers, and clean macOS installs these fonts are typically absent, so matplotlib falls back to DejaVu Sans, prints a `findfont` warning, and produces figures whose metrics no longer match the journal profile.

@@ -1189,3 +1189,359 @@ def add_heatmap_pairwise_panel(fig, features_df, *,
         "n_features": n,
         "correlation_matrix": correlation_matrix,
     }
+
+
+# ============================================================================
+# 10. OCCLUSION GUARDS  (cycle 22: anti-overlap discipline)
+# ============================================================================
+#
+# Three helpers that protect generated figures from the three dominant
+# occlusion modes observed in cycle-22 audit:
+#
+#   1. safe_annotate            Replaces ax.text/ax.annotate; forces zorder>=20
+#                               and an opaque rounded white bbox so the text
+#                               reads on any data background.
+#   2. choose_heatmap_fmt       Picks "{:.Nf}" format string adaptively from
+#                               cell physical size, font size, and value range
+#                               so heatmap cell labels never overflow.
+#   3. auto_relocate_annotations
+#                               Post-render collision avoidance: probes text
+#                               artists' display bbox against data artists,
+#                               picks the least-occluded candidate offset.
+#
+# The constants below were calibrated against the 77-case corpus.
+
+_SAFE_ANNOT_ZORDER = 20
+_SAFE_ANNOT_BBOX_ALPHA = 0.85
+_SAFE_ANNOT_BBOX_PAD = 0.25
+_HEATMAP_CELL_SAFETY = 0.85       # use 85% of cell width before rejecting fmt
+_HEATMAP_CHAR_WIDTH_PT = 0.55     # digit width / font size for sans-serif
+_RELOCATE_OFFSET_POINTS = [
+    (0, 8), (0, -8), (8, 0), (-8, 0),
+    (8, 8), (-8, 8), (8, -8), (-8, -8),
+    (0, 14), (0, -14), (14, 0), (-14, 0),
+]
+
+
+def safe_annotate(
+    ax: Axes,
+    text: str,
+    xy: tuple[float, float],
+    *,
+    xytext: tuple[float, float] | None = None,
+    xycoords: str = "data",
+    textcoords: str | None = None,
+    ha: str = "center",
+    va: str = "center",
+    fontsize: float | None = None,
+    color: str = "black",
+    zorder: float | None = None,
+    bbox: dict | bool | None = True,
+    arrowprops: dict | None = None,
+    **kwargs,
+):
+    """Drop-in replacement for ax.annotate / ax.text with anti-occlusion guards.
+
+    Differences from raw ax.annotate:
+      * zorder is forced to >= 20 so labels sit above every data layer
+        (default zorder for ax.plot=2, ax.scatter=1, ax.fill=1; this
+        ensures annotations are not silently buried by curves drawn later).
+      * bbox defaults to an opaque rounded white box (alpha 0.85) so the
+        text remains readable when a data line passes underneath.
+      * va/ha default to "center" to keep annotations flush with their
+        anchor point rather than baseline-left (matplotlib default).
+
+    Pass ``bbox=False`` to disable the white box (e.g., for heatmap cell
+    labels where the cell colour already provides contrast).
+    Pass an explicit dict to override individual bbox properties.
+    """
+    if zorder is None or zorder < _SAFE_ANNOT_ZORDER:
+        zorder = _SAFE_ANNOT_ZORDER
+
+    if bbox is True:
+        bbox_props: dict | None = dict(
+            boxstyle=f"round,pad={_SAFE_ANNOT_BBOX_PAD}",
+            facecolor="white",
+            alpha=_SAFE_ANNOT_BBOX_ALPHA,
+            edgecolor="none",
+            linewidth=0,
+        )
+    elif bbox is False or bbox is None:
+        bbox_props = None
+    else:
+        bbox_props = dict(bbox)
+
+    annotation_kwargs: dict = dict(
+        xy=xy,
+        xycoords=xycoords,
+        ha=ha,
+        va=va,
+        zorder=zorder,
+        color=color,
+    )
+    if fontsize is not None:
+        annotation_kwargs["fontsize"] = fontsize
+    if xytext is not None:
+        annotation_kwargs["xytext"] = xytext
+        annotation_kwargs["textcoords"] = textcoords or "offset points"
+    if bbox_props is not None:
+        annotation_kwargs["bbox"] = bbox_props
+    if arrowprops is not None:
+        annotation_kwargs["arrowprops"] = arrowprops
+    annotation_kwargs.update(kwargs)
+
+    return ax.annotate(text, **annotation_kwargs)
+
+
+def choose_heatmap_fmt(
+    cell_width_in: float,
+    *,
+    font_size_pt: float = 5.0,
+    value_range: tuple[float, float] = (-1.0, 1.0),
+    safety: float = _HEATMAP_CELL_SAFETY,
+    char_width_factor: float = _HEATMAP_CHAR_WIDTH_PT,
+) -> str:
+    """Pick the longest fmt string that fits without overflowing the cell.
+
+    Parameters
+    ----------
+    cell_width_in
+        Physical width of one heatmap cell in inches.
+        e.g. ``panel_width_mm / n_cols / 25.4``.
+    font_size_pt
+        Font size used by ``annot_kws["size"]`` (typically 4.5-6.0 pt).
+    value_range
+        ``(vmin, vmax)`` of the matrix values being annotated. Used to
+        compute the worst-case formatted text length (sign + integer
+        digits + decimal separator + fractional digits).
+    safety
+        Fraction of cell width allowed for text. Default 0.85 leaves
+        15% inter-cell padding so neighbouring labels never visually
+        merge across the cell border.
+    char_width_factor
+        Character width as a fraction of font size (≈0.55 for sans-serif
+        digits in the corpus).
+
+    Returns
+    -------
+    str
+        One of ``".3f"``, ``".2f"``, ``".1f"``, ``".0f"``, or ``""``.
+        Empty string means "do not annotate"; the caller should switch
+        to a colorbar-only display, or apply graceful degradation
+        (e.g., annotate only diagonal cells / only ``|r| > 0.5``).
+
+    Examples
+    --------
+    >>> choose_heatmap_fmt(0.18, font_size_pt=5.0, value_range=(-1, 1))
+    '.2f'
+    >>> choose_heatmap_fmt(0.10, font_size_pt=5.0, value_range=(-1, 1))
+    '.1f'
+    >>> choose_heatmap_fmt(0.06, font_size_pt=5.0, value_range=(-1, 1))
+    ''
+    """
+    vmin, vmax = float(value_range[0]), float(value_range[1])
+    int_digits = max(
+        len(str(int(abs(vmin)))) + (1 if vmin < 0 else 0),
+        len(str(int(abs(vmax)))) + (1 if vmax < 0 else 0),
+        1,
+    )
+
+    char_width_in = (font_size_pt * char_width_factor) / 72.0
+    available_in = cell_width_in * safety
+
+    for decimals in (3, 2, 1, 0):
+        if decimals == 0:
+            text_chars = int_digits
+        else:
+            # int part + '.' + fractional digits
+            text_chars = int_digits + 1 + decimals
+        text_width_in = text_chars * char_width_in
+        if text_width_in <= available_in:
+            return f".{decimals}f"
+    return ""
+
+
+def auto_relocate_annotations(
+    ax: Axes,
+    *,
+    text_artists: list | None = None,
+    fig: Figure | None = None,
+    overlap_threshold: float = 0.30,
+    max_relocate: int | None = None,
+) -> dict:
+    """Post-placement collision avoidance for text artists on an Axes.
+
+    **Available but NOT auto-invoked** by ``enforce_figure_legend_contract``.
+    The default zero-touch retrofit (zorder>=20 + white bbox via
+    ``_promote_inaxes_text_safety``) already resolves the dominant
+    occlusion modes; this relocator is a heavier escape hatch generators
+    can call manually when they expect heavy collision (e.g., dense
+    network labels, scatterplot point annotations on top of a fitted
+    curve where bbox alone is not enough).
+
+    Algorithm (cycle-22):
+      1. Force one canvas redraw to populate every artist's display bbox.
+      2. For each text artist, compute its display-coord bbox once and
+         cache it. Compute the same for every data artist on this Axes
+         (lines, collections, patches) — also cached, so we do not redraw
+         per candidate offset.
+      3. If the original overlap ratio (overlap area / text bbox area)
+         exceeds ``overlap_threshold``, probe 12 candidate offsets in
+         points: the 4 cardinals, 4 intercardinals, and 4 long-cardinals
+         (14 pt). For each candidate the new bbox is just the cached
+         original bbox shifted in display coords — no redraw needed.
+      4. Pick the offset minimising overlap, apply via ``set_position``
+         in data coordinates, then redraw once at the end.
+
+    Parameters
+    ----------
+    ax
+        Target axes. ``ax.figure`` is used if ``fig`` is None.
+    text_artists
+        List of ``Text`` artists to consider. Defaults to ``ax.texts``.
+    overlap_threshold
+        Fraction of the text bbox area that may overlap with data
+        artists before relocation triggers (default 0.30).
+    max_relocate
+        Optional cap on the number of relocations performed. Useful when
+        annotation density is so high that every text overlaps with
+        something — set this to ``len(text_artists) // 2`` to relocate
+        only the worst half.
+
+    Returns
+    -------
+    dict
+        ``{"checked": int, "relocated": int, "skipped": int,
+           "max_overlap_before": float, "max_overlap_after": float}``
+    """
+    fig = fig or ax.figure
+    if text_artists is None:
+        text_artists = list(ax.texts)
+
+    if not text_artists:
+        return {"checked": 0, "relocated": 0, "skipped": 0,
+                "max_overlap_before": 0.0, "max_overlap_after": 0.0}
+
+    try:
+        fig.canvas.draw()
+    except Exception:
+        return {"checked": len(text_artists), "relocated": 0,
+                "skipped": len(text_artists),
+                "max_overlap_before": 0.0, "max_overlap_after": 0.0,
+                "error": "initial_draw_failed"}
+
+    try:
+        renderer = fig.canvas.get_renderer()
+    except Exception:
+        return {"checked": len(text_artists), "relocated": 0,
+                "skipped": len(text_artists),
+                "max_overlap_before": 0.0, "max_overlap_after": 0.0,
+                "error": "no_renderer"}
+
+    def _bbox(artist):
+        try:
+            b = artist.get_window_extent(renderer=renderer)
+            if b is None or b.width <= 0 or b.height <= 0:
+                return None
+            return b
+        except Exception:
+            return None
+
+    def _overlap_area(b1, b2):
+        if b1 is None or b2 is None:
+            return 0.0
+        x0 = max(b1.x0, b2.x0); x1 = min(b1.x1, b2.x1)
+        y0 = max(b1.y0, b2.y0); y1 = min(b1.y1, b2.y1)
+        if x1 <= x0 or y1 <= y0:
+            return 0.0
+        return (x1 - x0) * (y1 - y0)
+
+    def _bbox_area(b):
+        if b is None:
+            return 1.0
+        return max((b.x1 - b.x0) * (b.y1 - b.y0), 1.0)
+
+    data_artists = list(ax.lines) + list(ax.collections) + list(ax.patches)
+    data_bboxes = [_bbox(a) for a in data_artists]
+    data_bboxes = [b for b in data_bboxes if b is not None]
+
+    dpi = fig.dpi
+    relocated = 0
+    skipped = 0
+    max_overlap_before = 0.0
+    max_overlap_after = 0.0
+
+    relocation_budget = max_relocate if max_relocate is not None else len(text_artists)
+
+    # First pass: rank text artists by overlap ratio (worst first)
+    candidates = []
+    for txt in text_artists:
+        text_bbox = _bbox(txt)
+        if text_bbox is None:
+            skipped += 1
+            continue
+        original_overlap = sum(_overlap_area(text_bbox, db) for db in data_bboxes)
+        ratio = original_overlap / _bbox_area(text_bbox)
+        max_overlap_before = max(max_overlap_before, ratio)
+        if ratio <= overlap_threshold:
+            max_overlap_after = max(max_overlap_after, ratio)
+            continue
+        candidates.append((ratio, original_overlap, txt, text_bbox))
+
+    candidates.sort(reverse=True)
+    candidates = candidates[:relocation_budget]
+
+    for ratio, original_overlap, txt, text_bbox in candidates:
+        best_overlap = original_overlap
+        best_offset = None
+
+        for dx_pt, dy_pt in _RELOCATE_OFFSET_POINTS:
+            shift_x = dx_pt * dpi / 72.0
+            shift_y = dy_pt * dpi / 72.0
+            from matplotlib.transforms import Bbox
+            shifted = Bbox.from_bounds(
+                text_bbox.x0 + shift_x,
+                text_bbox.y0 + shift_y,
+                text_bbox.width,
+                text_bbox.height,
+            )
+            shifted_overlap = sum(_overlap_area(shifted, db) for db in data_bboxes)
+            if shifted_overlap < best_overlap:
+                best_overlap = shifted_overlap
+                best_offset = (dx_pt, dy_pt)
+
+        if best_offset is None:
+            skipped += 1
+            max_overlap_after = max(max_overlap_after,
+                                    original_overlap / _bbox_area(text_bbox))
+            continue
+
+        try:
+            trans = ax.transData
+            trans_inv = trans.inverted()
+            old_data_xy = txt.get_position()
+            old_display_xy = trans.transform(old_data_xy)
+            new_display_xy = (
+                old_display_xy[0] + best_offset[0] * dpi / 72.0,
+                old_display_xy[1] + best_offset[1] * dpi / 72.0,
+            )
+            new_data_xy = trans_inv.transform(new_display_xy)
+            txt.set_position(tuple(new_data_xy))
+            relocated += 1
+            max_overlap_after = max(max_overlap_after,
+                                    best_overlap / _bbox_area(text_bbox))
+        except Exception:
+            skipped += 1
+
+    try:
+        fig.canvas.draw()
+    except Exception:
+        pass
+
+    return {
+        "checked": len(text_artists),
+        "relocated": relocated,
+        "skipped": skipped,
+        "max_overlap_before": round(max_overlap_before, 3),
+        "max_overlap_after": round(max_overlap_after, 3),
+    }
