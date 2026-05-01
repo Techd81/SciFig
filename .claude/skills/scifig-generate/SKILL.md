@@ -197,7 +197,7 @@ Blocking agent findings must route back to the owning phase before advancing. Ne
 15. Prefer vector export and generate source-data friendly artifacts for quantitative panels.
 16. If domain inference is weak, fall back to general rules instead of overfitting to a guessed specialty; however, explicit AI/ML/computer-science signals (`model`, `algorithm`, RF, XGBoost, SHAP, train/test metrics, AUC/F1/RMSE/R2, residuals) are strong domain evidence and must route to the `computer_ai_ml` template packages before biomedical defaults.
 17. If statistical assumptions are uncertain, downgrade to a conservative or descriptive choice and explain why.
-18. If rendered QA reports overlap, cross-panel title/table/text collision, metric-table overlap with bar/rectangle data marks, negative axes text without a reserved slot, poster-scale font sizes, blank/tiny output, missing `legendContractEnforced`, missing `layoutContractEnforced`, any remaining in-axes legend, too few visual enhancements, missing template/reference visual grammar motifs, missing in-plot explanatory labels, non-editable vector text, or missing formats, return to Phase 3 or Phase 2 before declaring completion.
+18. If rendered QA reports overlap, cross-panel title/table/text collision, colorbar overlap with any panel layout box, metric-table overlap with bar/rectangle data marks, negative axes text without a reserved slot, poster-scale font sizes, blank/tiny output, missing `legendContractEnforced`, missing `layoutContractEnforced`, any remaining in-axes legend, too few visual enhancements, missing template/reference visual grammar motifs, missing in-plot explanatory labels, non-editable vector text, or missing formats, return to Phase 3 or Phase 2 before declaring completion.
 19. Use `specs/workflow-policies.md` for thresholds and budgets; do not add new magic numbers in phase logic without naming the policy.
 
 ## Input Processing
@@ -256,7 +256,7 @@ Keep exactly one active phase. Expand the active phase into concrete sub-tasks, 
 - Before Phase 3, ensure the panel blueprint and palette plan are explicit.
 - Before Phase 3, resolve blocking chart/stat/layout/palette agent findings.
 - Before Phase 4, ensure code generation includes source-data, render-QA, and metadata hooks.
-- Before completion, require `renderQa.hardFail == false`, `legendContractEnforced == true`, `layoutContractEnforced == true`, `legendOutsidePlotArea == true`, `axisLegendRemainingCount == 0`, `layoutContractFailures == []`, `metricTableDataOverlapCount == 0`, metric-table relocation/suppression/fallback counts recorded when used, `legendModeUsed in ["bottom_center", "none"]`, exactly one rounded-frame shared bottom-center legend when a legend exists, and enough data-derived visual content to satisfy `visualContentPlan.minTotalEnhancements` and `visualContentPlan.minInPlotLabelsPerFigure`.
+- Before completion, require `renderQa.hardFail == false`, `legendContractEnforced == true`, `layoutContractEnforced == true`, `legendOutsidePlotArea == true`, `axisLegendRemainingCount == 0`, `layoutContractFailures == []`, `colorbarPanelOverlapCount == 0`, `metricTableDataOverlapCount == 0`, metric-table relocation/suppression/fallback counts recorded when used, `legendModeUsed in ["bottom_center", "none"]`, exactly one rounded-frame shared bottom-center legend when a legend exists, and enough data-derived visual content to satisfy `visualContentPlan.minTotalEnhancements` and `visualContentPlan.minInPlotLabelsPerFigure`.
 
 ## Related Commands
 

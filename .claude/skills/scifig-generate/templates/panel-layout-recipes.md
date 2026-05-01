@@ -99,7 +99,7 @@ Reusable layout blueprints for multi-panel scientific figures.
 - Panel labels (A/B/C/D) at `(-0.12, 1.05)` in axes coordinates, bold, 8pt
 - Shared y-axis: align ticks across panels in same row
 - Shared x-axis: align ticks across panels in same column
-- Colorbar: `shrink=0.6`, positioned right of heatmap panels
+- Colorbar: `shrink=0.6`, positioned in a reserved non-panel slot; Phase 4 fails if a colorbar overlaps any panel layout box.
 - Legend: treat as a figure-level layout element, never as a panel annotation. If panels share group, color, marker, or line semantics, keep one shared rounded-frame legend at figure bottom center, outside every plotting area and below the panels. Outside-right, top-center, and in-axes legends are forbidden.
 - Legend collision policy: never use `loc="best"` or any in-axes legend for publication output. If space is tight, adjust legend columns, shorten labels, reduce handle/text spacing, increase figure margins, or reflow panels before allowing the legend to overlap curves, bars, points, error bars, confidence intervals, grids, or heatmap cells.
 
@@ -148,8 +148,8 @@ fig.legend(handles, labels, loc="lower center", ncol=min(len(labels), 4),
 ## Shared Colorbar Pattern
 
 ```python
-# After heatmap, extract mappable for colorbar
-cbar = fig.colorbar(im, ax=[ax_a, ax_b], shrink=0.6, pad=0.02)
+# After heatmap, extract mappable for colorbar in reserved margin space.
+cbar = fig.colorbar(im, ax=[ax_a, ax_b], shrink=0.6, pad=0.06)
 cbar.set_label("Value", fontsize=5)
 ```
 

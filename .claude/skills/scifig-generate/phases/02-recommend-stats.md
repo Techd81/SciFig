@@ -304,7 +304,7 @@ def recommend_chart_bundle(dataProfile, workflowPreferences):
         return "line", ["grouped_bar", "lollipop_horizontal"]
     if has_aggregate_classifier_metrics:
         return "grouped_bar", ["line", "lollipop_horizontal"]
-    if has_rf_classifier_report and "score" in roles and "label" in roles:
+    if has_rf_classifier_report and has_classifier_validation_board:
         return "rf_classifier_report_board", ["classifier_validation_board", "lollipop_horizontal", "dotplot"]
     if has_classifier_validation_board and "score" in roles and "label" in roles:
         return "classifier_validation_board", ["roc", "pr_curve", "calibration", "confusion_matrix"]

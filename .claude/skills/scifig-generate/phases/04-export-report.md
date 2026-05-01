@@ -121,6 +121,8 @@ render_qa = {
     "layoutContractEnforced": chartPlan.get("crowdingPlan", {}).get("layoutContractEnforced", False),
     "layoutContractFailures": chartPlan.get("crowdingPlan", {}).get("layoutContractFailures", []),
     "crossPanelOverlapIssues": chartPlan.get("crowdingPlan", {}).get("crossPanelOverlapIssues", []),
+    "colorbarPanelOverlapIssues": chartPlan.get("crowdingPlan", {}).get("colorbarPanelOverlapIssues", []),
+    "colorbarPanelOverlapCount": chartPlan.get("crowdingPlan", {}).get("colorbarPanelOverlapCount", 0),
     "metricTableDataOverlapIssues": chartPlan.get("crowdingPlan", {}).get("metricTableDataOverlapIssues", []),
     "metricTableDataOverlapCount": chartPlan.get("crowdingPlan", {}).get("metricTableDataOverlapCount", 0),
     "negativeAxesTextCount": chartPlan.get("crowdingPlan", {}).get("negativeAxesTextCount", 0),
@@ -194,6 +196,9 @@ if render_qa["layoutContractFailures"]:
 
 if render_qa["crossPanelOverlapIssues"]:
     render_qa["overlapFailures"].append("cross_panel_text_or_table_overlap")
+
+if render_qa["colorbarPanelOverlapCount"] > 0:
+    render_qa["overlapFailures"].append("colorbar_panel_overlap")
 
 if render_qa["metricTableDataOverlapCount"] > 0:
     render_qa["overlapFailures"].append("metric_table_data_overlap")
@@ -277,6 +282,7 @@ Hard failures:
 - generated code saves a figure without `enforce_figure_legend_contract(...)`
 - `legendContractEnforced` is false or `legendContractFailures` is non-empty
 - `layoutContractEnforced` is false or `layoutContractFailures` is non-empty
+- `colorbarPanelOverlapCount > 0`
 - `metricTableDataOverlapCount > 0` after helper relocation attempts
 - risk tables, footnotes, or outside summaries are drawn with negative axes coordinates instead of a reserved GridSpec/subfigure slot
 - generated typography is poster-scale (`font.size >= 12`, `fontsize >= 13`, or panel labels above 12 pt)

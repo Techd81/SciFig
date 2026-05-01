@@ -2210,6 +2210,28 @@ def _metric_table_data_overlap_issues(fig, axes, renderer):
     return issues
 
 
+def _colorbar_panel_overlap_issues(fig, axes, renderer):
+    panel_boxes = {pid: _axis_layout_bbox(ax, renderer) for pid, ax in axes.items()}
+    issues = []
+    for colorbar_index, colorbar_ax in enumerate(get_non_panel_axes(fig, axes)):
+        if not hasattr(colorbar_ax, "_colorbar"):
+            continue
+        if not getattr(colorbar_ax, "get_visible", lambda: True)():
+            continue
+        try:
+            colorbar_box = _axis_layout_bbox(colorbar_ax, renderer)
+        except Exception:
+            continue
+        for panel_id, panel_box in panel_boxes.items():
+            if colorbar_box.overlaps(panel_box):
+                issues.append({
+                    "element": "colorbar",
+                    "colorbarIndex": colorbar_index,
+                    "conflict_panel": panel_id,
+                })
+    return issues
+
+
 def audit_figure_layout_contract(fig, axes=None, chartPlan=None, journalProfile=None, strict=False):
     """Check final multi-panel layout for cross-panel text, off-canvas text, and poster-scale typography."""
     axes_map = normalize_axes_map(fig, axes)
@@ -2233,6 +2255,7 @@ def audit_figure_layout_contract(fig, axes=None, chartPlan=None, journalProfile=
     oversized_text = []
     negative_axes_text = []
     metric_table_data_overlaps = _metric_table_data_overlap_issues(fig, axes_map, renderer)
+    colorbar_panel_overlaps = _colorbar_panel_overlap_issues(fig, axes_map, renderer)
 
     for panel_id, artist in _iter_layout_artists(axes_map):
         try:
@@ -2284,6 +2307,8 @@ def audit_figure_layout_contract(fig, axes=None, chartPlan=None, journalProfile=
         failures.append("negative_axes_text_without_reserved_slot")
     if metric_table_data_overlaps:
         failures.append("metric_table_data_overlap")
+    if colorbar_panel_overlaps:
+        failures.append("colorbar_panel_overlap")
 
     report = {
         "layoutContractEnforced": True,
@@ -2291,6 +2316,8 @@ def audit_figure_layout_contract(fig, axes=None, chartPlan=None, journalProfile=
         "crossPanelOverlapIssues": cross_panel_overlaps,
         "metricTableDataOverlapIssues": metric_table_data_overlaps,
         "metricTableDataOverlapCount": len(metric_table_data_overlaps),
+        "colorbarPanelOverlapIssues": colorbar_panel_overlaps,
+        "colorbarPanelOverlapCount": len(colorbar_panel_overlaps),
         "offCanvasArtistCount": len(off_canvas_artists),
         "offCanvasArtists": off_canvas_artists,
         "oversizedTextCount": len(oversized_text),
@@ -2588,15 +2615,14 @@ def apply_crowding_management(fig, axes, chartPlan, journalProfile):
         "forbidOutsideRightLegend": True,
     }
     shared_colorbar_applied = False
+    shared_colorbar_mappable = None
     if panelBlueprint.get("sharedColorbar", False):
         remove_extra_axes(fig, axes)
-        mappable = None
         for ax in axes.values():
-            mappable = find_first_mappable(ax)
-            if mappable is not None:
+            shared_colorbar_mappable = find_first_mappable(ax)
+            if shared_colorbar_mappable is not None:
                 break
-        if mappable is not None:
-            fig.colorbar(mappable, ax=list(axes.values()), shrink=0.6, pad=0.02)
+        if shared_colorbar_mappable is not None:
             shared_colorbar_applied = True
             visual_plan = chartPlan.setdefault("visualContentPlan", {})
             _visual_count(visual_plan, "colorbarSlotCount")
@@ -2635,6 +2661,8 @@ def apply_crowding_management(fig, axes, chartPlan, journalProfile):
     apply_subplot_margins(fig, legend_mode_used, has_colorbar=shared_colorbar_applied, legend=legend)
     if chartPlan.get("visualContentPlan", {}).get("outsideLayoutElements"):
         fig.subplots_adjust(right=min(fig.subplotpars.right, 0.78))
+    if shared_colorbar_applied and shared_colorbar_mappable is not None:
+        fig.colorbar(shared_colorbar_mappable, ax=list(axes.values()), shrink=0.6, pad=0.06)
 
     final_legend_overlap = False
     if legend is not None:
