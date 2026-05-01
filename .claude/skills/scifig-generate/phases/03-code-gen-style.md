@@ -849,6 +849,13 @@ multipanel_source = multipanel_source.replace("```python", "", 1).rsplit("```", 
 template_mining_helpers_source = Path(".claude/skills/scifig-generate/phases/code-gen/template_mining_helpers.py").read_text(encoding="utf-8").strip()
 template_mining_helpers_source = template_mining_helpers_source.replace("```python", "", 1).rsplit("```", 1)[0].strip()
 
+# Resolve absolute path to the bundled-fonts directory. Passed into the
+# generated script as an env var so template_mining_helpers._resolve_fonts_dir
+# can locate user-supplied TTFs at runtime — without this, the helper code
+# embedded via exec() loses __file__ context and cannot find the fonts.
+_FONTS_DIR_PATH = Path(".claude/skills/scifig-generate/assets/fonts").resolve()
+fonts_dir_str = str(_FONTS_DIR_PATH) if _FONTS_DIR_PATH.is_dir() else ""
+
 # Build generator call code
 # Check if multi-panel composition is needed
 panels = chartPlan.get("panelBlueprint", {}).get("panels", [])
@@ -918,6 +925,7 @@ _GENERATOR_FUNCTIONS = _build_generator_code(_needed_gens)
 
 full_code_string = f"""import numpy as np
 import pandas as pd
+import os
 import re
 import json
 import matplotlib
@@ -928,6 +936,14 @@ from pathlib import Path
 
 # Journal profile: {journalProfile['name']}
 MM = 1/25.4
+
+# Bundled-font directory (set by Phase 3 at build time so the embedded
+# template_mining_helpers source can locate assets/fonts/ via env var).
+# Empty string means the directory does not exist on the build host; the
+# helper falls back to other resolution strategies.
+_SCIFIG_FONTS_DIR = r"{fonts_dir_str}"
+if _SCIFIG_FONTS_DIR and Path(_SCIFIG_FONTS_DIR).is_dir():
+    os.environ.setdefault("SCIFIG_FONTS_DIR", _SCIFIG_FONTS_DIR)
 
 # rcParams (publication quality)
 plt.rcParams.update({repr(rcParams)})

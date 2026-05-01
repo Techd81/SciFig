@@ -24,7 +24,7 @@ import numpy as np
 import pandas as pd
 
 plt.rcParams.update({
-    'font.family':      ['Times New Roman', 'Arial'],
+    'font.family':      ['Times New Roman', 'Arial', 'DejaVu Sans'],
     'mathtext.fontset': 'stix',
     'font.size':        6.5,
     'axes.linewidth':   1.5,

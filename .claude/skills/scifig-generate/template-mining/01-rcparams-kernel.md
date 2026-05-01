@@ -43,7 +43,7 @@ Source cases: case Nature radar, GAM scatter+residual, forest plot, mirror radia
 
 ```python
 plt.rcParams.update({
-    'font.family':      ['Times New Roman', 'Arial', 'SimHei'],
+    'font.family':      ['Times New Roman', 'Arial', 'SimHei', 'DejaVu Sans'],
     'mathtext.fontset': 'stix',
     'font.size':        7.5,
     'axes.linewidth':   0.75,

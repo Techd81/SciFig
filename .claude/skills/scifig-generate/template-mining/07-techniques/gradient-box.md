@@ -21,7 +21,7 @@ import matplotlib.colors as mc
 import numpy as np
 
 plt.rcParams.update({
-    'font.family':      ['Arial', 'Times New Roman'],
+    'font.family':      ['Arial', 'Times New Roman', 'DejaVu Sans'],
     'mathtext.fontset': 'stix',
     'font.size':        6.5,
     'axes.linewidth':   1.2,

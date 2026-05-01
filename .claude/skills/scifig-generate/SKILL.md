@@ -71,6 +71,19 @@ fig, axes, palette = bootstrap_chart(arc="hero", panel_count=1,
                                      journalProfile=journalProfile)
 ```
 
+## Bundled Fonts (assets/fonts/)
+
+Templates anchor `font.family` to commercial typefaces (Arial / Helvetica / Times New Roman / SimHei) that the skill **cannot legally redistribute**. On Linux servers, Docker containers, and clean macOS installs these fonts are typically absent, so matplotlib falls back to DejaVu Sans, prints a `findfont` warning, and produces figures whose metrics no longer match the journal profile.
+
+**Resolution**: drop legally-obtained `*.ttf` / `*.otf` / `*.ttc` files into [`assets/fonts/`](assets/fonts/README.md). The first call to `apply_journal_kernel(...)` scans that directory and registers every font with matplotlib's `font_manager` (idempotent across calls; safe under Phase 3's `exec()` runtime embed).
+
+- **What to drop in**: `Arial.ttf`, `Times-New-Roman.ttf`, `Helvetica.ttf`, `SimHei.ttf` — or their open metric-compatible replacements (Liberation Sans, Liberation Serif, Noto Sans SC, Carlito).
+- **Resolution priority** for finding the directory: `SCIFIG_FONTS_DIR` env var → injected `__SCIFIG_SKILL_ROOT__` global (set by Phase 3 runtime) → `__file__`-relative (skill_root/assets/fonts/) → cwd-relative.
+- **Fallback discipline**: every `font.family` chain in the skill ends in `DejaVu Sans` (matplotlib's bundled default) so figures still render even when no user fonts are present — only the *visual fidelity* to the journal profile is degraded.
+- **Licensing**: `*.ttf` / `*.otf` / `*.ttc` files are gitignored at the project root. The skill ships zero font payloads to keep the repo license-clean.
+
+See `assets/fonts/README.md` for licensing notes, troubleshooting (clearing matplotlib's font cache, CJK glyph fallback), and the full list of metric-compatible open replacements.
+
 ## Interactive Preference Collection
 
 Collect workflow preferences before dispatching to phases, but treat data availability, file-path validation, and mode selection as separate gates.

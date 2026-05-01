@@ -149,6 +149,17 @@ skills/
 !.claude/skills/
 !.claude/skills/**
 
+# Bundled font payloads — user-supplied, NEVER commit
+# Most journal-anchor typefaces (Arial, Helvetica, Times New Roman, SimHei) are
+# commercial fonts that cannot be legally redistributed; keep them out of the
+# repository even when dropped into the skill's assets/fonts/ directory.
+.claude/skills/*/assets/fonts/*.ttf
+.claude/skills/*/assets/fonts/*.otf
+.claude/skills/*/assets/fonts/*.ttc
+.claude/skills/*/assets/fonts/*.TTF
+.claude/skills/*/assets/fonts/*.OTF
+.claude/skills/*/assets/fonts/*.TTC
+
 # Local settings
 .claude/settings.local.json
 

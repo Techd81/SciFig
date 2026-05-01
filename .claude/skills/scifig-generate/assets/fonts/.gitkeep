@@ -1,0 +1,2 @@
+# Keep the assets/fonts/ directory in git even when no fonts are bundled.
+# See README.md in this directory for usage.

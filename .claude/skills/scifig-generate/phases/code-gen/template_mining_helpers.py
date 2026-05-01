@@ -34,15 +34,143 @@ Reference docs:
 """
 from __future__ import annotations
 
+import os
+import warnings
+from pathlib import Path
 from typing import Iterable, Sequence
 
 import matplotlib as mpl
 import matplotlib.colors as mc
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib import font_manager
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from matplotlib.gridspec import GridSpec
+
+
+# ============================================================================
+# 0. BUNDLED FONT REGISTRATION  (assets/fonts/)
+# ============================================================================
+#
+# Templates anchor `font.family` to commercial typefaces (Arial, Helvetica,
+# Times New Roman, SimHei) that the skill cannot legally redistribute. Linux
+# servers / Docker containers / clean macOS installs typically lack these
+# fonts, so matplotlib silently falls back to DejaVu Sans and emits a
+# `findfont` warning that some environments treat as an error.
+#
+# Resolution: an opt-in `assets/fonts/` directory at the skill root holds
+# user-supplied TTF/OTF/TTC files. `_register_bundled_fonts()` scans the
+# directory at the top of `apply_journal_kernel()` and registers every font
+# with matplotlib's font_manager. Idempotent across calls; safe under
+# `exec()` embedding (Phase 3 sets SCIFIG_FONTS_DIR before exec'ing this
+# source).
+
+_FONT_REGISTRATION_DONE: bool = False
+_FONT_REGISTRATION_RESULT: dict | None = None
+
+
+def _resolve_fonts_dir() -> Path | None:
+    """Resolve the assets/fonts directory across import / exec / cwd contexts.
+
+    Strategy order (first existing directory wins):
+      1. ``SCIFIG_FONTS_DIR`` env var — explicit override; Phase 3 sets this.
+      2. ``__SCIFIG_SKILL_ROOT__`` global — injected into namespace before
+         ``exec(template_mining_helpers_source)`` in generated scripts.
+      3. ``__file__``-relative — three levels up from this module:
+         ``phases/code-gen/template_mining_helpers.py`` ->
+         ``<skill_root>/assets/fonts``. Works for direct imports.
+      4. ``Path.cwd() / "assets/fonts"`` — last-resort for ad-hoc scripts.
+
+    Returns ``None`` when no candidate directory exists; callers must treat
+    this as a no-op rather than an error (font registration is opt-in).
+    """
+    env_dir = os.environ.get("SCIFIG_FONTS_DIR")
+    if env_dir:
+        candidate = Path(env_dir).expanduser()
+        if candidate.is_dir():
+            return candidate.resolve()
+
+    injected_root = globals().get("__SCIFIG_SKILL_ROOT__")
+    if injected_root:
+        candidate = Path(str(injected_root)).expanduser() / "assets" / "fonts"
+        if candidate.is_dir():
+            return candidate.resolve()
+
+    try:
+        here = Path(__file__).resolve()
+        candidate = here.parent.parent.parent / "assets" / "fonts"
+        if candidate.is_dir():
+            return candidate.resolve()
+    except NameError:
+        # __file__ is undefined when this source is exec'd into a foreign
+        # namespace (Phase 3 runtime path); fall through to the cwd probe.
+        pass
+
+    candidate = Path.cwd() / "assets" / "fonts"
+    if candidate.is_dir():
+        return candidate.resolve()
+
+    return None
+
+
+def _register_bundled_fonts(force: bool = False) -> dict:
+    """Register every TTF/OTF/TTC under ``assets/fonts/`` with matplotlib.
+
+    Behavior:
+      * Idempotent — repeated calls return the cached result unchanged
+        unless ``force=True``.
+      * Safe — every error is caught and recorded; never propagates into
+        ``apply_journal_kernel()``.
+      * Resilient — if no fonts directory exists or it is empty, returns a
+        no-op result and the caller proceeds normally (matplotlib's
+        DejaVu Sans fallback still works).
+
+    Returns a diagnostic dict::
+
+        {
+            "fonts_dir":  "<absolute path or None>",
+            "registered": [<filenames added to fontManager>],
+            "errors":     [<"<filename>: <ExcType>: <msg>">],
+            "cached":     bool,  # True if this call returned a cached result
+        }
+    """
+    global _FONT_REGISTRATION_DONE, _FONT_REGISTRATION_RESULT
+
+    if _FONT_REGISTRATION_DONE and not force and _FONT_REGISTRATION_RESULT is not None:
+        cached = dict(_FONT_REGISTRATION_RESULT)
+        cached["cached"] = True
+        return cached
+
+    fonts_dir = _resolve_fonts_dir()
+    result: dict = {
+        "fonts_dir":  str(fonts_dir) if fonts_dir else None,
+        "registered": [],
+        "errors":     [],
+        "cached":     False,
+    }
+
+    if fonts_dir is None:
+        _FONT_REGISTRATION_DONE = True
+        _FONT_REGISTRATION_RESULT = result
+        return result
+
+    seen: set[Path] = set()
+    for pattern in ("*.ttf", "*.otf", "*.ttc", "*.TTF", "*.OTF", "*.TTC"):
+        for path in fonts_dir.glob(pattern):
+            if path.is_file():
+                seen.add(path.resolve())
+
+    for path in sorted(seen):
+        try:
+            font_manager.fontManager.addfont(str(path))
+            result["registered"].append(path.name)
+        except Exception as exc:  # noqa: BLE001 — catalog errors, never raise
+            result["errors"].append(f"{path.name}: {type(exc).__name__}: {exc}")
+
+    _FONT_REGISTRATION_DONE = True
+    _FONT_REGISTRATION_RESULT = result
+    return result
 
 
 # ============================================================================
@@ -85,7 +213,23 @@ def apply_journal_kernel(variant: str = "default",
       2. journalProfile fields take precedence for font_family, font_size_body_pt,
          axis_linewidth_pt.
       3. Always keep tick.direction='in'.
+      4. Bundled fonts under ``assets/fonts/`` are registered once at the top
+         of the first call (idempotent); registration failures never block
+         kernel application.
     """
+    # Register bundled fonts BEFORE rcParams.update so that user-supplied
+    # Arial/Helvetica/Times TTFs are present when matplotlib resolves the
+    # font.family fallback chain. Idempotent and exception-safe.
+    try:
+        _register_bundled_fonts()
+    except Exception as _font_err:  # noqa: BLE001 — never block kernel apply
+        warnings.warn(
+            f"_register_bundled_fonts failed: "
+            f"{type(_font_err).__name__}: {_font_err}; "
+            f"continuing with system fonts only.",
+            stacklevel=2,
+        )
+
     if variant not in _VARIANTS:
         raise KeyError(f"unknown kernel variant {variant!r}; "
                        f"choices: {sorted(_VARIANTS)}")
