@@ -912,6 +912,7 @@ codeReview = {
     "legendContractFinalizerPresent": "legend_contract_report = enforce_figure_legend_contract(" in full_code_string,
     "legendContractMetadataPresent": "legendContractEnforced" in full_code_string,
     "layoutContractMetadataPresent": "layoutContractFailures" in full_code_string and "audit_figure_layout_contract" in full_code_string,
+    "colorbarContractMetadataPresent": "colorbarReflowCount" in full_code_string and "colorbarPanelOverlapCount" in full_code_string,
     "embeddedHelperSourcePresent": "# Embedded helper source from the skill package" in full_code_string and "exec(aaa, globals())" in full_code_string,
     "singleLegendContractDefinition": full_code_string.count("def enforce_figure_legend_contract(") == 1,
     "negativeLegendAnchorScan": re.search(r"bbox_to_anchor\s*=\s*\([^)]*-\d", full_code_string) is None,
@@ -937,6 +938,8 @@ if "legendContractEnforced" not in full_code_string:
     codeReview["blockingFindings"].append("missing_legend_contract_metadata")
 if "layoutContractFailures" not in full_code_string or "audit_figure_layout_contract" not in full_code_string:
     codeReview["blockingFindings"].append("missing_layout_contract_metadata")
+if "colorbarReflowCount" not in full_code_string or "colorbarPanelOverlapCount" not in full_code_string:
+    codeReview["blockingFindings"].append("missing_colorbar_reflow_gate")
 if "# Embedded helper source from the skill package" not in full_code_string or "exec(aaa, globals())" not in full_code_string:
     codeReview["blockingFindings"].append("missing_embedded_skill_helper_source")
 if full_code_string.count("def enforce_figure_legend_contract(") != 1:

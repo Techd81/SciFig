@@ -86,7 +86,7 @@ python -m pytest -q
 git diff --check
 ```
 
-Add targeted tests or smoke assertions for every promoted helper, generator, or layout path. Render QA failures are blockers, not caveats. If smoke artifacts are generated, confirm they remain ignored before commit.
+Add targeted tests or smoke assertions for every promoted helper, generator, or layout path. If a smoke lesson promotes a render-QA repair, add a pytest regression that first reproduces the bad rendered state and then proves the canonical helper fixes or rejects it. If a smoke lesson promotes a router decision, add a Phase 2 snippet test for the weakest schema that should still route correctly. Render QA failures are blockers, not caveats. If smoke artifacts are generated, confirm they remain ignored before commit.
 
 ### Step 5.8: Distillation Report And Commit
 
