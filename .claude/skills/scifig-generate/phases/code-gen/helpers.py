@@ -24,6 +24,7 @@ VISUAL_CONTENT_DEFAULTS = {
     "referenceMotifsRequired": True,
     "minReferenceMotifsPerFigure": 2,
     "useMetricTables": True,
+    "useMetricTableFallbackBox": True,
     "useDensityHalos": True,
     "useDensityColorEncoding": True,
     "useMarginalAxes": False,
@@ -244,6 +245,9 @@ def default_visual_content_plan():
         "statProvenance": [],
         "metricBoxCount": 0,
         "metricTableCount": 0,
+        "metricTableRelocatedCount": 0,
+        "metricTableSuppressedCount": 0,
+        "metricTableFallbackBoxCount": 0,
         "insetCount": 0,
         "referenceLineCount": 0,
         "densityHaloCount": 0,
@@ -1060,6 +1064,22 @@ def _metric_table_overlaps_data_marks(ax, table):
     return any(table_box.overlaps(patch_box) for patch_box in _metric_table_data_patch_bboxes(ax, renderer))
 
 
+def _add_metric_table_fallback_box(ax, clean_rows, visualPlan):
+    if not visualPlan.get("useMetricTableFallbackBox", True):
+        return None
+    lines = [f"{label}: {value}" for label, value in clean_rows[:visualPlan.get("maxInlineStats", 4)]]
+    artist = _add_metric_box(ax, lines, visualPlan)
+    if artist is None:
+        return None
+    _visual_count(visualPlan, "metricTableFallbackBoxCount")
+    visualPlan.setdefault("metricTableFallbackEvents", []).append({
+        "reason": "all_table_locations_overlap_data",
+        "rows": len(lines),
+    })
+    _record_motif(visualPlan, "prediction_metric_table_fallback_box")
+    return artist
+
+
 def _add_metric_table(ax, rows, visualPlan, loc="lower_right"):
     if not visualPlan.get("useMetricTables", True):
         return None
@@ -1119,7 +1139,7 @@ def _add_metric_table(ax, rows, visualPlan, loc="lower_right"):
     visualPlan.setdefault("metricTablePlacementAttempts", []).append(attempts)
     if selected_table is None:
         _visual_count(visualPlan, "metricTableSuppressedCount")
-        return None
+        return _add_metric_table_fallback_box(ax, clean, visualPlan)
     if selected_location != requested:
         _visual_count(visualPlan, "metricTableRelocatedCount")
         visualPlan.setdefault("metricTableRelocationEvents", []).append({
@@ -1886,6 +1906,7 @@ def apply_visual_content_pass(fig, axes, chartPlan, dataProfile, journalProfile,
         "metricTableCount": visualPlan.get("metricTableCount", 0),
         "metricTableRelocatedCount": visualPlan.get("metricTableRelocatedCount", 0),
         "metricTableSuppressedCount": visualPlan.get("metricTableSuppressedCount", 0),
+        "metricTableFallbackBoxCount": visualPlan.get("metricTableFallbackBoxCount", 0),
         "insetCount": visualPlan.get("insetCount", 0),
         "referenceLineCount": visualPlan.get("referenceLineCount", 0),
         "densityHaloCount": visualPlan.get("densityHaloCount", 0),

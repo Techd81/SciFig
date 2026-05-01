@@ -151,6 +151,7 @@ render_qa = {
     "metricTableCount": chartPlan.get("visualContentPlan", {}).get("metricTableCount", 0),
     "metricTableRelocatedCount": chartPlan.get("visualContentPlan", {}).get("metricTableRelocatedCount", 0),
     "metricTableSuppressedCount": chartPlan.get("visualContentPlan", {}).get("metricTableSuppressedCount", 0),
+    "metricTableFallbackBoxCount": chartPlan.get("visualContentPlan", {}).get("metricTableFallbackBoxCount", 0),
     "referenceLineCount": chartPlan.get("visualContentPlan", {}).get("referenceLineCount", 0),
     "densityHaloCount": chartPlan.get("visualContentPlan", {}).get("densityHaloCount", 0),
     "marginalAxesCount": chartPlan.get("visualContentPlan", {}).get("marginalAxesCount", 0),
