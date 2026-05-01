@@ -962,7 +962,15 @@ def gen_diverging_bar(df, dataProfile, chartPlan, rcParams, palette, col_map=Non
             color=bar_colors, edgecolor="white", linewidth=0.3)
     ax.set_yticks(y_pos)
     ax.set_yticklabels(df_sorted[group_col].values, fontsize=5)
-    ax.axvline(0, color="black", lw=0.6)
+    # Center divider — delegate to template_mining_helpers when reachable
+    canonical_zero_ref = globals().get("add_zero_reference")
+    if canonical_zero_ref is not None:
+        try:
+            canonical_zero_ref(ax, axis="x", color="black", lw=0.6, ls="-", zorder=1)
+        except Exception:
+            ax.axvline(0, color="black", lw=0.6)
+    else:
+        ax.axvline(0, color="black", lw=0.6)
     ax.set_xlabel(value_col)
     if standalone:
         apply_chart_polish(ax, "diverging_bar")
@@ -1005,11 +1013,30 @@ def gen_heatmap_symmetric(df, dataProfile, chartPlan, rcParams, palette, col_map
         fig, ax = plt.subplots(figsize=(89 * (1 / 25.4), 75 * (1 / 25.4)),
                            constrained_layout=True)
 
-    sns.heatmap(symmetric, ax=ax, cmap="vlag", center=0,
-                xticklabels=labels, yticklabels=labels,
-                linewidths=0.3, annot=symmetric.shape[0] <= 12,
-                fmt=".2f", annot_kws={"size": 4.5},
-                cbar_kws={"shrink": 0.6, "label": "Value"})
+    # Diverging norm centered at 0 — matches red_blue_correlation palette anchor
+    try:
+        from matplotlib.colors import TwoSlopeNorm
+        m_min = float(np.nanmin(symmetric))
+        m_max = float(np.nanmax(symmetric))
+        vmin = min(-1.0, m_min) if np.isfinite(m_min) else -1.0
+        vmax = max(1.0, m_max) if np.isfinite(m_max) else 1.0
+        if vmin >= 0.0:
+            vmin = -vmax if vmax > 0 else -1.0
+        if vmax <= 0.0:
+            vmax = -vmin if vmin < 0 else 1.0
+        norm = TwoSlopeNorm(vmin=vmin, vcenter=0.0, vmax=vmax)
+        sns.heatmap(symmetric, ax=ax, cmap="RdBu_r", norm=norm,
+                    xticklabels=labels, yticklabels=labels,
+                    linewidths=0.3, annot=symmetric.shape[0] <= 12,
+                    fmt=".2f", annot_kws={"size": 4.5},
+                    cbar_kws={"shrink": 0.6, "label": "Value"})
+    except Exception:
+        sns.heatmap(symmetric, ax=ax, cmap="RdBu_r", center=0,
+                    vmin=-1, vmax=1,
+                    xticklabels=labels, yticklabels=labels,
+                    linewidths=0.3, annot=symmetric.shape[0] <= 12,
+                    fmt=".2f", annot_kws={"size": 4.5},
+                    cbar_kws={"shrink": 0.6, "label": "Value"})
     ax.tick_params(labelsize=5)
     ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha="right")
     if standalone:
@@ -1463,7 +1490,15 @@ def gen_ma_plot(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=
     ax.scatter(np.log10(mean_vals[sig]), fc_vals[sig], s=13, c="#C8553D",
                alpha=0.8, edgecolors="white", linewidth=0.25,
                label=f"Changed ({int(sig.sum())})")
-    ax.axhline(0, color="black", lw=0.55)
+    # Zero baseline (logFC=0) — delegate to template_mining_helpers when reachable
+    canonical_zero_ref = globals().get("add_zero_reference")
+    if canonical_zero_ref is not None:
+        try:
+            canonical_zero_ref(ax, axis="y", color="black", lw=0.55, ls="-", zorder=1)
+        except Exception:
+            ax.axhline(0, color="black", lw=0.55)
+    else:
+        ax.axhline(0, color="black", lw=0.55)
     ax.axhline(1, color="#777777", lw=0.45, ls="--")
     ax.axhline(-1, color="#777777", lw=0.45, ls="--")
     ax.set_xlabel(f"log10({_display_col(mean_col, col_map)})")
@@ -1689,7 +1724,16 @@ def gen_qq(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=None)
     ax.scatter(expected, observed, s=9, alpha=0.65, color=palette.get("categorical", ["#1F4E79"])[0],
                edgecolors="white", linewidth=0.25)
     lim = max(expected.max(), observed.max()) * 1.05
-    ax.plot([0, lim], [0, lim], color="#333333", lw=0.6, ls="--")
+    # Q-Q reference diagonal — delegate to template_mining_helpers when reachable
+    canonical_diagonal = globals().get("add_perfect_fit_diagonal")
+    if canonical_diagonal is not None:
+        try:
+            canonical_diagonal(ax, np.asarray([0.0, lim]), np.asarray([0.0, lim]),
+                               color="#333333", lw=0.6, alpha=1.0)
+        except Exception:
+            ax.plot([0, lim], [0, lim], color="#333333", lw=0.6, ls="--")
+    else:
+        ax.plot([0, lim], [0, lim], color="#333333", lw=0.6, ls="--")
     ax.set_xlim(0, lim)
     ax.set_ylim(0, lim)
     ax.set_xlabel("Expected -log10(p)")

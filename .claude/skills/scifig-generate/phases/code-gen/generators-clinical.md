@@ -14,7 +14,13 @@ The following 8 generators cover clinical trial, sensitivity analysis, and compo
 
 
 def gen_caterpillar_plot(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=None):
-    """Caterpillar plot: ranked effects with confidence intervals, sorted by effect size."""
+    """Caterpillar plot: ranked effects with confidence intervals, sorted by effect size.
+
+    Operational layer (post-Phase A1): when template_mining_helpers is embedded,
+    this generator delegates the forest discipline (markers + asymmetric error bars +
+    reference line + per-row estimate(CI) annotation) to add_forest_panel using
+    linear scale and reference_line=0.0 (no-effect anchor).
+    """
     standalone = ax is None
     roles = dataProfile.get("semanticRoles", {})
     label_col = roles.get("label") or roles.get("group")
@@ -32,17 +38,36 @@ def gen_caterpillar_plot(df, dataProfile, chartPlan, rcParams, palette, col_map=
         fig, ax = plt.subplots(figsize=(89 * (1 / 25.4), max(40, len(df_sorted) * 8) * (1 / 25.4)),
                            constrained_layout=True)
 
-    y_pos = np.arange(len(df_sorted))
-    estimates = df_sorted[estimate_col].values
-
+    estimates = df_sorted[estimate_col].astype(float).values
     if ci_low_col and ci_high_col:
-        ci_low = df_sorted[ci_low_col].values
-        ci_high = df_sorted[ci_high_col].values
+        ci_low = df_sorted[ci_low_col].astype(float).values
+        ci_high = df_sorted[ci_high_col].astype(float).values
     else:
-        se = df_sorted[roles.get("se", estimate_col)].values if roles.get("se") else estimates * 0.1
+        se_col = roles.get("se")
+        se = df_sorted[se_col].astype(float).values if se_col and se_col in df_sorted.columns else estimates * 0.1
         ci_low = estimates - 1.96 * se
         ci_high = estimates + 1.96 * se
+    labels = df_sorted[label_col].astype(str).tolist()
 
+    canonical_forest = globals().get("add_forest_panel")
+    if canonical_forest is not None:
+        try:
+            canonical_forest(ax, estimates, ci_low, ci_high, labels,
+                             color="#0072B2",
+                             reference_line=0.0,
+                             log_scale=False,
+                             show_yticklabels=True,
+                             annotation_format="{hr:.3g} ({lo:.3g}, {hi:.3g})",
+                             title=None)
+            ax.set_xlabel("Effect size (95% CI)")
+            if standalone:
+                apply_chart_polish(ax, "caterpillar_plot")
+            return ax
+        except Exception:
+            pass  # Fall through to inline implementation
+
+    # Inline fallback when add_forest_panel is not embedded
+    y_pos = np.arange(len(df_sorted))
     ax.errorbar(estimates, y_pos,
                 xerr=[estimates - ci_low, ci_high - estimates],
                 fmt="o", color="#0072B2", markersize=4, capsize=3,
@@ -50,7 +75,7 @@ def gen_caterpillar_plot(df, dataProfile, chartPlan, rcParams, palette, col_map=
 
     ax.axvline(0, color="#999999", lw=0.5, ls="--", alpha=0.7)
     ax.set_yticks(y_pos)
-    ax.set_yticklabels(df_sorted[label_col].values, fontsize=5)
+    ax.set_yticklabels(labels, fontsize=5)
     ax.set_xlabel("Effect size (95% CI)")
     ax.invert_yaxis()
     if standalone:
@@ -171,7 +196,17 @@ def gen_decision_curve(df, dataProfile, chartPlan, rcParams, palette, col_map=No
     prevalence = df[benefit_col].mean()
     treat_all = prevalence - (1 - prevalence) * thresholds / (1 - thresholds + 1e-10)
     ax.plot(thresholds, treat_all, color="#999999", lw=0.5, ls="--", label="Treat all")
-    ax.axhline(0, color="#999999", lw=0.5, ls=":", label="Treat none")
+    # "Treat none" reference at y=0 — delegate to template_mining_helpers when reachable
+    canonical_zero_ref = globals().get("add_zero_reference")
+    if canonical_zero_ref is not None:
+        try:
+            canonical_zero_ref(ax, axis="y", color="#999999", lw=0.5, ls=":", zorder=5)
+            # Register legend entry via proxy (canonical helper has no label kwarg)
+            ax.plot([], [], color="#999999", lw=0.5, ls=":", label="Treat none")
+        except Exception:
+            ax.axhline(0, color="#999999", lw=0.5, ls=":", label="Treat none")
+    else:
+        ax.axhline(0, color="#999999", lw=0.5, ls=":", label="Treat none")
 
     ax.set_xlabel("Threshold probability")
     ax.set_ylabel("Net benefit")
@@ -739,7 +774,15 @@ def gen_lollipop_horizontal(df, dataProfile, chartPlan, rcParams, palette, col_m
         max_val = max(float(np.nanmax(np.abs(values))) if len(values) else 1.0, 1e-12)
         cmap = plt.get_cmap("Blues")
         colors = [cmap(0.35 + 0.55 * (abs(v) / max_val)) for v in values]
-        ax.axvline(0, color="#888888", linestyle="--", linewidth=0.65, zorder=0)
+        # SHAP signed-value zero divider — delegate to template_mining_helpers when reachable
+        canonical_zero_ref = globals().get("add_zero_reference")
+        if canonical_zero_ref is not None:
+            try:
+                canonical_zero_ref(ax, axis="x", color="#888888", lw=0.65, ls="--", zorder=0)
+            except Exception:
+                ax.axvline(0, color="#888888", linestyle="--", linewidth=0.65, zorder=0)
+        else:
+            ax.axvline(0, color="#888888", linestyle="--", linewidth=0.65, zorder=0)
         ax.hlines(y_pos, 0, values, color="#A7BBD6", linewidth=1.0, zorder=1)
         ax.scatter(values, list(y_pos), color=colors, s=34, zorder=3,
                    linewidth=0.35, edgecolors="white")

@@ -577,6 +577,16 @@ def gen_residual_vs_fitted(df, dataProfile, chartPlan, rcParams, palette, col_ma
         fig, ax = plt.subplots(figsize=(89 * (1 / 25.4), 60 * (1 / 25.4)),
                            constrained_layout=True)
 
+    # Apply L0 scatter-regression floor — delegate to template_mining_helpers
+    # when reachable. Sets up light dashed grid + despine BEFORE scatter so the
+    # grid sits at zorder=0 and residual-vs-fitted reads as a regression diagnostic.
+    canonical_floor = globals().get("apply_scatter_regression_floor")
+    if canonical_floor is not None:
+        try:
+            canonical_floor(ax, grid_axis="both")
+        except Exception:
+            pass
+
     plot_df = working_df[[fitted_col, resid_col] + ([split_col] if split_col and split_col in working_df.columns else [])].copy()
     plot_df[fitted_col] = pd.to_numeric(plot_df[fitted_col], errors="coerce")
     plot_df[resid_col] = pd.to_numeric(plot_df[resid_col], errors="coerce")
@@ -601,7 +611,15 @@ def gen_residual_vs_fitted(df, dataProfile, chartPlan, rcParams, palette, col_ma
                 facecolors="none", edgecolors=color, linewidth=0.75,
                 alpha=0.88, label=label, zorder=3,
             )
-        ax.axhline(0, color="#B00000", linewidth=0.85, linestyle="--", zorder=2)
+        # Zero-reference line — delegate to template_mining_helpers when reachable
+        canonical_zero_ref = globals().get("add_zero_reference")
+        if canonical_zero_ref is not None:
+            try:
+                canonical_zero_ref(ax, axis="y", color="#B00000", lw=0.85, ls="--", zorder=2)
+            except Exception:
+                ax.axhline(0, color="#B00000", linewidth=0.85, linestyle="--", zorder=2)
+        else:
+            ax.axhline(0, color="#B00000", linewidth=0.85, linestyle="--", zorder=2)
         ax.yaxis.grid(True, linestyle="--", linewidth=0.3, alpha=0.28, zorder=0)
         bias = float(plot_df[resid_col].mean()) if len(plot_df) else 0.0
         spread = float(plot_df[resid_col].std()) if len(plot_df) > 1 else 0.0
@@ -618,7 +636,15 @@ def gen_residual_vs_fitted(df, dataProfile, chartPlan, rcParams, palette, col_ma
         color = palette.get("categorical", ["#0072B2"])[0]
         ax.scatter(plot_df[fitted_col], plot_df[resid_col], s=10, alpha=0.5, color=color,
                    linewidth=0.3, edgecolor="white", zorder=2)
-        ax.axhline(0, color="black", linewidth=0.6, linestyle="--", zorder=1)
+        # Zero-reference line — delegate to template_mining_helpers when reachable
+        canonical_zero_ref = globals().get("add_zero_reference")
+        if canonical_zero_ref is not None:
+            try:
+                canonical_zero_ref(ax, axis="y", color="black", lw=0.6, ls="--", zorder=1)
+            except Exception:
+                ax.axhline(0, color="black", linewidth=0.6, linestyle="--", zorder=1)
+        else:
+            ax.axhline(0, color="black", linewidth=0.6, linestyle="--", zorder=1)
 
     try:
         from statsmodels.nonparametric.smoothers_lowess import lowess
@@ -655,6 +681,17 @@ def gen_scale_location(df, dataProfile, chartPlan, rcParams, palette, col_map=No
     if standalone:
         fig, ax = plt.subplots(figsize=(89 * (1 / 25.4), 60 * (1 / 25.4)),
                            constrained_layout=True)
+
+    # Apply L0 scatter-regression floor — delegate to template_mining_helpers
+    # when reachable. Light dashed grid + despine BEFORE drawing scatter, so the
+    # grid sits at zorder=0 and the homoscedasticity check reads as a regression
+    # diagnostic panel rather than a generic scatter.
+    canonical_floor = globals().get("apply_scatter_regression_floor")
+    if canonical_floor is not None:
+        try:
+            canonical_floor(ax, grid_axis="both")
+        except Exception:
+            pass
 
     fitted = df[fitted_col].dropna()
     resid = df[resid_col].dropna()
@@ -716,8 +753,16 @@ def gen_pp_plot(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=
     ax.scatter(expected, observed, s=10, alpha=0.6, color=color,
                linewidth=0.3, edgecolor="white", zorder=2)
 
-    # Diagonal reference line
-    ax.plot([0, 1], [0, 1], color="black", linewidth=0.6, linestyle="--", zorder=1)
+    # Diagonal reference line — delegate to template_mining_helpers when reachable
+    canonical_diagonal = globals().get("add_perfect_fit_diagonal")
+    if canonical_diagonal is not None:
+        try:
+            canonical_diagonal(ax, np.asarray([0.0, 1.0]), np.asarray([0.0, 1.0]),
+                               color="black", lw=0.6, alpha=1.0)
+        except Exception:
+            ax.plot([0, 1], [0, 1], color="black", linewidth=0.6, linestyle="--", zorder=1)
+    else:
+        ax.plot([0, 1], [0, 1], color="black", linewidth=0.6, linestyle="--", zorder=1)
 
     ax.set_xlabel("Expected cumulative probability")
     ax.set_ylabel("Observed cumulative probability")
@@ -1138,6 +1183,11 @@ def gen_ci_plot(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=
     estimate (point value), lower CI bound, and upper CI bound.  Optionally
     accepts a label column for y-axis tick names.  A vertical reference line
     at x = 0 is drawn when the interval spans zero.
+
+    Operational layer (post-Phase A1): when template_mining_helpers is embedded,
+    this generator delegates to add_forest_panel with linear scale + reference_line=0
+    so each CI panel matches the corpus-anchored forest discipline (per-row
+    estimate(CI) annotation column on the right edge).
     """
     standalone = ax is None
     plt.rcParams.update(rcParams)
@@ -1156,30 +1206,45 @@ def gen_ci_plot(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=
         fig, ax = plt.subplots(figsize=(89 * (1 / 25.4), fig_height),
                            constrained_layout=True)
 
-    y_pos = np.arange(n)
+    estimates = df[est_col].astype(float).values
+    lowers = df[lower_col].astype(float).values
+    uppers = df[upper_col].astype(float).values
+    if label_col and label_col in df.columns:
+        labels = df[label_col].astype(str).tolist()
+    else:
+        labels = [str(i + 1) for i in range(n)]
     color = palette.get("categorical", ["#0072B2"])[0]
 
-    for i, (_, row) in enumerate(df.iterrows()):
-        est = row[est_col]
-        lo = row[lower_col]
-        hi = row[upper_col]
-        ax.plot([lo, hi], [i, i], color=color, linewidth=0.8,
+    canonical_forest = globals().get("add_forest_panel")
+    if canonical_forest is not None:
+        try:
+            canonical_forest(ax, estimates, lowers, uppers, labels,
+                             color=color,
+                             reference_line=0.0,
+                             log_scale=False,
+                             show_yticklabels=True,
+                             annotation_format="{hr:.3g} ({lo:.3g}, {hi:.3g})",
+                             title=None)
+            ax.set_xlabel("Estimate (95 % CI)")
+            if standalone:
+                apply_chart_polish(ax, "ci_plot")
+            return ax
+        except Exception:
+            pass  # Fall through to inline implementation
+
+    # Inline fallback when add_forest_panel is not embedded
+    y_pos = np.arange(n)
+    for i in range(n):
+        ax.plot([lowers[i], uppers[i]], [i, i], color=color, linewidth=0.8,
                 solid_capstyle="round", zorder=2)
-        ax.plot(est, i, "o", color=color, markersize=4, zorder=3)
+        ax.plot(estimates[i], i, "o", color=color, markersize=4, zorder=3)
 
     # Reference line at zero if interval spans it
-    all_lo = df[lower_col].min()
-    all_hi = df[upper_col].max()
-    if all_lo < 0 < all_hi:
+    if lowers.min() < 0 < uppers.max():
         ax.axvline(0, color="black", linewidth=0.5, linestyle="--", zorder=1)
 
-    if label_col and label_col in df.columns:
-        ax.set_yticks(y_pos)
-        ax.set_yticklabels(df[label_col].astype(str).tolist(), fontsize=5)
-    else:
-        ax.set_yticks(y_pos)
-        ax.set_yticklabels([str(i + 1) for i in range(n)], fontsize=5)
-
+    ax.set_yticks(y_pos)
+    ax.set_yticklabels(labels, fontsize=5)
     ax.set_xlabel("Estimate (95 % CI)")
     ax.invert_yaxis()
     ax.spines["left"].set_visible(False)
@@ -1944,8 +2009,10 @@ def gen_risk_ratio_plot(df, dataProfile, chartPlan, rcParams, palette, col_map=N
     confidence intervals for each subgroup.  A vertical reference line at 1
     (no effect) is drawn.  Optionally annotates p-values on the right margin.
 
-    Expects in semanticRoles: label (subgroup name), estimate (HR or OR),
-    ci_lower, ci_upper, and optionally p_value.
+    Operational layer (post-Phase A1): when template_mining_helpers is embedded,
+    this generator delegates to add_forest_panel for log-scale + reference_line=1
+    + per-row HR(CI) annotation column. The p-value annotation column is added
+    on top of the canonical forest discipline.
     """
     standalone = ax is None
     plt.rcParams.update(rcParams)
@@ -1965,34 +2032,52 @@ def gen_risk_ratio_plot(df, dataProfile, chartPlan, rcParams, palette, col_map=N
         fig, ax = plt.subplots(figsize=(89 * (1 / 25.4), fig_height),
                            constrained_layout=True)
 
-    y_pos = np.arange(n)
-    color = palette.get("categorical", ["#0072B2"])[0]
-
-    for i, (_, row) in enumerate(df.iterrows()):
-        est = row[est_col]
-        lo = row[lo_col]
-        hi = row[hi_col]
-        ax.plot([lo, hi], [i, i], color=color, linewidth=0.8,
-                solid_capstyle="round", zorder=2)
-        ax.plot(est, i, "D", color=color, markersize=4, zorder=3)
-
-    ax.axvline(1, color="black", linewidth=0.6, linestyle="--", zorder=1)
-
+    estimates = df[est_col].astype(float).values
+    lowers = df[lo_col].astype(float).values
+    uppers = df[hi_col].astype(float).values
     if label_col and label_col in df.columns:
         labels = df[label_col].astype(str).tolist()
     else:
         labels = [str(i + 1) for i in range(n)]
-    ax.set_yticks(y_pos)
-    ax.set_yticklabels(labels, fontsize=5)
+    color = palette.get("categorical", ["#0072B2"])[0]
 
-    # Annotate estimate [CI] on right margin
-    x_max = ax.get_xlim()[1]
-    for i, (_, row) in enumerate(df.iterrows()):
-        ci_text = f"{row[est_col]:.2f} [{row[lo_col]:.2f}, {row[hi_col]:.2f}]"
-        ax.text(x_max * 1.05, i, ci_text, fontsize=4, va="center", ha="left",
-                color="#333", transform=ax.get_yaxis_transform())
+    used_canonical = False
+    canonical_forest = globals().get("add_forest_panel")
+    if canonical_forest is not None:
+        try:
+            canonical_forest(ax, estimates, lowers, uppers, labels,
+                             color=color,
+                             reference_line=1.0,
+                             log_scale=True,
+                             show_yticklabels=True,
+                             annotation_format="{hr:.2f} [{lo:.2f}, {hi:.2f}]",
+                             title=None)
+            used_canonical = True
+        except Exception:
+            used_canonical = False
 
+    if not used_canonical:
+        # Inline fallback when add_forest_panel is not embedded
+        y_pos_inline = np.arange(n)
+        for i in range(n):
+            ax.plot([lowers[i], uppers[i]], [i, i], color=color, linewidth=0.8,
+                    solid_capstyle="round", zorder=2)
+            ax.plot(estimates[i], i, "D", color=color, markersize=4, zorder=3)
+
+        ax.axvline(1, color="black", linewidth=0.6, linestyle="--", zorder=1)
+        ax.set_yticks(y_pos_inline)
+        ax.set_yticklabels(labels, fontsize=5)
+
+        # Per-row HR(CI) annotation column at right margin
+        x_max = ax.get_xlim()[1]
+        for i in range(n):
+            ci_text = f"{estimates[i]:.2f} [{lowers[i]:.2f}, {uppers[i]:.2f}]"
+            ax.text(x_max * 1.05, i, ci_text, fontsize=4, va="center", ha="left",
+                    color="#333", transform=ax.get_yaxis_transform())
+
+    # P-value annotation column (additional to forest discipline)
     if p_col and p_col in df.columns:
+        x_max = ax.get_xlim()[1]
         p_x = x_max * 1.45
         ax.text(p_x, n + 0.3, "p", fontsize=5, fontstyle="italic", fontweight="bold",
                 va="bottom", ha="center", transform=ax.get_yaxis_transform())
@@ -2004,9 +2089,10 @@ def gen_risk_ratio_plot(df, dataProfile, chartPlan, rcParams, palette, col_map=N
 
     ratio_label = chartPlan.get("ratioLabel", "Risk ratio")
     ax.set_xlabel(f"{ratio_label} (95 % CI)")
-    ax.invert_yaxis()
-    ax.spines["left"].set_visible(False)
-    ax.tick_params(axis="y", length=0)
+    if not used_canonical:
+        ax.invert_yaxis()
+        ax.spines["left"].set_visible(False)
+        ax.tick_params(axis="y", length=0)
     if standalone:
         apply_chart_polish(ax, "risk_ratio_plot")
     return ax
@@ -2312,11 +2398,22 @@ def gen_radar(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=No
     # ─── Legacy compatibility: also call apply_template_radar_signature so
     # downstream visualPlan motif counters still register `polar_comparison_signature`
     # during the migration window (Phase D will retire the legacy helper).
+    # Pass draw_grid=False because we already drew the polygon grid via
+    # add_polygon_polar_grid above — without this guard the legacy shim would
+    # delegate the grid drawing AGAIN and produce duplicate dashed lines.
     legacy_sig = globals().get("apply_template_radar_signature")
     if legacy_sig is not None:
         try:
             legacy_sig(ax, angles, value_rows=template_rows,
-                       colors=template_colors, visualPlan=visual_plan)
+                       colors=template_colors, visualPlan=visual_plan,
+                       draw_grid=False)
+        except TypeError:
+            # Older legacy shim without draw_grid kwarg — best-effort fallback
+            try:
+                legacy_sig(ax, angles, value_rows=template_rows,
+                           colors=template_colors, visualPlan=visual_plan)
+            except Exception:
+                pass
         except Exception:
             pass
 
@@ -2390,7 +2487,15 @@ def gen_likert_divergent(df, dataProfile, chartPlan, rcParams, palette, col_map=
                         color=colors[j], edgecolor="white", linewidth=0.3)
                 left_pos += val
 
-    ax.axvline(0, color="black", linewidth=0.6, linestyle="-", zorder=3)
+    # Zero divider for diverging Likert — delegate to template_mining_helpers when reachable
+    canonical_zero_ref = globals().get("add_zero_reference")
+    if canonical_zero_ref is not None:
+        try:
+            canonical_zero_ref(ax, axis="x", color="black", lw=0.6, ls="-", zorder=3)
+        except Exception:
+            ax.axvline(0, color="black", linewidth=0.6, linestyle="-", zorder=3)
+    else:
+        ax.axvline(0, color="black", linewidth=0.6, linestyle="-", zorder=3)
     ax.set_yticks(y_pos)
     ax.set_yticklabels(items, fontsize=5)
     ax.set_xlabel("Percentage of responses")
@@ -3869,7 +3974,19 @@ def gen_roc(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=None
 
     color = "#1F4E79" if is_classifier_board else "#0072B2"
     ax.plot(fpr, tpr, color=color, lw=1.15 if is_classifier_board else 1, label=f"ROC AUC = {roc_auc:.3f}")
-    ax.plot([0, 1], [0, 1], color="#999999", lw=0.5, ls="--", label="Chance")
+    # Chance diagonal — delegate to template_mining_helpers when reachable
+    # (encodes the corpus-anchored 'random classifier reference' for ROC panels)
+    canonical_diagonal = globals().get("add_perfect_fit_diagonal")
+    if canonical_diagonal is not None:
+        try:
+            canonical_diagonal(ax, np.asarray([0.0, 1.0]), np.asarray([0.0, 1.0]),
+                               color="#999999", lw=0.5, alpha=1.0)
+            # Register legend entry via proxy (canonical helper has no label kwarg)
+            ax.plot([], [], color="#999999", lw=0.5, ls="--", label="Chance")
+        except Exception:
+            ax.plot([0, 1], [0, 1], color="#999999", lw=0.5, ls="--", label="Chance")
+    else:
+        ax.plot([0, 1], [0, 1], color="#999999", lw=0.5, ls="--", label="Chance")
     ax.fill_between(fpr, 0, tpr, alpha=0.12 if is_classifier_board else 0.1, color=color)
     if is_classifier_board and len(thresholds):
         youden = tpr - fpr
@@ -3964,7 +4081,16 @@ def gen_calibration(df, dataProfile, chartPlan, rcParams, palette, col_map=None,
         _place_classifier_validation_legend(ax, standalone, ncol=3)
     else:
         ax.plot(bin_centers, observed, "o-", color="#0072B2", lw=1, markersize=4)
-    ax.plot([0, 1], [0, 1], "--", color="#999999", lw=0.5)
+    # Perfect-fit diagonal — delegate to template_mining_helpers when reachable
+    canonical_diagonal = globals().get("add_perfect_fit_diagonal")
+    if canonical_diagonal is not None:
+        try:
+            canonical_diagonal(ax, np.asarray([0.0, 1.0]), np.asarray([0.0, 1.0]),
+                               color="#999999", lw=0.5, alpha=1.0)
+        except Exception:
+            ax.plot([0, 1], [0, 1], "--", color="#999999", lw=0.5)
+    else:
+        ax.plot([0, 1], [0, 1], "--", color="#999999", lw=0.5)
 
     ax.set_xlabel("Predicted probability" if standalone or not is_classifier_board else "")
     ax.set_ylabel("Observed fraction" if standalone or not is_classifier_board else "")
@@ -3994,7 +4120,15 @@ def gen_waterfall(df, dataProfile, chartPlan, rcParams, palette, col_map=None, a
     colors = ["#0072B2" if v <= -30 else "#999999" if v <= 20 else "#D55E00" for v in values]
     ax.bar(range(len(values)), values, color=colors, width=0.7,
            linewidth=0.3, edgecolor="white")
-    ax.axhline(0, color="black", lw=0.5)
+    # Zero baseline — delegate to template_mining_helpers when reachable
+    canonical_zero_ref = globals().get("add_zero_reference")
+    if canonical_zero_ref is not None:
+        try:
+            canonical_zero_ref(ax, axis="y", color="black", lw=0.5, ls="-", zorder=1)
+        except Exception:
+            ax.axhline(0, color="black", lw=0.5)
+    else:
+        ax.axhline(0, color="black", lw=0.5)
 
     ax.set_xlabel("Patient")
     ax.set_ylabel("Response (%)")
@@ -4004,7 +4138,12 @@ def gen_waterfall(df, dataProfile, chartPlan, rcParams, palette, col_map=None, a
 
 
 def gen_correlation(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=None):
-    """Correlation heatmap: lower triangle with annotations."""
+    """Correlation heatmap: lower triangle with annotations.
+
+    Operational layer (post-Phase A1): when template_mining_helpers is embedded,
+    this generator uses the canonical RdBu_r diverging colormap with TwoSlopeNorm
+    centered at 0 — matching the corpus-anchored discipline for correlation matrices.
+    """
     standalone = ax is None
     numeric_cols = df.select_dtypes(include="number").columns.tolist()
     if len(numeric_cols) < 2:
@@ -4018,10 +4157,30 @@ def gen_correlation(df, dataProfile, chartPlan, rcParams, palette, col_map=None,
                            constrained_layout=True)
 
     cbar_kw = {"shrink": 0.6} if standalone else {"shrink": 0.4, "aspect": 20}
-    sns.heatmap(corr, mask=mask, ax=ax, cmap="vlag", center=0,
-                annot=True, fmt=".2f", linewidths=0.5,
-                cbar_kws=cbar_kw, annot_kws={"size": 5},
-                square=True)
+
+    # Diverging norm centered at 0 — matches red_blue_correlation palette anchor
+    try:
+        from matplotlib.colors import TwoSlopeNorm
+        corr_min = float(np.nanmin(corr.values))
+        corr_max = float(np.nanmax(corr.values))
+        vmin = min(-1.0, corr_min) if np.isfinite(corr_min) else -1.0
+        vmax = max(1.0, corr_max) if np.isfinite(corr_max) else 1.0
+        if vmin >= 0.0:
+            vmin = -vmax if vmax > 0 else -1.0
+        if vmax <= 0.0:
+            vmax = -vmin if vmin < 0 else 1.0
+        norm = TwoSlopeNorm(vmin=vmin, vcenter=0.0, vmax=vmax)
+        sns.heatmap(corr, mask=mask, ax=ax, cmap="RdBu_r", norm=norm,
+                    annot=True, fmt=".2f", linewidths=0.5,
+                    cbar_kws=cbar_kw, annot_kws={"size": 5},
+                    square=True)
+    except Exception:
+        # Fallback when TwoSlopeNorm or RdBu_r unavailable in this matplotlib build
+        sns.heatmap(corr, mask=mask, ax=ax, cmap="RdBu_r", center=0,
+                    vmin=-1, vmax=1,
+                    annot=True, fmt=".2f", linewidths=0.5,
+                    cbar_kws=cbar_kw, annot_kws={"size": 5},
+                    square=True)
     if standalone:
         apply_chart_polish(ax, "correlation")
     return ax
@@ -4169,7 +4328,15 @@ def gen_scatter_regression(df, dataProfile, chartPlan, rcParams, palette, col_ma
                 color="#1F4E79", **scatter_kwargs,
             )
 
-        ax.axhline(0, color="black", linewidth=0.8, zorder=3)
+        # SHAP value zero divider — delegate to template_mining_helpers when reachable
+        canonical_zero_ref = globals().get("add_zero_reference")
+        if canonical_zero_ref is not None:
+            try:
+                canonical_zero_ref(ax, axis="y", color="black", lw=0.8, ls="-", zorder=3)
+            except Exception:
+                ax.axhline(0, color="black", linewidth=0.8, zorder=3)
+        else:
+            ax.axhline(0, color="black", linewidth=0.8, zorder=3)
         if plot_df[x_col].nunique() >= 4:
             for q in np.nanquantile(plot_df[x_col], [0.25, 0.5, 0.75]):
                 ax.axvline(q, color="#8A8A8A", linewidth=0.35, linestyle=":", alpha=0.55, zorder=1)
@@ -4388,7 +4555,15 @@ def gen_dotplot(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=
         else:
             ax.scatter(plot_df[value_col], y, color="#1F4E79", s=14,
                        alpha=0.72, edgecolor="white", linewidth=0.22, zorder=3)
-        ax.axvline(0, color="black", linewidth=0.8, zorder=2)
+        # SHAP-composite zero divider — delegate to template_mining_helpers when reachable
+        canonical_zero_ref = globals().get("add_zero_reference")
+        if canonical_zero_ref is not None:
+            try:
+                canonical_zero_ref(ax, axis="x", color="black", lw=0.8, ls="-", zorder=2)
+            except Exception:
+                ax.axvline(0, color="black", linewidth=0.8, zorder=2)
+        else:
+            ax.axvline(0, color="black", linewidth=0.8, zorder=2)
         ax.set_yticks(range(len(order)))
         ax.set_yticklabels(order, fontsize=5)
         ax.set_ylim(len(order) - 0.5, -0.5)
@@ -5962,6 +6137,22 @@ def gen_dose_response(df, dataProfile, chartPlan, rcParams, palette, col_map=Non
     if standalone:
         fig, ax = plt.subplots(figsize=(89 * (1 / 25.4), 62 * (1 / 25.4)), constrained_layout=True)
 
+    # Apply L0 floor: light dashed grid + despine BEFORE drawing scatter so grid sits at zorder=0
+    canonical_floor = globals().get("apply_scatter_regression_floor")
+    if canonical_floor is not None:
+        try:
+            canonical_floor(ax, grid_axis="both")
+        except Exception:
+            ax.grid(True, linestyle="--", color="#E0E0E0", linewidth=0.6, alpha=0.6, zorder=0)
+            ax.set_axisbelow(True)
+            ax.spines["top"].set_visible(False)
+            ax.spines["right"].set_visible(False)
+    else:
+        ax.grid(True, linestyle="--", color="#E0E0E0", linewidth=0.6, alpha=0.6, zorder=0)
+        ax.set_axisbelow(True)
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+
     roles = dataProfile.get("semanticRoles", {})
     dose_col = roles.get("dose")
     response_col = roles.get("response") or roles.get("value")
@@ -6110,3 +6301,5 @@ def gen_pr_curve(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax
     if standalone:
         apply_chart_polish(ax, "pr_curve")
     return ax
+
+```

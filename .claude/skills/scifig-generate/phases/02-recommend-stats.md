@@ -1520,12 +1520,26 @@ def build_palette_plan(primaryChart, dataProfile, workflowPreferences, templateC
             plan["paletteFamily"] = "morandi_sci_4"
         else:
             plan["categoricalPreset"] = "tableau10_classic"
-    elif chart_norm in ("forest", "caterpillar_plot", "risk_ratio_plot"):
+    elif chart_norm in ("forest", "caterpillar_plot", "risk_ratio_plot", "ci_plot"):
         plan["categoricalPreset"] = "npg_4"
         plan["paletteFamily"] = "npg_4"
-    elif chart_norm in ("heatmap_triangular", "heatmap_pairwise", "correlation"):
+    elif chart_norm in ("heatmap_triangular", "heatmap_pairwise", "heatmap_symmetric", "correlation"):
         plan["divergingPreset"] = "red_blue_correlation"
         plan["paletteFamily"] = "red_blue_correlation"
+    elif chart_norm in ("waterfall", "diverging_bar", "likert_divergent", "ma_plot", "residual_vs_fitted"):
+        # Zero-reference family: diverging anchors so positive/negative deviations contrast
+        plan["divergingPreset"] = "bipolar_ALE"
+        plan["paletteFamily"] = "bipolar_ALE"
+    elif chart_norm in ("calibration", "pp_plot", "qq", "scatter_regression", "dose_response", "roc", "scale_location", "residual_vs_fitted"):
+        # Perfect-fit / scatter-regression family — keep journal_muted palette neutral so
+        # the y=x diagonal + scatter density is the visual anchor, not the color hue
+        plan["paletteFamily"] = "journal_muted_8"
+    elif chart_norm in ("decision_curve",):
+        # Decision curve is a treatment-vs-threshold curve; use perfect-fit neutral
+        plan["paletteFamily"] = "journal_muted_8"
+    elif chart_norm in ("lollipop_horizontal", "dotplot", "shap_composite", "ridge", "joyplot"):
+        plan["categoricalPreset"] = "cool_summer_4"
+        plan["paletteFamily"] = "cool_summer_4"
     elif chart_norm in ("violin_split", "violin_paired", "box_paired", "dumbbell", "paired_lines"):
         # Bipolar / paired comparisons benefit from the bipolar_ALE diverging anchors
         plan["divergingPreset"] = "bipolar_ALE"

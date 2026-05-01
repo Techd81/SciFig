@@ -58,6 +58,9 @@ from template_mining_helpers import (
     add_group_dividers, add_panel_label,
     density_sort, density_color_scatter,
     add_polygon_polar_grid, draw_gradient_box,
+    add_forest_panel, add_heatmap_pairwise_panel,
+    apply_scatter_regression_floor, resolve_split_palette,
+    set_polar_title,
     build_grid, select_narrative_arc, arc_required_motifs,
     arc_default_grid, apply_zorder_recipe, bootstrap_chart,
 )

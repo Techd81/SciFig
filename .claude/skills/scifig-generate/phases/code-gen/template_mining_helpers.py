@@ -21,6 +21,7 @@ Module status (n/n implemented):
   - arc_required_motifs         ✓
   - arc_default_grid            ✓
   - apply_zorder_recipe         ✓ (scatter_regression / forest / dual_axis / radar / shap_composite / marginal_joint)
+  - add_heatmap_pairwise_panel  ✓ (cycle 21; n*n correlation matrix discipline)
 
 Reference docs:
   - 01-rcparams-kernel.md       kernel definitions
@@ -243,6 +244,10 @@ def add_perfect_fit_diagonal(ax: Axes,
                 joint percentile of x and y. Use this for noisy density scatter
                 where a few outliers would otherwise stretch the diagonal far
                 beyond the data bulk. None (default) uses the full min/max range.
+
+    Degenerate-input guard: when the joint x/y range is zero or non-finite (single
+    point, all NaN), the diagonal is drawn over a small symbolic range around the
+    midpoint so matplotlib does not emit the "singular transformation" warning.
     """
     if percentile is not None:
         p_lo = (100.0 - percentile)
@@ -252,7 +257,13 @@ def add_perfect_fit_diagonal(ax: Axes,
     else:
         lo = float(min(np.min(x), np.min(y)))
         hi = float(max(np.max(x), np.max(y)))
-    pad = (hi - lo) * 0.05
+    if not np.isfinite(lo) or not np.isfinite(hi) or hi <= lo:
+        # Degenerate range — fall back to a sensible symbolic interval centered
+        # on the midpoint (or 0 if midpoint also degenerate).
+        mid = (lo + hi) / 2.0 if np.isfinite(lo) and np.isfinite(hi) else 0.0
+        half = max(abs(mid) * 0.10, 0.5)
+        lo, hi = mid - half, mid + half
+    pad = max((hi - lo) * 0.05, 1e-6)
     ax.plot([lo - pad, hi + pad], [lo - pad, hi + pad],
             color=color, linestyle="--", linewidth=lw, alpha=alpha, zorder=6)
     ax.set_xlim(lo - pad, hi + pad)
@@ -323,6 +334,10 @@ def apply_scatter_regression_floor(ax: Axes, *,
     Always call this BEFORE drawing scatter so the grid sits at zorder=0.
 
     grid_axis: 'both' (default, scatter), 'x' (horizontal bars / dot-plot), 'y' (vertical bars).
+
+    Polar-safe: matplotlib polar Axes only own a 'polar' spine, not 'top'/'right'.
+    The despine step is skipped silently when called on polar axes so radar /
+    polar variants can call this generically without KeyError.
     """
     if grid_axis == "both":
         ax.grid(True, linestyle="--", color=grid_color, linewidth=grid_lw,
@@ -339,8 +354,15 @@ def apply_scatter_regression_floor(ax: Axes, *,
         raise ValueError(f"grid_axis must be 'both'|'x'|'y', got {grid_axis!r}")
     ax.set_axisbelow(True)
     if despine:
-        ax.spines["top"].set_visible(False)
-        ax.spines["right"].set_visible(False)
+        spines = getattr(ax, "spines", None)
+        is_polar = getattr(ax, "name", "") == "polar" or (
+            spines is not None and "polar" in spines and "top" not in spines
+        )
+        if not is_polar and spines is not None:
+            if "top" in spines:
+                ax.spines["top"].set_visible(False)
+            if "right" in spines:
+                ax.spines["right"].set_visible(False)
 
 
 def resolve_split_palette(dataProfile: dict, *,
@@ -845,3 +867,181 @@ def add_forest_panel(ax, hrs, lower, upper, labels, *,
     ax.spines['right'].set_visible(False)
     if title:
         ax.set_title(title, color=color, fontsize=8, fontweight='bold')
+
+
+# ============================================================================
+# 9. HEATMAP PAIRWISE PANEL (cycle 21 addition)
+# ============================================================================
+
+def add_heatmap_pairwise_panel(fig, features_df, *,
+                                 gs=None,
+                                 cmap_name="RdBu_r",
+                                 primary_color="#3C5488",
+                                 spacing=0.05,
+                                 show_colorbar=True,
+                                 colorbar_label="Pearson r",
+                                 colorbar_rect=(0.92, 0.30, 0.012, 0.40),
+                                 max_features=8) -> dict:
+    """One-call pairwise correlation matrix panel — encodes the corpus-anchored
+    `heatmap_pairwise` discipline (8/77 cases) from `07-techniques/heatmap-pairwise.md`.
+
+    Layout discipline (Nature 5x5 Pearson matrix anchor):
+      - n*n GridSpec with hspace=wspace=0.05 (tight)
+      - Diagonal: histogram + KDE in primary color
+      - Upper triangle: correlation r-value (with significance stars when p<0.05)
+        on TwoSlopeNorm-tinted background, spines hidden
+      - Lower triangle: hollow-marker scatter + linear fit (corpus pattern)
+      - Outer-only labels (left column + bottom row)
+      - Diverging cmap RdBu_r centered at 0
+      - Text color flips to white when |r| > 0.5 (contrast rule)
+
+    Args:
+      fig: matplotlib Figure to populate.
+      features_df: pandas DataFrame whose columns are the features to compare.
+                   Each column must be numeric and have >=2 valid observations.
+      gs: optional pre-built GridSpec (n*n). If None, one is built from features_df.
+      cmap_name: diverging colormap name (default "RdBu_r").
+      primary_color: KDE + scatter edge color (default "#3C5488", NPG navy).
+      spacing: hspace/wspace for the GridSpec (default 0.05, corpus tight value).
+      show_colorbar: whether to add the shared diverging colorbar.
+      colorbar_label: label for the colorbar.
+      colorbar_rect: [left, bottom, width, height] in fig fraction for colorbar.
+      max_features: hard cap to avoid 20x20 matrices (default 8). Raises if exceeded.
+
+    Returns:
+      dict with keys:
+        axes:        list[Axes] in row-major order (length n*n)
+        norm:        TwoSlopeNorm(vmin=-1, vcenter=0, vmax=1)
+        cmap:        the colormap object
+        gridspec:    the GridSpec used
+        n_features:  number of features (n)
+        correlation_matrix: dict mapping (i,j) -> {'r': float, 'p': float}
+
+    Anchor cases:
+      - Nature Pearson 5x5 matrix
+      - Spearman ML model performance
+      - Gaussian-kernel 3x3 multipanel scatter
+    """
+    from matplotlib.gridspec import GridSpec
+    from matplotlib.colors import TwoSlopeNorm
+    import matplotlib.cm as cm
+    try:
+        from scipy.stats import gaussian_kde, pearsonr
+        _has_scipy = True
+    except ImportError:
+        _has_scipy = False
+
+    features = list(features_df.columns)
+    n = len(features)
+    if n < 2:
+        raise ValueError(f"heatmap_pairwise requires >=2 features, got {n}")
+    if n > max_features:
+        raise ValueError(
+            f"heatmap_pairwise capped at {max_features} features to keep panels readable; "
+            f"got {n}. Pre-select top variables before calling."
+        )
+
+    if gs is None:
+        gs = GridSpec(n, n, figure=fig, hspace=spacing, wspace=spacing)
+
+    norm = TwoSlopeNorm(vmin=-1, vcenter=0, vmax=1)
+    # Use modern matplotlib.colormaps API when available (>=3.7); fall back to
+    # cm.get_cmap for older matplotlib versions
+    try:
+        cmap = mpl.colormaps[cmap_name]
+    except (AttributeError, KeyError):
+        cmap = cm.get_cmap(cmap_name)
+    axes = []
+    correlation_matrix = {}
+
+    for i in range(n):
+        for j in range(n):
+            ax = fig.add_subplot(gs[i, j])
+            axes.append(ax)
+            x_raw = features_df[features[j]].dropna().values
+            y_raw = features_df[features[i]].dropna().values
+            n_pts = min(len(x_raw), len(y_raw))
+            x = np.asarray(x_raw[:n_pts], dtype=float)
+            y = np.asarray(y_raw[:n_pts], dtype=float)
+
+            if i == j:
+                # Diagonal: histogram + KDE
+                ax.hist(x, bins=15, density=True, color="white",
+                        edgecolor="black", linewidth=0.8, zorder=1)
+                if _has_scipy and n_pts > 1 and float(np.std(x)) > 0:
+                    try:
+                        kde = gaussian_kde(x)
+                        xx = np.linspace(float(x.min()), float(x.max()), 200)
+                        ax.plot(xx, kde(xx), color=primary_color, linewidth=1.8, zorder=3)
+                    except Exception:
+                        pass
+                ax.set_yticks([])
+            elif i < j:
+                # Upper triangle: correlation r-value on tinted background
+                # Guard against zero-variance columns (constant features) which
+                # would produce NaN + RuntimeWarning from pearsonr / corrcoef.
+                std_x = float(np.std(x)) if n_pts >= 2 else 0.0
+                std_y = float(np.std(y)) if n_pts >= 2 else 0.0
+                if _has_scipy and n_pts >= 2 and std_x > 0 and std_y > 0:
+                    r, p = pearsonr(x, y)
+                    r = float(r); p = float(p)
+                elif n_pts >= 2 and std_x > 0 and std_y > 0:
+                    # Manual fallback when scipy unavailable
+                    with np.errstate(all="ignore"):
+                        r = float(np.corrcoef(x, y)[0, 1])
+                    if not np.isfinite(r):
+                        r = 0.0
+                    p = 1.0
+                else:
+                    # Degenerate: at least one column is constant, correlation is undefined
+                    r, p = 0.0, 1.0
+                correlation_matrix[(i, j)] = {"r": r, "p": p}
+                ax.set_facecolor(cmap(norm(r)))
+                stars = "***" if p < 0.001 else "**" if p < 0.01 else "*" if p < 0.05 else ""
+                ax.text(0.5, 0.5, f"{r:.2f}{stars}",
+                        ha="center", va="center", transform=ax.transAxes,
+                        fontsize=8, fontweight="bold",
+                        color="white" if abs(r) > 0.5 else "black",
+                        zorder=10)
+                for s in ax.spines.values():
+                    s.set_visible(False)
+                ax.set_xticks([]); ax.set_yticks([])
+            else:
+                # Lower triangle: hollow scatter + linear fit
+                ax.scatter(x, y, s=12, facecolor="none",
+                           edgecolor=primary_color, alpha=0.5,
+                           linewidth=0.6, zorder=2)
+                if n_pts >= 2 and float(np.std(x)) > 0:
+                    try:
+                        slope, intercept = np.polyfit(x, y, 1)
+                        xx = np.linspace(float(x.min()), float(x.max()), 100)
+                        ax.plot(xx, slope * xx + intercept, color="black",
+                                linewidth=1.0, zorder=4)
+                    except Exception:
+                        pass
+
+            # Outer-only labels (corpus discipline)
+            if j == 0:
+                ax.set_ylabel(features[i], fontsize=8)
+            else:
+                ax.set_yticklabels([])
+            if i == n - 1:
+                ax.set_xlabel(features[j], fontsize=8)
+            else:
+                ax.set_xticklabels([])
+
+    if show_colorbar:
+        sm = cm.ScalarMappable(cmap=cmap, norm=norm)
+        sm.set_array([])
+        cax = fig.add_axes(list(colorbar_rect))
+        cbar = fig.colorbar(sm, cax=cax)
+        cbar.set_label(colorbar_label, fontsize=8)
+
+    return {
+        "axes": axes,
+        "norm": norm,
+        "cmap": cmap,
+        "gridspec": gs,
+        "n_features": n,
+        "correlation_matrix": correlation_matrix,
+    }

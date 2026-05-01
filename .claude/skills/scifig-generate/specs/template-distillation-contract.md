@@ -27,37 +27,125 @@ Each entry maps a chart family to (1) its registered generator function, (2) the
 template_mining_helpers API it must call, and (3) the deep-dive reference. Autonomous
 distillation cycles must verify these bindings via static scan of generator source.
 
-| Chart family          | Registered generator           | Required template_mining_helpers calls                                              | Deep-dive reference                     |
-|-----------------------|--------------------------------|-------------------------------------------------------------------------------------|------------------------------------------|
-| `radar`               | `gen_radar`                    | `add_polygon_polar_grid` + `apply_zorder_recipe('radar', ...)`                      | `07-techniques/radar.md`                |
-| `biodiversity_radar`  | `gen_biodiversity_radar`       | `add_polygon_polar_grid` + `apply_zorder_recipe('radar', ...)`                      | `07-techniques/radar.md`                |
-| `forest`              | `gen_forest`                   | `add_forest_panel`                                                                   | `02-zorder-recipes.md § forest`          |
-| `scatter_regression`  | `gen_scatter_regression`       | `apply_scatter_regression_floor` + `add_perfect_fit_diagonal` (when prediction)     | `02-zorder-recipes.md § scatter-regression` + `05-annotation-idioms.md § I1, I2` |
-| `marginal_joint`      | (via `gen_scatter_regression`) | `density_color_scatter` + `add_perfect_fit_diagonal` + marginal axes setup          | `07-techniques/marginal-joint.md`        |
-| `heatmap_triangular`  | `gen_heatmap_triangular`       | `TwoSlopeNorm(vmin=-1, vcenter=0, vmax=1)` + `RdBu_r` cmap (corpus anchor)          | `07-techniques/heatmap-pairwise.md`      |
-| `dual_axis`           | (axis pair generator)          | `apply_zorder_recipe('dual_axis', ...)` + corpus-anchored color spines              | `07-techniques/dual-axis.md`             |
-| `shap_composite`      | (via composite board)          | `add_zero_reference` + `add_group_dividers` + bipolar palette                       | `07-techniques/shap-composite.md`        |
+The binding map is grouped into **six chart-family categories**; every category must contain
+at least one bound generator (family-coverage assertion in the binding probe).
+
+### Polar / Radar family
+Polygon dashed grid replaces matplotlib's default circular polar grid (Nature Vol 626 Fig 3c discipline).
+
+| Chart family          | Registered generator           | Required template_mining_helpers calls                           | Deep-dive reference        |
+|-----------------------|--------------------------------|------------------------------------------------------------------|-----------------------------|
+| `radar`               | `gen_radar`                    | `add_polygon_polar_grid`                                          | `07-techniques/radar.md`   |
+| `biodiversity_radar`  | `gen_biodiversity_radar`       | `add_polygon_polar_grid`                                          | `07-techniques/radar.md`   |
+
+### Forest / CI family
+One-call forest discipline: dashed reference line + asymmetric CI whiskers + per-row HR(CI) annotation column.
+
+| Chart family          | Registered generator           | Required template_mining_helpers calls                           | Deep-dive reference                 |
+|-----------------------|--------------------------------|------------------------------------------------------------------|-------------------------------------|
+| `forest`              | `gen_forest`                   | `add_forest_panel`                                                | `02-zorder-recipes.md § forest`     |
+| `caterpillar_plot`    | `gen_caterpillar_plot`         | `add_forest_panel` (linear scale, reference_line=0)               | `02-zorder-recipes.md § forest`     |
+| `risk_ratio_plot`     | `gen_risk_ratio_plot`          | `add_forest_panel` (log scale, reference_line=1)                  | `02-zorder-recipes.md § forest`     |
+| `ci_plot`             | `gen_ci_plot`                  | `add_forest_panel` (linear scale, reference_line=0)               | `02-zorder-recipes.md § forest`     |
+
+### Correlation heatmap family
+TwoSlopeNorm + RdBu_r enforce the corpus-anchored diverging palette centered at 0.
+
+| Chart family          | Registered generator           | Required template_mining_helpers calls                           | Deep-dive reference                  |
+|-----------------------|--------------------------------|------------------------------------------------------------------|--------------------------------------|
+| `heatmap_triangular`  | `gen_heatmap_triangular`       | `TwoSlopeNorm` + `RdBu_r` cmap                                    | `07-techniques/heatmap-pairwise.md`  |
+| `correlation`         | `gen_correlation`              | `TwoSlopeNorm` + `RdBu_r` cmap                                    | `07-techniques/heatmap-pairwise.md`  |
+| `heatmap_symmetric`   | `gen_heatmap_symmetric`        | `TwoSlopeNorm` + `RdBu_r` cmap                                    | `07-techniques/heatmap-pairwise.md`  |
+
+### Perfect-fit diagonal family (y=x reference)
+Dashed y=x line for predicted-vs-actual / probability-probability / quantile-quantile / random-classifier panels.
+
+| Chart family          | Registered generator           | Required template_mining_helpers calls                           | Deep-dive reference                  |
+|-----------------------|--------------------------------|------------------------------------------------------------------|--------------------------------------|
+| `calibration`         | `gen_calibration`              | `add_perfect_fit_diagonal`                                        | `05-annotation-idioms.md § I2`       |
+| `pp_plot`             | `gen_pp_plot`                  | `add_perfect_fit_diagonal`                                        | `05-annotation-idioms.md § I2`       |
+| `qq`                  | `gen_qq`                       | `add_perfect_fit_diagonal`                                        | `05-annotation-idioms.md § I2`       |
+| `roc`                 | `gen_roc`                      | `add_perfect_fit_diagonal` (random classifier chance line)        | `05-annotation-idioms.md § I2`       |
+
+### Zero reference family
+Dashed/solid y=0 (or x=0) anchor for residual / fold-change / waterfall / diverging / SHAP-divider panels.
+
+| Chart family          | Registered generator           | Required template_mining_helpers calls                           | Deep-dive reference                  |
+|-----------------------|--------------------------------|------------------------------------------------------------------|--------------------------------------|
+| `residual_vs_fitted`  | `gen_residual_vs_fitted`       | `add_zero_reference` (axis='y') + `apply_scatter_regression_floor` | `05-annotation-idioms.md § I4`       |
+| `ma_plot`             | `gen_ma_plot`                  | `add_zero_reference` (axis='y')                                   | `05-annotation-idioms.md § I4`       |
+| `waterfall`           | `gen_waterfall`                | `add_zero_reference` (axis='y')                                   | `05-annotation-idioms.md § I4`       |
+| `diverging_bar`       | `gen_diverging_bar`            | `add_zero_reference` (axis='x')                                   | `05-annotation-idioms.md § I4`       |
+| `likert_divergent`    | `gen_likert_divergent`         | `add_zero_reference` (axis='x')                                   | `05-annotation-idioms.md § I4`       |
+| `decision_curve`      | `gen_decision_curve`           | `add_zero_reference` (axis='y', "Treat none" reference)           | `05-annotation-idioms.md § I4`       |
+| `lollipop_horizontal` | `gen_lollipop_horizontal`      | `add_zero_reference` (axis='x', SHAP signed-value divider)        | `07-techniques/shap-composite.md`    |
+| `dotplot`             | `gen_dotplot`                  | `add_zero_reference` (axis='x', SHAP composite divider)           | `07-techniques/shap-composite.md`    |
+
+### Scatter regression floor family
+L0 floor: light dashed grid + despine, applied BEFORE drawing scatter so the grid sits at zorder=0.
+**Polar-safe** (cycle 21 + round-3): the despine step is skipped on polar axes so radar variants can call generically.
+
+| Chart family          | Registered generator           | Required template_mining_helpers calls                           | Deep-dive reference                                |
+|-----------------------|--------------------------------|------------------------------------------------------------------|----------------------------------------------------|
+| `scatter_regression`  | `gen_scatter_regression`       | `apply_scatter_regression_floor` + `add_perfect_fit_diagonal` (when prediction) | `02-zorder-recipes.md § scatter-regression`         |
+| `dose_response`       | `gen_dose_response`            | `apply_scatter_regression_floor`                                  | `02-zorder-recipes.md § scatter-regression`         |
+| `scale_location`      | `gen_scale_location`           | `apply_scatter_regression_floor`                                  | `02-zorder-recipes.md § scatter-regression`         |
+
+### Composite / future families (binding TBD)
+
+| Chart family          | Registered generator           | Required template_mining_helpers calls                           | Deep-dive reference                                |
+|-----------------------|--------------------------------|------------------------------------------------------------------|----------------------------------------------------|
+| `marginal_joint`      | (via `gen_scatter_regression`) | `density_color_scatter` + `add_perfect_fit_diagonal` + marginal axes setup | `07-techniques/marginal-joint.md`                  |
+| `dual_axis`           | (axis pair generator)          | `apply_zorder_recipe('dual_axis', ...)` + corpus-anchored color spines      | `07-techniques/dual-axis.md`                       |
+| `shap_composite`      | (via composite board)          | `add_zero_reference` + `add_group_dividers` + bipolar palette               | `07-techniques/shap-composite.md`                  |
 
 ### Static-scan probe (autonomous cycle requirement)
 
-Every autonomous distillation cycle must run the binding probe and persist its output
-to the cycle report. Pseudo-spec:
+Every autonomous distillation cycle must run `template-mining/_extraction/binding_probe.py`
+and persist its output to the cycle report. The probe enumerates all 19 strict bindings
+across the six covered families, reports per-generator pass/fail, and asserts every
+family is covered.
 
 ```python
 import re
 from pathlib import Path
 SOURCE_FILES = [
     "phases/code-gen/generators-distribution.md",
+    "phases/code-gen/generators-distribution.py",
     "phases/code-gen/generators-clinical.md",
     "phases/code-gen/generators-psychology.md",
-    "phases/code-gen/generators-distribution.py",
 ]
 BINDINGS = {
-    "gen_radar":               ["add_polygon_polar_grid"],
-    "gen_biodiversity_radar":  ["add_polygon_polar_grid"],
-    "gen_forest":              ["add_forest_panel"],
-    "gen_heatmap_triangular":  ["TwoSlopeNorm", "RdBu_r"],
-    "gen_scatter_regression":  ["apply_scatter_regression_floor"],
+    # Polar / Radar family
+    "gen_radar":              ["add_polygon_polar_grid"],
+    "gen_biodiversity_radar": ["add_polygon_polar_grid"],
+    # Forest / CI family
+    "gen_forest":             ["add_forest_panel"],
+    "gen_caterpillar_plot":   ["add_forest_panel"],
+    "gen_risk_ratio_plot":    ["add_forest_panel"],
+    "gen_ci_plot":            ["add_forest_panel"],
+    # Correlation heatmap family
+    "gen_heatmap_triangular": ["TwoSlopeNorm", "RdBu_r"],
+    "gen_correlation":        ["TwoSlopeNorm", "RdBu_r"],
+    "gen_heatmap_symmetric":  ["TwoSlopeNorm", "RdBu_r"],
+    # Perfect-fit diagonal family
+    "gen_calibration":        ["add_perfect_fit_diagonal"],
+    "gen_pp_plot":            ["add_perfect_fit_diagonal"],
+    "gen_qq":                 ["add_perfect_fit_diagonal"],
+    "gen_roc":                ["add_perfect_fit_diagonal"],
+    # Zero reference family
+    "gen_residual_vs_fitted": ["add_zero_reference", "apply_scatter_regression_floor"],
+    "gen_ma_plot":            ["add_zero_reference"],
+    "gen_waterfall":          ["add_zero_reference"],
+    "gen_diverging_bar":      ["add_zero_reference"],
+    "gen_likert_divergent":   ["add_zero_reference"],
+    "gen_decision_curve":     ["add_zero_reference"],
+    "gen_lollipop_horizontal": ["add_zero_reference"],
+    "gen_dotplot":            ["add_zero_reference"],
+    # Scatter regression floor family
+    "gen_scatter_regression": ["apply_scatter_regression_floor", "add_zero_reference"],
+    "gen_dose_response":      ["apply_scatter_regression_floor"],
+    "gen_scale_location":     ["apply_scatter_regression_floor"],
 }
 text = "\n".join(Path(p).read_text(encoding="utf-8") for p in SOURCE_FILES if Path(p).exists())
 violations = []
@@ -75,9 +163,32 @@ for fn_name, required_calls in BINDINGS.items():
 ```
 
 The cycle report's `templateMiningHelperBindings` field must include both the per-generator
-binding status and the violation list. A non-empty violation list is a hard block — the cycle
-must not commit until either (a) the generator is updated to call the required helper, or
-(b) the binding contract is amended in this file (with a recorded reason and ticket reference).
+binding status, the family-coverage map, and the violation list. A non-empty violation list
+is a hard block — the cycle must not commit until either (a) the generator is updated to
+call the required helper, or (b) the binding contract is amended in this file (with a
+recorded reason and ticket reference).
+
+### Guarded-call pattern (canonical + fallback)
+
+When a generator binds to a template_mining_helpers API, it must use the **guarded-call
+pattern** so the function still works when `template_mining_helpers.py` source is not
+embedded in the runtime (e.g., legacy direct imports, alternate runtimes):
+
+```python
+canonical_helper = globals().get("helper_name")
+if canonical_helper is not None:
+    try:
+        canonical_helper(ax, ...)
+    except Exception:
+        # inline fallback (preserved legacy implementation)
+        ax.axhline(0, ...)
+else:
+    # inline fallback
+    ax.axhline(0, ...)
+```
+
+Both branches must reference the helper name textually so the binding probe sees the
+binding regardless of which path executes at runtime.
 
 ## Classification
 
