@@ -121,6 +121,7 @@ render_qa = {
     "layoutContractEnforced": chartPlan.get("crowdingPlan", {}).get("layoutContractEnforced", False),
     "layoutContractFailures": chartPlan.get("crowdingPlan", {}).get("layoutContractFailures", []),
     "crossPanelOverlapIssues": chartPlan.get("crowdingPlan", {}).get("crossPanelOverlapIssues", []),
+    "colorbarReflowCount": chartPlan.get("crowdingPlan", {}).get("colorbarReflowCount", 0),
     "colorbarPanelOverlapIssues": chartPlan.get("crowdingPlan", {}).get("colorbarPanelOverlapIssues", []),
     "colorbarPanelOverlapCount": chartPlan.get("crowdingPlan", {}).get("colorbarPanelOverlapCount", 0),
     "metricTableDataOverlapIssues": chartPlan.get("crowdingPlan", {}).get("metricTableDataOverlapIssues", []),

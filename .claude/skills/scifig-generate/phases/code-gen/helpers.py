@@ -60,6 +60,11 @@ CROWDING_DEFAULTS = {
     "forbidOutsideRightLegend": True,
     "forbidInAxesLegend": True,
     "colorbarMode": "none",
+    "colorbarReflowRequiredOnOverlap": True,
+    "colorbarReservedRight": 0.78,
+    "colorbarReflowPad": 0.04,
+    "colorbarReflowWidth": 0.025,
+    "colorbarReflowMinHeight": 0.20,
     "maxDirectLabelsHero": 5,
     "maxDirectLabelsSupport": 3,
     "maxBracketGroups": 2,
@@ -2210,14 +2215,19 @@ def _metric_table_data_overlap_issues(fig, axes, renderer):
     return issues
 
 
+def _colorbar_axes(fig, axes):
+    return [
+        colorbar_ax
+        for colorbar_ax in get_non_panel_axes(fig, axes)
+        if hasattr(colorbar_ax, "_colorbar")
+        and getattr(colorbar_ax, "get_visible", lambda: True)()
+    ]
+
+
 def _colorbar_panel_overlap_issues(fig, axes, renderer):
     panel_boxes = {pid: _axis_layout_bbox(ax, renderer) for pid, ax in axes.items()}
     issues = []
-    for colorbar_index, colorbar_ax in enumerate(get_non_panel_axes(fig, axes)):
-        if not hasattr(colorbar_ax, "_colorbar"):
-            continue
-        if not getattr(colorbar_ax, "get_visible", lambda: True)():
-            continue
+    for colorbar_index, colorbar_ax in enumerate(_colorbar_axes(fig, axes)):
         try:
             colorbar_box = _axis_layout_bbox(colorbar_ax, renderer)
         except Exception:
@@ -2230,6 +2240,107 @@ def _colorbar_panel_overlap_issues(fig, axes, renderer):
                     "conflict_panel": panel_id,
                 })
     return issues
+
+
+def _axes_position_bounds(axes):
+    positions = []
+    for ax in axes:
+        try:
+            positions.append(ax.get_position())
+        except Exception:
+            continue
+    if not positions:
+        return None
+    return {
+        "x0": min(pos.x0 for pos in positions),
+        "y0": min(pos.y0 for pos in positions),
+        "x1": max(pos.x1 for pos in positions),
+        "y1": max(pos.y1 for pos in positions),
+    }
+
+
+def _compress_panel_axes_right(fig, axes, target_right):
+    bounds = _axes_position_bounds(axes.values())
+    if not bounds:
+        return
+    span = max(bounds["x1"] - bounds["x0"], 1e-6)
+    target_right = max(bounds["x0"] + 0.18, min(target_right, bounds["x1"]))
+    scale = (target_right - bounds["x0"]) / span
+    for ax in axes.values():
+        pos = ax.get_position()
+        new_x0 = bounds["x0"] + (pos.x0 - bounds["x0"]) * scale
+        ax.set_position([new_x0, pos.y0, pos.width * scale, pos.height])
+    invalidate_layout_cache(fig)
+
+
+def reflow_colorbars_outside_panels(fig, axes=None, crowdingPlan=None):
+    """Move overlapping colorbar axes into reserved non-panel slots before final QA."""
+    axes_map = normalize_axes_map(fig, axes)
+    plan = {**default_crowding_plan(), **(crowdingPlan or {})}
+    if not axes_map or not plan.get("colorbarReflowRequiredOnOverlap", True):
+        return 0
+
+    renderer = get_cached_renderer(fig, force=True)
+    overlap_issues = _colorbar_panel_overlap_issues(fig, axes_map, renderer)
+    if not overlap_issues:
+        return 0
+
+    colorbars = _colorbar_axes(fig, axes_map)
+    overlap_indices = {
+        issue.get("colorbarIndex")
+        for issue in overlap_issues
+        if issue.get("colorbarIndex") is not None
+    }
+    if not overlap_indices:
+        return 0
+
+    _disable_layout_engine_for_manual_margins(fig)
+    try:
+        fig.subplots_adjust(right=min(fig.subplotpars.right, float(plan.get("colorbarReservedRight", 0.78))))
+    except Exception:
+        pass
+    invalidate_layout_cache(fig)
+    get_cached_renderer(fig, force=True)
+
+    bounds = _axes_position_bounds(axes_map.values())
+    if not bounds:
+        return 0
+    pad = float(plan.get("colorbarReflowPad", 0.04))
+    width = float(plan.get("colorbarReflowWidth", 0.025))
+    min_height = float(plan.get("colorbarReflowMinHeight", 0.20))
+    target_right = min(float(plan.get("colorbarReservedRight", 0.78)), 0.98 - width - pad)
+    if bounds["x1"] + pad + width > 0.98:
+        _compress_panel_axes_right(fig, axes_map, target_right)
+        bounds = _axes_position_bounds(axes_map.values())
+        if not bounds:
+            return 0
+
+    y0 = max(0.12, bounds["y0"])
+    y1 = min(0.92, bounds["y1"])
+    height = max(min_height, y1 - y0)
+    if y0 + height > 0.94:
+        y0 = max(0.08, 0.94 - height)
+
+    moved = 0
+    for slot, colorbar_ax in enumerate(colorbars):
+        if slot not in overlap_indices:
+            continue
+        x0 = min(0.98 - width, bounds["x1"] + pad + moved * (width + pad * 0.5))
+        if x0 <= bounds["x1"]:
+            continue
+        try:
+            colorbar_ax.set_position([x0, y0, width, height])
+            colorbar_ax.set_in_layout(False)
+            colorbar_ax.yaxis.set_ticks_position("right")
+            colorbar_ax.yaxis.set_label_position("right")
+            moved += 1
+        except Exception:
+            continue
+
+    if moved:
+        invalidate_layout_cache(fig)
+        get_cached_renderer(fig, force=True)
+    return moved
 
 
 def audit_figure_layout_contract(fig, axes=None, chartPlan=None, journalProfile=None, strict=False):
@@ -2811,6 +2922,10 @@ def enforce_figure_legend_contract(fig, axes=None, chartPlan=None, journalProfil
         if any(issue.get("element") == "scifig_shared_legend" for issue in report["overlapIssues"]):
             failures.append("legend_overlap_issue_recorded")
 
+    colorbar_reflow_count = reflow_colorbars_outside_panels(fig, axes_map, plan["crowdingPlan"])
+    plan["crowdingPlan"]["colorbarReflowCount"] = colorbar_reflow_count
+    report["colorbarReflowCount"] = colorbar_reflow_count
+
     layout_report = audit_figure_layout_contract(fig, axes_map, plan, profile, strict=False)
     if layout_report.get("layoutContractFailures"):
         failures.extend(layout_report["layoutContractFailures"])
@@ -2820,6 +2935,7 @@ def enforce_figure_legend_contract(fig, axes=None, chartPlan=None, journalProfil
     report["legendContractEnforced"] = True
     report["legendContractFailures"] = failures
     report.update(layout_report)
+    report["colorbarReflowCount"] = colorbar_reflow_count
     if strict and failures:
         raise RuntimeError("Figure contract failed: " + ", ".join(failures))
     return report
