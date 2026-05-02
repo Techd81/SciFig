@@ -134,9 +134,10 @@ output/
 figures/
 *.pdf
 *.svg
-*.png
 *.tiff
 *.eps
+# Gallery images are committed for README display
+!docs/gallery/*.png
 
 # Tool-specific local agent/skill install directories
 .agents/
