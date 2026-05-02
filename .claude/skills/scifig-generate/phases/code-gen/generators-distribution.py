@@ -1,4 +1,4 @@
-﻿```python
+```python
 # ──────────────────────────────────────────────────────────────
 # Distribution Chart Generators
 # Signature: gen_xxx(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=None) -> ax

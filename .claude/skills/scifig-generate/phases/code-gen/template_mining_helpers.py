@@ -178,7 +178,21 @@ def _register_bundled_fonts(force: bool = False) -> dict:
 # ============================================================================
 
 _KERNEL_BASE = {
-    "font.family":       ["Times New Roman", "Arial", "DejaVu Sans"],
+    # Font fallback chain (cycle-23):
+    #   [Times New Roman, Arial, DejaVu Sans] (Latin / scientific) →
+    #   [Microsoft YaHei, SimHei, Noto Sans CJK SC, Noto Sans CJK JP, Hiragino Sans]
+    #   (CJK glyph coverage — first family available wins per glyph).
+    # matplotlib walks the list and picks the first family that has each
+    # glyph; this means English text still renders in Times/Arial while
+    # Chinese / Japanese / Korean characters fall through to YaHei / Noto
+    # without raising "Glyph N missing from font" warnings on Windows /
+    # macOS / Linux respectively. Final DejaVu Sans is matplotlib's bundled
+    # universal fallback for any glyph still uncovered.
+    "font.family":       ["Times New Roman", "Arial",
+                           "Microsoft YaHei", "SimHei",
+                           "Noto Sans CJK SC", "Noto Sans CJK JP",
+                           "Hiragino Sans", "DejaVu Sans"],
+    "axes.unicode_minus": False,  # CJK fonts often miss U+2212; use ASCII '-' for axis ticks
     "mathtext.fontset":  "stix",
     "font.size":         6.5,
     "axes.linewidth":    0.65,
@@ -195,12 +209,39 @@ _KERNEL_BASE = {
 _VARIANTS = {
     "default": {},
     "hero":    {"font.size": 7.5, "axes.linewidth": 0.75, "lines.linewidth": 1.2},
-    "compact": {"font.family": ["Arial", "Times New Roman", "DejaVu Sans"],
+    "compact": {"font.family": ["Arial", "Times New Roman",
+                                  "Microsoft YaHei", "SimHei",
+                                  "Noto Sans CJK SC", "Noto Sans CJK JP",
+                                  "Hiragino Sans", "DejaVu Sans"],
                 "font.size": 6.5, "axes.linewidth": 0.65,
                 "lines.linewidth": 0.9, "lines.markersize": 3.5},
     "polar":   {"font.size": 7.0, "axes.linewidth": 0.75,
                 "grid.linestyle": "--", "grid.alpha": 0.5},
 }
+
+
+def _filter_available_fonts(font_chain: list) -> list:
+    """Drop font families that are not installed on this system.
+
+    matplotlib walks the ``font.family`` list and emits a `findfont` warning
+    for every missing entry before falling through to one that exists. On a
+    Windows host the CJK chain ``[Microsoft YaHei, SimHei, Noto Sans CJK SC,
+    Noto Sans CJK JP, Hiragino Sans, DejaVu Sans]`` produces three warnings
+    per render even though YaHei + SimHei already cover Chinese glyphs.
+
+    This filter keeps a family iff ``font_manager`` can find it. Callers
+    must guarantee at least one fallback always survives — `_KERNEL_BASE`
+    ends in `DejaVu Sans` which ships with matplotlib, so the filtered list
+    is never empty in practice. If somehow it is, return the original
+    chain unchanged so matplotlib raises its own clear error rather than
+    a silent empty-list KeyError downstream.
+    """
+    try:
+        installed = {f.name for f in font_manager.fontManager.ttflist}
+    except Exception:
+        return list(font_chain)
+    available = [name for name in font_chain if name in installed]
+    return available if available else list(font_chain)
 
 
 def apply_journal_kernel(variant: str = "default",
@@ -216,6 +257,10 @@ def apply_journal_kernel(variant: str = "default",
       4. Bundled fonts under ``assets/fonts/`` are registered once at the top
          of the first call (idempotent); registration failures never block
          kernel application.
+      5. (cycle-23) ``font.family`` fallback chain is filtered against the
+         installed font set so matplotlib does not emit a `findfont` warning
+         for every cross-platform CJK fallback (Noto Sans CJK on Linux,
+         Hiragino Sans on macOS, Microsoft YaHei / SimHei on Windows).
     """
     # Register bundled fonts BEFORE rcParams.update so that user-supplied
     # Arial/Helvetica/Times TTFs are present when matplotlib resolves the
@@ -243,6 +288,12 @@ def apply_journal_kernel(variant: str = "default",
             rc["font.size"] = float(journalProfile["font_size_body_pt"])
         if journalProfile.get("axis_linewidth_pt"):
             rc["axes.linewidth"] = float(journalProfile["axis_linewidth_pt"])
+
+    # Filter font.family to only installed families (suppresses findfont
+    # warnings for cross-platform CJK fallbacks). MUST happen after the
+    # journalProfile override so user-specified fonts are still honored.
+    if isinstance(rc.get("font.family"), list):
+        rc["font.family"] = _filter_available_fonts(rc["font.family"])
 
     rc["xtick.direction"] = "in"
     rc["ytick.direction"] = "in"

@@ -790,6 +790,11 @@ def _add_marginal_distribution_axes(ax, x, y, visualPlan, color="#4C78A8"):
     _draw_template_marginal_distribution(right, y_valid, orientation="horizontal", color=color, bins=bins)
     for marginal in (top, right):
         _style_template_marginal_axis(marginal)
+    # Each marginal panel produces TWO Axes (top + right), so count both
+    # subAxesCount and marginalAxesCount twice per call. This matches the
+    # QA contract in template-mining/07-techniques/marginal-joint.md
+    # ("marginalAxesCount: 2") and is asserted by
+    # tests/test_crowding_controls.py::test_prediction_scatter_adds_reference_grammar_motifs.
     _visual_count(visualPlan, "marginalAxesCount")
     _visual_count(visualPlan, "marginalAxesCount")
     _visual_count(visualPlan, "subAxesCount")
@@ -2660,12 +2665,48 @@ def _shrink_heatmap_cell_labels(axes, fig, *, font_size_pt=5.0, char_width_facto
             skipped_axes += 1
             continue
 
+        # P2 — graceful integer fallback (cycle-23 fix for Finding-1)
+        # When fmt == "" the strict-fit pass rejected every decimal width.
+        # For integer / count-style heatmaps (e.g. weekday-by-hour trip counts)
+        # this is too aggressive: removing 100% of labels destroys all
+        # information density. Detect "values are effectively integers" and
+        # accept .0f with mild overflow tolerance so the user still sees
+        # the magnitudes, even if neighbouring labels touch by a hair.
+        # Zero cells are still suppressed in graceful_threshold path below.
+        force_integer_fallback = False
+        if fmt == "":
+            try:
+                arr = qm.get_array()
+                arr_finite = np.asarray(arr).astype(float)
+                arr_finite = arr_finite[np.isfinite(arr_finite)]
+                if arr_finite.size > 0:
+                    is_integer = np.all(arr_finite == np.round(arr_finite))
+                    char_width_in = (font_size_pt * char_width_factor) / 72.0
+                    available_in = cell_width_in * 0.85
+                    int_digits_local = max(
+                        len(str(int(abs(vmin)))) + (1 if vmin < 0 else 0),
+                        len(str(int(abs(vmax)))) + (1 if vmax < 0 else 0),
+                        1,
+                    )
+                    needed_in = int_digits_local * char_width_in
+                    # Allow up to 1.4x overflow for integer data so 5-digit
+                    # counts (e.g. up to 99999) still annotate even when the
+                    # cell is borderline-tight.
+                    if is_integer and needed_in <= available_in * 1.4:
+                        fmt = ".0f"
+                        force_integer_fallback = True
+            except Exception:
+                pass
+
         # Reformat / remove text artists.
         # M1: skip texts that contain scientific notation ('e'/'E') or significance
         # markers ('*' / '†' / '‡' / '§') — generators may have intentional formats.
         # P1: when fmt == '.0f' (heavy density), apply graceful degradation —
         # remove non-diagonal cells with |value| < 0.5 so the remaining numbers
         # carry real information rather than a forest of "0" / "-0".
+        # P2 (cycle-23): when force_integer_fallback is on, suppress zero-value
+        # cells so a sparse-zero heatmap stays readable; do not impose the
+        # diagonal-only rule (count heatmaps have no semantic diagonal).
         graceful_threshold = 0.5
         for txt in list(ax.texts):
             raw = str(txt.get_text()).strip()
@@ -2686,6 +2727,17 @@ def _shrink_heatmap_cell_labels(axes, fig, *, font_size_pt=5.0, char_width_facto
             if fmt == "":
                 txt.remove()
                 removed += 1
+                continue
+            # P2 (cycle-23) — integer fallback: drop zero-value cells only
+            if force_integer_fallback:
+                if val == 0:
+                    txt.remove()
+                    removed += 1
+                    continue
+                new_text = format(val, fmt)
+                if new_text != raw:
+                    txt.set_text(new_text)
+                    reformatted += 1
                 continue
             # P1 — graceful degradation when fmt forced to '.0f'
             if fmt == ".0f":
