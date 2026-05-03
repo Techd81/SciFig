@@ -1,27 +1,27 @@
-"""Template-mining helpers — the operational layer for the 7-module knowledge base
-under `template-mining/`. Phase 3 imports from this module to apply 顶刊 patterns
+"""Template-mining helpers 鈥?the operational layer for the 7-module knowledge base
+under `template-mining/`. Phase 3 imports from this module to apply 椤跺垔 patterns
 distilled from 77 reference cases.
 
 Module status (n/n implemented):
-  - apply_journal_kernel        ✓
-  - resolve_palette             ✓
-  - role_color                  ✓
-  - add_metric_box              ✓
-  - add_perfect_fit_diagonal    ✓
-  - add_zero_reference          ✓
-  - add_group_dividers          ✓
-  - add_panel_label             ✓
-  - density_sort                ✓
-  - density_color_scatter       ✓
-  - add_polygon_polar_grid      ✓
-  - draw_gradient_box           ✓
-  - add_forest_panel            ✓
-  - build_grid                  ✓ (R0 / R1 / R2 / R3 / R5 / R6 / R8 / R9; R7 / R10 / R11 stubs)
-  - select_narrative_arc        ✓
-  - arc_required_motifs         ✓
-  - arc_default_grid            ✓
-  - apply_zorder_recipe         ✓ (scatter_regression / forest / dual_axis / radar / shap_composite / marginal_joint)
-  - add_heatmap_pairwise_panel  ✓ (cycle 21; n*n correlation matrix discipline)
+  - apply_journal_kernel        鉁?
+  - resolve_palette             鉁?
+  - role_color                  鉁?
+  - add_metric_box              鉁?
+  - add_perfect_fit_diagonal    鉁?
+  - add_zero_reference          鉁?
+  - add_group_dividers          鉁?
+  - add_panel_label             鉁?
+  - density_sort                鉁?
+  - density_color_scatter       鉁?
+  - add_polygon_polar_grid      鉁?
+  - draw_gradient_box           鉁?
+  - add_forest_panel            鉁?
+  - build_grid                  ok (R0 / R1 / R2 / R3 / R4 / R5 / R6 / R7 / R8 / R9 / R10 / R11 implemented)
+  - select_narrative_arc        鉁?
+  - arc_required_motifs         鉁?
+  - arc_default_grid            鉁?
+  - apply_zorder_recipe         鉁?(scatter_regression / forest / dual_axis / radar / shap_composite / marginal_joint)
+  - add_heatmap_pairwise_panel  鉁?(cycle 21; n*n correlation matrix discipline)
 
 Reference docs:
   - 01-rcparams-kernel.md       kernel definitions
@@ -34,6 +34,7 @@ Reference docs:
 """
 from __future__ import annotations
 
+import json
 import os
 import warnings
 from pathlib import Path
@@ -74,13 +75,13 @@ def _resolve_fonts_dir() -> Path | None:
     """Resolve the assets/fonts directory across import / exec / cwd contexts.
 
     Strategy order (first existing directory wins):
-      1. ``SCIFIG_FONTS_DIR`` env var — explicit override; Phase 3 sets this.
-      2. ``__SCIFIG_SKILL_ROOT__`` global — injected into namespace before
+      1. ``SCIFIG_FONTS_DIR`` env var 鈥?explicit override; Phase 3 sets this.
+      2. ``__SCIFIG_SKILL_ROOT__`` global 鈥?injected into namespace before
          ``exec(template_mining_helpers_source)`` in generated scripts.
-      3. ``__file__``-relative — three levels up from this module:
+      3. ``__file__``-relative 鈥?three levels up from this module:
          ``phases/code-gen/template_mining_helpers.py`` ->
          ``<skill_root>/assets/fonts``. Works for direct imports.
-      4. ``Path.cwd() / "assets/fonts"`` — last-resort for ad-hoc scripts.
+      4. ``Path.cwd() / "assets/fonts"`` 鈥?last-resort for ad-hoc scripts.
 
     Returns ``None`` when no candidate directory exists; callers must treat
     this as a no-op rather than an error (font registration is opt-in).
@@ -118,11 +119,11 @@ def _register_bundled_fonts(force: bool = False) -> dict:
     """Register every TTF/OTF/TTC under ``assets/fonts/`` with matplotlib.
 
     Behavior:
-      * Idempotent — repeated calls return the cached result unchanged
+      * Idempotent 鈥?repeated calls return the cached result unchanged
         unless ``force=True``.
-      * Safe — every error is caught and recorded; never propagates into
+      * Safe 鈥?every error is caught and recorded; never propagates into
         ``apply_journal_kernel()``.
-      * Resilient — if no fonts directory exists or it is empty, returns a
+      * Resilient 鈥?if no fonts directory exists or it is empty, returns a
         no-op result and the caller proceeds normally (matplotlib's
         DejaVu Sans fallback still works).
 
@@ -165,7 +166,7 @@ def _register_bundled_fonts(force: bool = False) -> dict:
         try:
             font_manager.fontManager.addfont(str(path))
             result["registered"].append(path.name)
-        except Exception as exc:  # noqa: BLE001 — catalog errors, never raise
+        except Exception as exc:  # noqa: BLE001 鈥?catalog errors, never raise
             result["errors"].append(f"{path.name}: {type(exc).__name__}: {exc}")
 
     _FONT_REGISTRATION_DONE = True
@@ -179,9 +180,9 @@ def _register_bundled_fonts(force: bool = False) -> dict:
 
 _KERNEL_BASE = {
     # Font fallback chain (cycle-23):
-    #   [Times New Roman, Arial, DejaVu Sans] (Latin / scientific) →
+    #   [Times New Roman, Arial, DejaVu Sans] (Latin / scientific) 鈫?
     #   [Microsoft YaHei, SimHei, Noto Sans CJK SC, Noto Sans CJK JP, Hiragino Sans]
-    #   (CJK glyph coverage — first family available wins per glyph).
+    #   (CJK glyph coverage 鈥?first family available wins per glyph).
     # matplotlib walks the list and picks the first family that has each
     # glyph; this means English text still renders in Times/Arial while
     # Chinese / Japanese / Korean characters fall through to YaHei / Noto
@@ -230,7 +231,7 @@ def _filter_available_fonts(font_chain: list) -> list:
     per render even though YaHei + SimHei already cover Chinese glyphs.
 
     This filter keeps a family iff ``font_manager`` can find it. Callers
-    must guarantee at least one fallback always survives — `_KERNEL_BASE`
+    must guarantee at least one fallback always survives 鈥?`_KERNEL_BASE`
     ends in `DejaVu Sans` which ships with matplotlib, so the filtered list
     is never empty in practice. If somehow it is, return the original
     chain unchanged so matplotlib raises its own clear error rather than
@@ -267,7 +268,7 @@ def apply_journal_kernel(variant: str = "default",
     # font.family fallback chain. Idempotent and exception-safe.
     try:
         _register_bundled_fonts()
-    except Exception as _font_err:  # noqa: BLE001 — never block kernel apply
+    except Exception as _font_err:  # noqa: BLE001 鈥?never block kernel apply
         warnings.warn(
             f"_register_bundled_fonts failed: "
             f"{type(_font_err).__name__}: {_font_err}; "
@@ -304,62 +305,71 @@ def apply_journal_kernel(variant: str = "default",
 # 2. PALETTE BANK  (03-palette-bank.md)
 # ============================================================================
 
-PALETTES: dict[str, list[str]] = {
-    # categorical
-    "nature_radar_dual":              ["#1F3A5F", "#C8553D"],
-    "morandi_sci_4":                  ["#4A6B8A", "#5FA896", "#D9A75A", "#B85B5B"],
-    "cej_vibrant_3":                  ["#00CED1", "#FF0000", "#1E90FF"],
-    "cell_high_contrast_6":           ["#1B1B1B", "#D73027", "#4575B4",
-                                        "#1A9850", "#FDAE61", "#7570B3"],
-    "materials_porosity_terracotta":  ["#CFE2F3", "#9BC2E6", "#F48E66"],
-    "npg_4":                          ["#E64B35", "#4DBBD5", "#00A087", "#3C5488"],
-    "ml_model_performance_10":         ["#4DBBD5", "#E64B35", "#00A087", "#3C5488",
-                                        "#F39B7F", "#8491B4", "#91D1C2", "#DC0000",
-                                        "#7E6148", "#333333"],
-    "cool_summer_4":                  ["#8DA0CB", "#FC8D62", "#66C2A5", "#FBC15E"],
-    "tableau10_classic":              ["#1F77B4", "#FF7F0E", "#2CA02C", "#D62728",
-                                        "#9467BD", "#8C564B", "#E377C2", "#7F7F7F",
-                                        "#BCBD22", "#17BECF"],
-    # sequential (returned as a list of stops; for actual cmap use mpl.colormaps)
-    "seq_cool_5":                     ["#F7FBFF", "#D6EAF8", "#A9CCE3", "#5DADE2", "#21618C"],
-    "seq_warm_5":                     ["#FFF6E8", "#FBD38D", "#F6AD55", "#DD6B20", "#9C4221"],
-    # diverging anchors
-    "bipolar_ALE":                    ["#4F81BD", "#FFFFFF", "#C0504D"],
-    "red_blue_correlation":           ["#3B6FB6", "#F7F7F7", "#B5403A"],
-}
-
-
-PALETTE_ROLE_MAP: dict[str, str] = {
-    "control":              "#1F4E79",
-    "treatment":            "#C8553D",
-    "rescue":               "#4C956C",
-    "vehicle":              "#6C757D",
-    "train":                "#4C78A8",
-    "test":                 "#E45756",
-    "training":             "#F6CFA3",
-    "testing":              "#9BCBEB",
-    "rf":                   "#4DBBD5",
-    "random forest":        "#4DBBD5",
-    "rfr":                  "#4DBBD5",
-    "xgboost":              "#E64B35",
-    "lightgbm":             "#00A087",
-    "gbdt":                 "#3C5488",
-    "svm":                  "#F39B7F",
-    "knn":                  "#8491B4",
-    "actual":               "#1F4E79",
-    "observed":             "#1F4E79",
-    "experimental":         "#1F4E79",
-    "predicted":            "#C8553D",
-    "fitted":               "#C8553D",
-    "estimated":            "#C8553D",
-    "negative_correlation": "#4F81BD",
+FALLBACK_PALETTE = ["#1F3A5F", "#C8553D", "#4C956C"]
+FALLBACK_SEMANTIC_ROLES = {
+    "control": "#1F4E79",
+    "treatment": "#C8553D",
+    "actual": "#1F4E79",
+    "observed": "#1F4E79",
+    "predicted": "#C8553D",
     "positive_correlation": "#C0504D",
-    "shap_positive":        "#C0504D",
-    "shap_negative":        "#4F81BD",
-    "optimal":              "#00A087",
-    "pareto":               "#00A087",
-    "dominated":            "#7F7F7F",
+    "negative_correlation": "#4F81BD",
+    "shap_positive": "#C0504D",
+    "shap_negative": "#4F81BD",
 }
+_PALETTE_CACHE: dict | None = None
+
+
+def _resolve_skill_root() -> Path:
+    injected_root = globals().get("__SCIFIG_SKILL_ROOT__")
+    if injected_root:
+        return Path(str(injected_root)).expanduser().resolve()
+    try:
+        candidate = Path(__file__).resolve().parents[2]
+        # Validate: must contain templates/template-palette-registry.json
+        if (candidate / "templates" / "template-palette-registry.json").exists():
+            return candidate
+    except (NameError, IndexError):
+        pass
+    # Fallback: search cwd for .claude/skills/scifig-generate
+    for base in [Path.cwd(), *Path.cwd().parents]:
+        candidate = base / ".claude" / "skills" / "scifig-generate"
+        if (candidate / "templates" / "template-palette-registry.json").exists():
+            return candidate.resolve()
+    return Path.cwd().resolve()
+
+
+def _load_palette_registry() -> dict:
+    global _PALETTE_CACHE
+    if _PALETTE_CACHE is None:
+        skill_root = _resolve_skill_root()
+        try:
+            with open(skill_root / "templates" / "template-palette-registry.json", encoding="utf-8") as f:
+                _PALETTE_CACHE = json.load(f)
+        except Exception:
+            _PALETTE_CACHE = {
+                "categorical": {
+                    "nature_radar_dual": {
+                        "anchors": list(FALLBACK_PALETTE),
+                    },
+                    "template_case_hex": {
+                        "anchors": list(FALLBACK_PALETTE),
+                    },
+                },
+                "sequential": {},
+                "diverging": {},
+                "semantic_roles": dict(FALLBACK_SEMANTIC_ROLES),
+            }
+    return _PALETTE_CACHE
+
+
+def _registry_palette_choices(registry: dict) -> dict[str, list[str]]:
+    choices = {}
+    for section in ("categorical", "sequential", "diverging"):
+        for name, meta in registry.get(section, {}).items():
+            if isinstance(meta, dict):
+                choices[name] = list(meta.get("anchors", []))
+    return choices
 
 
 def resolve_palette(name: str, n: int | None = None,
@@ -370,10 +380,12 @@ def resolve_palette(name: str, n: int | None = None,
         overrides = journalProfile["palette_overrides"]
         if name in overrides:
             return list(overrides[name])
-    if name not in PALETTES:
-        raise KeyError(f"palette {name!r} not in PALETTES; "
-                       f"choices: {sorted(PALETTES)}")
-    palette = list(PALETTES[name])
+    registry = _load_palette_registry()
+    choices = _registry_palette_choices(registry)
+    if name not in choices:
+        raise KeyError(f"palette {name!r} not in template-palette-registry.json; "
+                       f"choices: {sorted(choices)}")
+    palette = list(choices[name])
     if n is None:
         return palette
     if n <= len(palette):
@@ -382,10 +394,21 @@ def resolve_palette(name: str, n: int | None = None,
 
 
 def role_color(role: str, palette: list[str] | None = None) -> str:
-    """Lookup a semantic role from PALETTE_ROLE_MAP."""
-    if role not in PALETTE_ROLE_MAP:
-        raise KeyError(f"role {role!r} not in PALETTE_ROLE_MAP")
-    return PALETTE_ROLE_MAP[role]
+    """Lookup a semantic role from template-palette-registry.json."""
+    registry = _load_palette_registry()
+    role_map = {**FALLBACK_SEMANTIC_ROLES, **registry.get("semantic_roles", {})}
+    # Legacy aliases: "train" → "TRAIN_BLUE", "test" → "TEST_RED"
+    _LEGACY_ROLE_ALIASES = {"train": "TRAIN_BLUE", "test": "TEST_RED"}
+    key = _LEGACY_ROLE_ALIASES.get(role, role if role in role_map else role.upper())
+    if key not in role_map:
+        raise KeyError(f"role {role!r} not in template-palette-registry.json semantic_roles")
+    value = role_map[key]
+    if isinstance(value, str) and value.startswith("palette[") and palette:
+        if value == "palette[0]":
+            return palette[0]
+        if value == "palette[-1]":
+            return palette[-1]
+    return value
 
 
 # ============================================================================
@@ -397,7 +420,7 @@ def add_metric_box(ax: Axes, metrics: dict[str, str | float], *,
                    pad: float = 0.28, lw: float = 0.45) -> None:
     """Place a metric text box with white fill + thin black border (idiom I1).
 
-    metrics: dict mapping label → value. Values formatted with default precision.
+    metrics: dict mapping label 鈫?value. Values formatted with default precision.
              Keys may use $...$ for math.
     loc: 'top_left' (default), 'top_right', 'bottom_left', 'bottom_right'.
     """
@@ -453,7 +476,7 @@ def add_perfect_fit_diagonal(ax: Axes,
         lo = float(min(np.min(x), np.min(y)))
         hi = float(max(np.max(x), np.max(y)))
     if not np.isfinite(lo) or not np.isfinite(hi) or hi <= lo:
-        # Degenerate range — fall back to a sensible symbolic interval centered
+        # Degenerate range 鈥?fall back to a sensible symbolic interval centered
         # on the midpoint (or 0 if midpoint also degenerate).
         mid = (lo + hi) / 2.0 if np.isfinite(lo) and np.isfinite(hi) else 0.0
         half = max(abs(mid) * 0.10, 0.5)
@@ -470,7 +493,7 @@ def add_zero_reference(ax: Axes, *, axis: str = "y",
                         color: str = "#222222",
                         lw: float = 1.0, ls: str = "--",
                         zorder: int = 5) -> None:
-    """Add a dashed zero reference line (idiom I4). axis='y' → axhline; 'x' → axvline."""
+    """Add a dashed zero reference line (idiom I4). axis='y' 鈫?axhline; 'x' 鈫?axvline."""
     if axis == "y":
         ax.axhline(0, color=color, linestyle=ls, linewidth=lw, zorder=zorder)
     elif axis == "x":
@@ -525,7 +548,7 @@ def apply_scatter_regression_floor(ax: Axes, *,
                                     despine: bool = True,
                                     grid_axis: str = "both") -> None:
     """Apply the L0 floor for scatter-regression panels: light dashed grid + despine.
-    Anchor cases: GAM scatter+residual (Nature), R² scatter, distance-decay scatter.
+    Anchor cases: GAM scatter+residual (Nature), R虏 scatter, distance-decay scatter.
     Always call this BEFORE drawing scatter so the grid sits at zorder=0.
 
     grid_axis: 'both' (default, scatter), 'x' (horizontal bars / dot-plot), 'y' (vertical bars).
@@ -565,13 +588,13 @@ def resolve_split_palette(dataProfile: dict, *,
                            journalProfile: dict | None = None) -> dict[str, str]:
     """One-stop palette resolver that auto-detects split semantics.
 
-    Returns a dict mapping role/category → hex.
+    Returns a dict mapping role/category 鈫?hex.
 
     Discipline (per 03-palette-bank.md):
-      - dataProfile.has_train_test_split → role_color('train'/'test')
-      - dataProfile.has_actual_predicted → role_color('actual'/'predicted')
-      - dataProfile.has_shap_signed       → role_color('shap_positive'/'shap_negative')
-      - dataProfile.has_correlation_signed→ role_color('positive_correlation'/'negative_correlation')
+      - dataProfile.has_train_test_split 鈫?role_color('train'/'test')
+      - dataProfile.has_actual_predicted 鈫?role_color('actual'/'predicted')
+      - dataProfile.has_shap_signed       鈫?role_color('shap_positive'/'shap_negative')
+      - dataProfile.has_correlation_signed鈫?role_color('positive_correlation'/'negative_correlation')
       - Otherwise return categorical palette by `default_palette` name
         (categorical roles cat_0, cat_1, ...).
     """
@@ -651,7 +674,7 @@ def set_polar_title(ax: Axes, title: str, *,
     """Place title above polar axis without colliding with the topmost angle label.
     Default y=1.18 keeps clearance for tick labels (max=...) AND axis names.
 
-    Use this instead of `ax.set_title(title)` on polar axes — matplotlib's default
+    Use this instead of `ax.set_title(title)` on polar axes 鈥?matplotlib's default
     title position overlaps the angle-0 label on radar/polygon plots.
     """
     ax.text(0.5, y, title, transform=ax.transAxes,
@@ -873,11 +896,11 @@ def arc_required_motifs(arc: str, *, chart_family: str | None = None) -> list[st
     """Return mandatory motif keys for the chosen narrative arc.
 
     For arcs with sub-types, pass `chart_family` to disambiguate:
-      - hero + 'radar' / 'mirror_radial' → polar sub-type
-      - hero + 'dual_axis'                → dual_axis sub-type
-      - hero + 'scatter_regression' / 'forest' / 'box' / 'violin' → cartesian sub-type
-      - train_test_diagnostic + 'scatter_regression' → scatter sub-type
-      - train_test_diagnostic + 'time_series_pi'      → time-series sub-type
+      - hero + 'radar' / 'mirror_radial' 鈫?polar sub-type
+      - hero + 'dual_axis'                鈫?dual_axis sub-type
+      - hero + 'scatter_regression' / 'forest' / 'box' / 'violin' 鈫?cartesian sub-type
+      - train_test_diagnostic + 'scatter_regression' 鈫?scatter sub-type
+      - train_test_diagnostic + 'time_series_pi'      鈫?time-series sub-type
     Default (no chart_family): return the arc's universal motifs.
     """
     if arc == "hero" and chart_family:
@@ -914,8 +937,8 @@ def arc_default_grid(arc: str, panel_count: int = 1) -> str:
     """Return the default grid recipe key for the arc.
 
     Overrides:
-      multipanel_grid + panel_count <= 4 → R2 (2x2)
-      multipanel_grid + panel_count >= 9 → R5 (3x3 / n×n)
+      multipanel_grid + panel_count <= 4 鈫?R2 (2x2)
+      multipanel_grid + panel_count >= 9 鈫?R5 (3x3 / n×n)
     """
     if arc == "multipanel_grid":
         if panel_count <= 4:
@@ -946,7 +969,7 @@ def apply_zorder_recipe(family: str, ax: Axes, layers: dict[str, list]) -> None:
     family: 'scatter_regression' | 'forest' | 'dual_axis' | 'radar'
             | 'shap_composite' | 'marginal_joint' (plus stubs for
             'time_series_pi' | 'lollipop' | 'gradient_box' | 'inset_distribution').
-    layers: dict mapping role-key → list of artist objects (or single artist).
+    layers: dict mapping role-key 鈫?list of artist objects (or single artist).
             Roles: 'grid', 'background', 'fill', 'primary', 'reference',
                     'error', 'highlight'.
     """
@@ -981,7 +1004,7 @@ def bootstrap_chart(arc: str, *,
                      journalProfile: dict | None = None,
                      figsize: tuple[float, float] | None = None,
                      ) -> tuple[Figure, list[Axes], list[str]]:
-    """Bootstrap a figure from a narrative arc — applies kernel + grid + palette.
+    """Bootstrap a figure from a narrative arc 鈥?applies kernel + grid + palette.
 
     Returns (fig, axes_flat, palette_hex_list).
 
@@ -1077,7 +1100,7 @@ def add_heatmap_pairwise_panel(fig, features_df, *,
                                  colorbar_label="Pearson r",
                                  colorbar_rect=(0.92, 0.30, 0.012, 0.40),
                                  max_features=8) -> dict:
-    """One-call pairwise correlation matrix panel — encodes the corpus-anchored
+    """One-call pairwise correlation matrix panel 鈥?encodes the corpus-anchored
     `heatmap_pairwise` discipline (8/77 cases) from `07-techniques/heatmap-pairwise.md`.
 
     Layout discipline (Nature 5x5 Pearson matrix anchor):
@@ -1370,7 +1393,7 @@ def choose_heatmap_fmt(
         15% inter-cell padding so neighbouring labels never visually
         merge across the cell border.
     char_width_factor
-        Character width as a fraction of font size (≈0.55 for sans-serif
+        Character width as a fraction of font size (鈮?.55 for sans-serif
         digits in the corpus).
 
     Returns
@@ -1434,13 +1457,13 @@ def auto_relocate_annotations(
       1. Force one canvas redraw to populate every artist's display bbox.
       2. For each text artist, compute its display-coord bbox once and
          cache it. Compute the same for every data artist on this Axes
-         (lines, collections, patches) — also cached, so we do not redraw
+         (lines, collections, patches) 鈥?also cached, so we do not redraw
          per candidate offset.
       3. If the original overlap ratio (overlap area / text bbox area)
          exceeds ``overlap_threshold``, probe 12 candidate offsets in
          points: the 4 cardinals, 4 intercardinals, and 4 long-cardinals
          (14 pt). For each candidate the new bbox is just the cached
-         original bbox shifted in display coords — no redraw needed.
+         original bbox shifted in display coords 鈥?no redraw needed.
       4. Pick the offset minimising overlap, apply via ``set_position``
          in data coordinates, then redraw once at the end.
 
@@ -1456,7 +1479,7 @@ def auto_relocate_annotations(
     max_relocate
         Optional cap on the number of relocations performed. Useful when
         annotation density is so high that every text overlaps with
-        something — set this to ``len(text_artists) // 2`` to relocate
+        something 鈥?set this to ``len(text_artists) // 2`` to relocate
         only the worst half.
 
     Returns

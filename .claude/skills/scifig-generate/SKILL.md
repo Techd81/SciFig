@@ -43,6 +43,10 @@ Pipeline: preference gates -> Phase 1 `dataProfile` -> Phase 2 `chartPlan` -> Ph
    - Read `07-techniques/<family>.md` only if the chart family has a dedicated deep-dive (radar, shap-composite, dual-axis, heatmap-pairwise, marginal-joint, time-series-pi, lollipop-bipolar, gradient-box, inset-distribution).
 4. **Phase 4** render QA: every required motif from the chosen arc + family must be present (`arc_required_motifs(arc)`); failures route back to Phase 3.
 
+For finalizer-safe usage rules and ready annotation snippets, see
+`templates/finalizer-safe-template-contract.md` and
+`templates/annotation-idioms-ready.md`.
+
 **Re-extraction**: when `template/articles/` changes, run `python .claude/skills/scifig-generate/template-mining/_extraction/extract.py` then `enrich.py` to refresh `case-index.json`, `stats.md`, `narratives.md`. Then audit the "Distilled Universal Findings" section in `INDEX.md`.
 
 **Code promotion**: when the user asks to absorb article examples into the skill, run optional Phase 5 and follow `specs/template-distillation-contract.md`. Promote reusable Matplotlib logic into helpers/generators first; update prose only after executable behavior and tests exist.
@@ -71,7 +75,7 @@ fig, axes, palette = bootstrap_chart(arc="hero", panel_count=1,
                                      journalProfile=journalProfile)
 ```
 
-## Finalizer Auto-corrections (cycle-22)
+## Finalizer Auto-corrections (cycle-22 + cycle-24)
 
 `enforce_figure_legend_contract(...)` runs three **zero-touch retrofit passes** before `audit_figure_layout_contract` so common occlusion modes are repaired automatically without modifying generator source. Generators do not need to call these helpers explicitly — they fire from inside the contract finalizer.
 
@@ -80,6 +84,9 @@ fig, axes, palette = bootstrap_chart(arc="hero", panel_count=1,
 | `_promote_inaxes_text_safety` | Promotes every in-axes `Text` artist to `zorder>=20` and adds a rounded white bbox (alpha 0.85) when none exists. | `ax.text(... fontsize=10)` at default zorder=3 will be silently lifted to zorder=20 with a white background. |
 | `_shrink_heatmap_cell_labels` | Detects `QuadMesh` axes (sns.heatmap / pcolormesh) and reformats numeric cell labels to fit physical cell width via `choose_heatmap_fmt`. When fmt forced to `.0f` (very dense), applies graceful degradation: keeps only diagonal cells and `\|val\| ≥ 0.5`, removing the noise. | `sns.heatmap(annot=True, fmt=".3f")` may have its labels reformatted to `.2f` / `.1f` / `.0f` and some non-significant cells may lose their annotation entirely. |
 | `_text_data_overlap_issues` (audit) | Reports text-vs-line/scatter/patch geometric overlap > 30%. White-bbox text is treated as already-resolved and skipped. | `audit["textDataOverlapCount"]` and the `annotation_text_buried_under_data` failure flag. |
+
+| `normalize_axes_map` (audit) | Single-panel charts with inset axes receive all non-colorbar `fig.axes`; no generator opt-in is needed. | `audit["audited_axes_count"]` includes main axes plus inset axes. |
+| `_text_text_overlap_issues` / bbox coverage (audit) | Reports label-on-label collisions and oversized white bboxes that still cover plotted data. | `audit["textTextOverlapCount"]` and `audit["bboxDataCoverageOverflowCount"]` hard-fail Phase 4. |
 
 ### Excluded artists (never modified)
 
@@ -97,12 +104,21 @@ fig, axes, palette = bootstrap_chart(arc="hero", panel_count=1,
 | Scientific notation cell labels in a heatmap (`1.2e-3`) | The shrink pass auto-skips text containing `e+` / `e-` / `E+` / `E-` |
 | Significance markers in a heatmap (`*`, `**`, `ns`, `n.s.`) | The shrink pass auto-skips text containing `*`, `†`, `‡`, `§`, `ns`, `n.s.` |
 
+### What the finalizer does NOT auto-invoke
+
+The finalizer does not run expensive annotation relocation. Call these helpers
+explicitly when dense annotation layouts require them.
+
 ### Handcrafted helpers (manual invocation)
 
 Helpers in `template_mining_helpers.py` Section 10 that are **available but not auto-invoked**:
 
 - `safe_annotate(ax, text, xy, ...)` — drop-in replacement for `ax.annotate` / `ax.text` that pre-applies the same zorder + bbox guards as the retrofit. Use when you want explicit control instead of relying on the retrofit.
 - `auto_relocate_annotations(ax, ...)` — heavyweight collision-avoidance relocator (probes 12 candidate offsets in display coords). Use only when annotation density is high enough that bbox alone is not enough; the default retrofit covers most cases.
+
+### Source lint
+
+Generator source files must not contain `ax.legend(...)` with `bbox_to_anchor=(1.02, 1)` or `(0.5, -X)`. `phases/code-gen/source-lint.py` blocks these reverse examples before generated code is finalized.
 
 ## Bundled Fonts (assets/fonts/)
 

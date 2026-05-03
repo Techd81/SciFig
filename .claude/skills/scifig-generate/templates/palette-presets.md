@@ -1,5 +1,9 @@
 # Palette Presets
 
+Status: superseded by `templates/template-palette-registry.json`. This file
+remains human-readable documentation of palette intent; runtime resolution is
+JSON-driven.
+
 Stable palette presets for publication-grade scientific figures.
 
 ## Categorical Presets

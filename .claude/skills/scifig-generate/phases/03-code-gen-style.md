@@ -316,55 +316,20 @@ def build_rcparams(journalProfile):
 
 ### Step 3.2: Resolve Color System
 
-Read `templates/palette-presets.md` and convert `palettePlan` into a chart-ready color system.
+Palette defaults are defined in `templates/template-palette-registry.json`.
+Use `resolve_palette(name)` from `template_mining_helpers`; do not duplicate
+palette hex lists in this phase document.
 
 ```python
-PALETTES = {
-    # Local journal-safe presets
-    "journal_muted_8": ["#1F4E79", "#4C956C", "#F2A541", "#C8553D", "#7A6C8F", "#2B6F77", "#BC4749", "#6C757D"],
-    "journal_muted_6": ["#1F4E79", "#4C956C", "#F2A541", "#C8553D", "#7A6C8F", "#6C757D"],
-    "wong_8": ["#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7"],
-    "okabe_ito_8": ["#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#000000"],
-    "ml_model_performance_10": ["#4DBBD5", "#E64B35", "#00A087", "#3C5488", "#F39B7F", "#8491B4", "#91D1C2", "#DC0000", "#7E6148", "#333333"],
-    "genomics_categorical": ["#3B5998", "#C8553D", "#999999", "#4C956C", "#F2A541", "#7A6C8F"],
-    "clinical_survival": ["#0072B2", "#C8553D", "#4C956C", "#F2A541"],
-    "seq_cool": ["#F7FBFF", "#D6EAF8", "#A9CCE3", "#5DADE2", "#21618C"],
-    "seq_warm": ["#FFF6E8", "#FBD38D", "#F6AD55", "#DD6B20", "#9C4221"],
-    "div_centered": ["#3B6FB6", "#8FBCE6", "#F7F7F7", "#E6A0A0", "#B5403A"],
-    "div_expression": ["#2D5AA7", "#9CC4E4", "#F5F5F5", "#F4A582", "#B2182B"],
-    # Template-mining anchored palettes (mirror template_mining_helpers.PALETTES so
-    # that build_palette_plan can set categoricalPreset='nature_radar_dual' etc. and
-    # resolve_color_system can resolve the hex via PALETTES[name] without going
-    # through templatePaletteHex). Source: template-mining/03-palette-bank.md.
-    "nature_radar_dual": ["#1F3A5F", "#C8553D"],
-    "morandi_sci_4": ["#4A6B8A", "#5FA896", "#D9A75A", "#B85B5B"],
-    "cej_vibrant_3": ["#00CED1", "#FF0000", "#1E90FF"],
-    "cell_high_contrast_6": ["#1B1B1B", "#D73027", "#4575B4", "#1A9850", "#FDAE61", "#7570B3"],
-    "materials_porosity_terracotta": ["#CFE2F3", "#9BC2E6", "#F48E66"],
-    "npg_4": ["#E64B35", "#4DBBD5", "#00A087", "#3C5488"],
-    "cool_summer_4": ["#8DA0CB", "#FC8D62", "#66C2A5", "#FBC15E"],
-    "tableau10_classic": ["#1F77B4", "#FF7F0E", "#2CA02C", "#D62728", "#9467BD", "#8C564B", "#E377C2", "#7F7F7F", "#BCBD22", "#17BECF"],
-    "seq_cool_5": ["#F7FBFF", "#D6EAF8", "#A9CCE3", "#5DADE2", "#21618C"],
-    "seq_warm_5": ["#FFF6E8", "#FBD38D", "#F6AD55", "#DD6B20", "#9C4221"],
-    "bipolar_ALE": ["#4F81BD", "#FFFFFF", "#C0504D"],
-    "red_blue_correlation": ["#3B6FB6", "#F7F7F7", "#B5403A"],
-    # Defensive: when build_palette_plan sets categoricalPreset='template_case_hex'
-    # and supplies templatePaletteHex, resolve_color_system bypasses this dict.
-    # Provide a safe 4-color fallback so a bare PALETTES['template_case_hex']
-    # lookup never KeyErrors in legacy paths.
-    "template_case_hex": ["#1F3A5F", "#C8553D", "#4C956C", "#F2A541"],
-}
-
-
 def resolve_color_system(chartPlan, dataProfile):
     palettePlan = chartPlan["palettePlan"]
     roles = dataProfile["semanticRoles"]
     df = dataProfile["df"]
 
     template_palette = list(palettePlan.get("templatePaletteHex", []) or [])
-    categorical = template_palette or PALETTES[palettePlan["categoricalPreset"]]
-    sequential = PALETTES[palettePlan["sequentialPreset"]]
-    diverging = PALETTES[palettePlan["divergingPreset"]]
+    categorical = template_palette or resolve_palette(palettePlan["categoricalPreset"])
+    sequential = resolve_palette(palettePlan["sequentialPreset"])
+    diverging = resolve_palette(palettePlan["divergingPreset"])
 
     categories = []
     if "group" in roles and roles["group"] in df.columns:
@@ -422,156 +387,16 @@ def resolve_panel_geometry(panelBlueprint, journalProfile):
 
 ### Step 3.4: Generate Chart Code And Registry
 
-Create a registry so chart expansion stays maintainable.
+The canonical 121-chart family list lives in
+`phases/code-gen/registry.py::CHART_GENERATORS`. Phase-3 dispatch reads this
+dict directly; do not duplicate the registry in this document.
 
 ```python
-CHART_GENERATORS = {
-    "violin_strip": "gen_violin_strip",
-    "box_strip": "gen_box_strip",
-    "raincloud": "gen_raincloud",
-    "beeswarm": "gen_beeswarm",
-    "paired_lines": "gen_paired_lines",
-    "dumbbell": "gen_dumbbell",
-    "line": "gen_line",
-    "training_curve": "gen_training_curve",
-    "model_architecture": "gen_model_architecture",
-    "model_architecture_board": "gen_model_architecture_board",
-    "line_ci": "gen_line_ci",
-    "spaghetti": "gen_spaghetti",
-    "heatmap_cluster": "gen_heatmap_cluster",
-    "heatmap_pure": "gen_heatmap_pure",
-    "volcano": "gen_volcano",
-    "ma_plot": "gen_ma_plot",
-    "pca": "gen_pca",
-    "umap": "gen_umap",
-    "tsne": "gen_tsne",
-    "enrichment_dotplot": "gen_enrichment_dotplot",
-    "oncoprint": "gen_oncoprint",
-    "lollipop_mutation": "gen_lollipop_mutation",
-    "rf_classifier_report_board": "gen_rf_classifier_report_board",
-    "classifier_validation_board": "gen_classifier_validation_board",
-    "roc": "gen_roc",
-    "pr_curve": "gen_pr_curve",
-    "calibration": "gen_calibration",
-    "km": "gen_km",
-    "forest": "gen_forest",
-    "waterfall": "gen_waterfall",
-    "dose_response": "gen_dose_response",
-    "scatter_regression": "gen_scatter_regression",
-    "correlation": "gen_correlation",
-    "manhattan": "gen_manhattan",
-    "qq": "gen_qq",
-    "spatial_feature": "gen_spatial_feature",
-    "composition_dotplot": "gen_composition_dotplot",
-    "ridge": "gen_ridge",
-    "bubble_matrix": "gen_bubble_matrix",
-    "stacked_bar_comp": "gen_stacked_bar_comp",
-    "alluvial": "gen_alluvial",
-
-    # Distribution variants (7)
-    "violin_paired": "gen_violin_paired",
-    "violin_split": "gen_violin_split",
-    "dot_strip": "gen_dot_strip",
-    "histogram": "gen_histogram",
-    "density": "gen_density",
-    "ecdf": "gen_ecdf",
-    "joyplot": "gen_joyplot",
-
-    # Time series variants (6)
-    "sparkline": "gen_sparkline",
-    "area": "gen_area",
-    "area_stacked": "gen_area_stacked",
-    "streamgraph": "gen_streamgraph",
-    "gantt": "gen_gantt",
-    "timeline_annotation": "gen_timeline_annotation",
-
-    # Statistical / diagnostic (12)
-    "residual_vs_fitted": "gen_residual_vs_fitted",
-    "scale_location": "gen_scale_location",
-    "cook_distance": "gen_cook_distance",
-    "leverage_plot": "gen_leverage_plot",
-    "pp_plot": "gen_pp_plot",
-    "bland_altman": "gen_bland_altman",
-    "funnel_plot": "gen_funnel_plot",
-    "pareto_chart": "gen_pareto_chart",
-    "control_chart": "gen_control_chart",
-    "box_paired": "gen_box_paired",
-    "mean_diff_plot": "gen_mean_diff_plot",
-    "ci_plot": "gen_ci_plot",
-
-    # Matrix / heatmap variants (7)
-    "dotplot": "gen_dotplot",
-    "adjacency_matrix": "gen_adjacency_matrix",
-    "heatmap_annotated": "gen_heatmap_annotated",
-    "confusion_matrix": "gen_confusion_matrix",
-    "heatmap_triangular": "gen_heatmap_triangular",
-    "heatmap_mirrored": "gen_heatmap_mirrored",
-    "cooccurrence_matrix": "gen_cooccurrence_matrix",
-
-    # Genomics extended (6)
-    "circos_karyotype": "gen_circos_karyotype",
-    "gene_structure": "gen_gene_structure",
-    "pathway_map": "gen_pathway_map",
-    "kegg_bar": "gen_kegg_bar",
-    "go_treemap": "gen_go_treemap",
-    "chromosome_coverage": "gen_chromosome_coverage",
-
-    # Clinical extended (6)
-    "swimmer_plot": "gen_swimmer_plot",
-    "risk_ratio_plot": "gen_risk_ratio_plot",
-    "caterpillar_plot": "gen_caterpillar_plot",
-    "tornado_chart": "gen_tornado_chart",
-    "nomogram": "gen_nomogram",
-    "decision_curve": "gen_decision_curve",
-
-    # Composition / hierarchical (6)
-    "treemap": "gen_treemap",
-    "sunburst": "gen_sunburst",
-    "waffle_chart": "gen_waffle_chart",
-    "marimekko": "gen_marimekko",
-    "stacked_area_comp": "gen_stacked_area_comp",
-    "nested_donut": "gen_nested_donut",
-
-    # Relationship / network (4)
-    "chord_diagram": "gen_chord_diagram",
-    "parallel_coordinates": "gen_parallel_coordinates",
-    "sankey": "gen_sankey",
-    "radar": "gen_radar",
-
-    # Engineering / materials (6)
-    "stress_strain": "gen_stress_strain",
-    "phase_diagram": "gen_phase_diagram",
-    "nyquist_plot": "gen_nyquist_plot",
-    "xrd_pattern": "gen_xrd_pattern",
-    "ftir_spectrum": "gen_ftir_spectrum",
-    "dsc_thermogram": "gen_dsc_thermogram",
-
-    # Ecology / environmental (4)
-    "species_abundance": "gen_species_abundance",
-    "shannon_diversity": "gen_shannon_diversity",
-    "ordination_plot": "gen_ordination_plot",
-    "biodiversity_radar": "gen_biodiversity_radar",
-
-    # Psychology / social (4)
-    "likert_divergent": "gen_likert_divergent",
-    "likert_stacked": "gen_likert_stacked",
-    "mediation_path": "gen_mediation_path",
-    "interaction_plot": "gen_interaction_plot",
-
-    # Additional variants (12)
-    "bubble_scatter": "gen_bubble_scatter",
-    "connected_scatter": "gen_connected_scatter",
-    "stem_plot": "gen_stem_plot",
-    "lollipop_horizontal": "gen_lollipop_horizontal",
-    "slope_chart": "gen_slope_chart",
-    "bump_chart": "gen_bump_chart",
-    "mosaic_plot": "gen_mosaic_plot",
-    "clustered_bar": "gen_clustered_bar",
-    "diverging_bar": "gen_diverging_bar",
-    "grouped_bar": "gen_grouped_bar",
-    "heatmap_symmetric": "gen_heatmap_symmetric",
-    "violin_grouped": "gen_violin_grouped"
-}
+registry_source = Path(".claude/skills/scifig-generate/phases/code-gen/registry.py").read_text(encoding="utf-8").strip()
+registry_source = registry_source.replace("```python", "", 1).rsplit("```", 1)[0].strip()
+_registry_ns = {}
+exec(registry_source, _registry_ns)
+CHART_GENERATORS = _registry_ns["CHART_GENERATORS"]
 
 CHART_KEY_ALIASES = {
     "violin+strip": "violin_strip",
@@ -886,9 +711,10 @@ palette = {repr(colorSystem)}
 single_height = journalProfile.get("canvas_height_mm", {}).get("single", 62)
 fig, ax = plt.subplots(figsize=({journalProfile['single_width_mm']}*MM, single_height*MM), constrained_layout=False)
 ax = {primary_gen}(df, dataProfile, chartPlan, rcParams, palette, col_map=col_map, ax=ax)
+audit_axes_map = normalize_axes_map(fig, {{"A": ax}})
 apply_visual_content_pass(fig, {{"A": ax}}, chartPlan, dataProfile, journalProfile, palette, col_map=col_map)
 visual_density_report = audit_visual_density_contract(chartPlan, strict=True)
-legend_contract_report = enforce_figure_legend_contract(fig, {{"A": ax}}, chartPlan, journalProfile)
+legend_contract_report = enforce_figure_legend_contract(fig, audit_axes_map, chartPlan, journalProfile)
 record_render_contract_report("figure1", chartPlan, legend_contract_report)
 {savefig_lines}
 plt.close()
@@ -909,9 +735,10 @@ secondaryPlan = {{"primaryChart": "{sec_chart}", "secondaryCharts": [], "panelBl
 single_height = journalProfile.get("canvas_height_mm", {}).get("single", 62)
 fig, ax = plt.subplots(figsize=({journalProfile['single_width_mm']}*MM, single_height*MM), constrained_layout=False)
 ax = {sec_gen}(df, dataProfile, secondaryPlan, rcParams, palette, col_map=col_map, ax=ax)
+audit_secondary_axes_map = normalize_axes_map(fig, {{"A": ax}})
 apply_visual_content_pass(fig, {{"A": ax}}, secondaryPlan, dataProfile, journalProfile, palette, col_map=col_map)
 visual_density_report = audit_visual_density_contract(secondaryPlan, strict=True)
-legend_contract_report = enforce_figure_legend_contract(fig, {{"A": ax}}, secondaryPlan, journalProfile)
+legend_contract_report = enforce_figure_legend_contract(fig, audit_secondary_axes_map, secondaryPlan, journalProfile)
 record_render_contract_report("{sec_chart}", secondaryPlan, legend_contract_report)
 {sec_savefig_lines}
 plt.close()
@@ -1059,6 +886,8 @@ if "add_polygon_polar_grid" not in full_code_string or "resolve_palette" not in 
     codeReview["blockingFindings"].append("template_mining_helpers_api_unreferenced_after_embed")
 if full_code_string.count("def enforce_figure_legend_contract(") != 1:
     codeReview["blockingFindings"].append("custom_or_duplicate_legend_contract_finalizer")
+if re.search(r"bbox_to_anchor\s*=\s*\(1\.0\d", full_code_string):
+    codeReview["blockingFindings"].append("outside_right_legend_bbox_anchor")
 if re.search(r"bbox_to_anchor\s*=\s*\([^)]*-\d", full_code_string):
     codeReview["blockingFindings"].append("negative_legend_bbox_anchor")
 if re.search(r"(risk_table_y|table_y|footnote_y|label_y)\s*=\s*-\d", full_code_string):
@@ -1079,6 +908,10 @@ if "savefig" not in full_code_string:
     codeReview["blockingFindings"].append("missing_savefig")
 if "savefig" in full_code_string and "legend_contract_report = enforce_figure_legend_contract(" not in full_code_string:
     codeReview["blockingFindings"].append("savefig_without_legend_contract")
+# Source-side legend lint: run `python phases/code-gen/source-lint.py`
+# before finalizing; BANNED_LEGEND_PATTERNS block outside-right and
+# negative-bottom legend anchors in split generator source.
+codeReview["sourceLintCommand"] = "python phases/code-gen/source-lint.py"
 
 if codeReview["blockingFindings"]:
     raise RuntimeError(f"Phase 3 code review failed: {codeReview['blockingFindings']}")
@@ -1092,6 +925,7 @@ styledCode = {
     "colorSystem": colorSystem,
     "visualContentPlan": chartPlan.get("visualContentPlan", {}),
     "templateCasePlan": chartPlan.get("templateCasePlan", {}),
+    "sharedLegend": chartPlan.get("sharedLegend", chartPlan.get("panelBlueprint", {}).get("sharedLegend", False)),
     "statsReport": statsReport,
     "codeReview": codeReview,
     "generatorCoverage": {

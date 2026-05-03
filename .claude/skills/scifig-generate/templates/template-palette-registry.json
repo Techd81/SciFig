@@ -1,0 +1,212 @@
+{
+  "version": "0.1.1",
+  "source": "template-mining/03-palette-bank.md + templates/palette-presets.md",
+  "categorical": {
+    "journal_muted_8": {
+      "name": "journal_muted_8",
+      "type": "categorical",
+      "anchors": ["#1F4E79", "#4C956C", "#F2A541", "#C8553D", "#7A6C8F", "#2B6F77", "#BC4749", "#6C757D"],
+      "n_max": 8,
+      "source_anchors": ["templates/palette-presets.md"],
+      "anti_palette": false
+    },
+    "journal_muted_6": {
+      "name": "journal_muted_6",
+      "type": "categorical",
+      "anchors": ["#1F4E79", "#4C956C", "#F2A541", "#C8553D", "#7A6C8F", "#6C757D"],
+      "n_max": 6,
+      "source_anchors": ["templates/palette-presets.md"],
+      "anti_palette": false
+    },
+    "wong_8": {
+      "name": "wong_8",
+      "type": "categorical",
+      "anchors": ["#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7"],
+      "n_max": 8,
+      "source_anchors": ["Bang Wong Nature Methods", "templates/palette-presets.md"],
+      "anti_palette": false
+    },
+    "okabe_ito_8": {
+      "name": "okabe_ito_8",
+      "type": "categorical",
+      "anchors": ["#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#000000"],
+      "n_max": 8,
+      "source_anchors": ["templates/palette-presets.md"],
+      "anti_palette": false
+    },
+    "nature_radar_dual": {
+      "name": "nature_radar_dual",
+      "type": "categorical",
+      "anchors": ["#1F3A5F", "#C8553D", "#5FA896"],
+      "n_max": 3,
+      "source_anchors": ["template-mining/03-palette-bank.md", "radar"],
+      "anti_palette": false
+    },
+    "morandi_sci_4": {
+      "name": "morandi_sci_4",
+      "type": "categorical",
+      "anchors": ["#4A6B8A", "#5FA896", "#D9A75A", "#B85B5B"],
+      "n_max": 4,
+      "source_anchors": ["template-mining/03-palette-bank.md"],
+      "anti_palette": false
+    },
+    "cej_vibrant_3": {
+      "name": "cej_vibrant_3",
+      "type": "categorical",
+      "anchors": ["#00CED1", "#FF0000", "#1E90FF"],
+      "n_max": 3,
+      "source_anchors": ["template-mining/_extraction/palette-harvest.json"],
+      "anti_palette": false
+    },
+    "cell_high_contrast_6": {
+      "name": "cell_high_contrast_6",
+      "type": "categorical",
+      "anchors": ["#1B1B1B", "#D73027", "#4575B4", "#1A9850", "#FDAE61", "#7570B3"],
+      "n_max": 6,
+      "source_anchors": ["templates/palette-presets.md"],
+      "anti_palette": false
+    },
+    "materials_porosity_terracotta": {
+      "name": "materials_porosity_terracotta",
+      "type": "categorical",
+      "anchors": ["#CFE2F3", "#9BC2E6", "#F48E66"],
+      "n_max": 3,
+      "source_anchors": ["template-mining/03-palette-bank.md"],
+      "anti_palette": false
+    },
+    "npg_4": {
+      "name": "npg_4",
+      "type": "categorical",
+      "anchors": ["#E64B35", "#4DBBD5", "#00A087", "#3C5488"],
+      "n_max": 4,
+      "source_anchors": ["forest", "clinical"],
+      "anti_palette": false
+    },
+    "ml_model_performance_10": {
+      "name": "ml_model_performance_10",
+      "type": "categorical",
+      "anchors": ["#4DBBD5", "#E64B35", "#00A087", "#3C5488", "#F39B7F", "#8491B4", "#91D1C2", "#DC0000", "#7E6148", "#333333"],
+      "n_max": 10,
+      "source_anchors": ["ml_model_diagnostics", "templates/palette-presets.md"],
+      "anti_palette": false
+    },
+    "cool_summer_4": {
+      "name": "cool_summer_4",
+      "type": "categorical",
+      "anchors": ["#8DA0CB", "#FC8D62", "#66C2A5", "#FBC15E"],
+      "n_max": 4,
+      "source_anchors": ["shap_composite", "template-mining/03-palette-bank.md"],
+      "anti_palette": false
+    },
+    "tableau10_classic": {
+      "name": "tableau10_classic",
+      "type": "categorical",
+      "anchors": ["#1F77B4", "#FF7F0E", "#2CA02C", "#D62728", "#9467BD", "#8C564B", "#E377C2", "#7F7F7F", "#BCBD22", "#17BECF"],
+      "n_max": 10,
+      "source_anchors": ["template-mining/03-palette-bank.md"],
+      "anti_palette": false
+    },
+    "template_case_hex": {
+      "name": "template_case_hex",
+      "type": "categorical",
+      "anchors": ["#1F3A5F", "#C8553D", "#4C956C", "#F2A541"],
+      "n_max": 4,
+      "source_anchors": ["case-index.json runtime override"],
+      "anti_palette": false
+    }
+  },
+  "sequential": {
+    "seq_cool": {
+      "name": "seq_cool",
+      "type": "sequential",
+      "anchors": ["#F7FBFF", "#D6EAF8", "#A9CCE3", "#5DADE2", "#21618C"],
+      "n_max": 5,
+      "source_anchors": ["templates/palette-presets.md"],
+      "anti_palette": false
+    },
+    "seq_cool_5": {
+      "name": "seq_cool_5",
+      "type": "sequential",
+      "anchors": ["#F7FBFF", "#D6EAF8", "#A9CCE3", "#5DADE2", "#21618C"],
+      "n_max": 5,
+      "source_anchors": ["template-mining/03-palette-bank.md"],
+      "anti_palette": false
+    },
+    "seq_warm": {
+      "name": "seq_warm",
+      "type": "sequential",
+      "anchors": ["#FFF6E8", "#FBD38D", "#F6AD55", "#DD6B20", "#9C4221"],
+      "n_max": 5,
+      "source_anchors": ["templates/palette-presets.md"],
+      "anti_palette": false
+    },
+    "seq_warm_5": {
+      "name": "seq_warm_5",
+      "type": "sequential",
+      "anchors": ["#FFF6E8", "#FBD38D", "#F6AD55", "#DD6B20", "#9C4221"],
+      "n_max": 5,
+      "source_anchors": ["template-mining/03-palette-bank.md"],
+      "anti_palette": false
+    },
+    "density_teal": {
+      "name": "density_teal",
+      "type": "sequential",
+      "anchors": ["#F0F9F7", "#C7EAE5", "#80CDC1", "#35978F", "#01665E"],
+      "n_max": 5,
+      "source_anchors": ["density_color_scatter"],
+      "anti_palette": false
+    }
+  },
+  "diverging": {
+    "div_centered": {
+      "name": "div_centered",
+      "type": "diverging",
+      "anchors": ["#3B6FB6", "#8FBCE6", "#F7F7F7", "#E6A0A0", "#B5403A"],
+      "n_max": 5,
+      "source_anchors": ["templates/palette-presets.md"],
+      "anti_palette": false
+    },
+    "div_expression": {
+      "name": "div_expression",
+      "type": "diverging",
+      "anchors": ["#2D5AA7", "#9CC4E4", "#F5F5F5", "#F4A582", "#B2182B"],
+      "n_max": 5,
+      "source_anchors": ["templates/palette-presets.md"],
+      "anti_palette": false
+    },
+    "bipolar_ALE": {
+      "name": "bipolar_ALE",
+      "type": "diverging",
+      "anchors": ["#4F81BD", "#FFFFFF", "#C0504D"],
+      "n_max": 3,
+      "source_anchors": ["ale_pdp", "template-mining/03-palette-bank.md"],
+      "anti_palette": false
+    },
+    "red_blue_correlation": {
+      "name": "red_blue_correlation",
+      "type": "diverging",
+      "anchors": ["#3B6FB6", "#F7F7F7", "#B5403A"],
+      "n_max": 3,
+      "source_anchors": ["heatmap_pairwise", "template-mining/03-palette-bank.md"],
+      "anti_palette": false
+    }
+  },
+  "semantic_roles": {
+    "CONTROL_BLUE": "#1F4E79",
+    "TREATMENT_RED": "#C8553D",
+    "POSITIVE_GREEN": "#2CA02C",
+    "NEGATIVE_RED": "#D62728",
+    "WARNING_AMBER": "#F2A541",
+    "NEUTRAL_GRAY": "#6C757D",
+    "TRAIN_BLUE": "#4C78A8",
+    "TEST_RED": "#E45756",
+    "ACTUAL_BLUE": "#1F4E79",
+    "PREDICTED_RED": "#C8553D",
+    "SELECTED_TEAL": "#00A087",
+    "REFERENCE_GRAY": "#808080",
+    "feature_low": "palette[0]",
+    "feature_high": "palette[-1]",
+    "negative_correlation": "#3B6FB6",
+    "positive_correlation": "#B5403A"
+  }
+}

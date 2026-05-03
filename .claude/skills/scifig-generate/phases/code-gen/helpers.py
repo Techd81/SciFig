@@ -2055,24 +2055,61 @@ def _panel_id_from_index(index):
 
 
 def normalize_axes_map(fig, axes=None):
-    if isinstance(axes, dict):
-        return dict(axes)
-    if axes is None:
-        raw_axes = [ax for ax in fig.axes if ax.get_visible()]
-    elif hasattr(axes, "ravel"):
-        raw_axes = list(axes.ravel())
-    elif isinstance(axes, (list, tuple, set)):
-        raw_axes = list(axes)
-    else:
-        raw_axes = [axes]
+    """Return panel-id -> Axes, adding unnamed non-colorbar fig.axes.
 
-    axes_map = {}
-    for idx, ax in enumerate(raw_axes):
-        if ax is None:
+    Cycle-24: single-axis path now audits all fig.axes including inset axes
+    (fix B01). The caller's explicit panel keys stay stable; extra child axes
+    are appended as A1, A2, ... by Axes identity rather than label.
+    """
+    def _is_colorbar_axes(ax):
+        label = str(getattr(ax, "get_label", lambda: "")())
+        if label == "<colorbar>":
+            return True
+        if getattr(ax, "_colorbar", None) is not None:
+            return True
+        return False
+
+    if isinstance(axes, dict):
+        axes_map = {key: ax for key, ax in axes.items() if ax is not None}
+    else:
+        if axes is None:
+            raw_axes = [ax for ax in fig.axes if ax.get_visible()]
+        elif hasattr(axes, "ravel"):
+            raw_axes = list(axes.ravel())
+        elif isinstance(axes, (list, tuple, set)):
+            raw_axes = list(axes)
+        else:
+            raw_axes = [axes]
+
+        axes_map = {}
+        for ax in raw_axes:
+            if ax is None:
+                continue
+            if _is_colorbar_axes(ax) and ax.get_legend() is None:
+                continue
+            axes_map[_panel_id_from_index(len(axes_map))] = ax
+
+    seen_ids = {id(ax) for ax in axes_map.values() if ax is not None}
+    child_index = 1
+    candidate_axes = list(getattr(fig, "axes", []))
+    for parent_ax in list(candidate_axes):
+        for child_ax in getattr(parent_ax, "child_axes", []):
+            if id(child_ax) not in {id(candidate) for candidate in candidate_axes}:
+                candidate_axes.append(child_ax)
+    for ax in candidate_axes:
+        if ax is None or id(ax) in seen_ids:
             continue
-        if str(getattr(ax, "get_label", lambda: "")()) == "<colorbar>" and ax.get_legend() is None:
+        if not getattr(ax, "get_visible", lambda: True)():
             continue
-        axes_map[_panel_id_from_index(len(axes_map))] = ax
+        if _is_colorbar_axes(ax) and ax.get_legend() is None:
+            continue
+        key = f"A{child_index}"
+        while key in axes_map:
+            child_index += 1
+            key = f"A{child_index}"
+        axes_map[key] = ax
+        seen_ids.add(id(ax))
+        child_index += 1
     return axes_map
 
 
@@ -2323,7 +2360,7 @@ def _metric_table_data_overlap_issues(fig, axes, renderer):
     return issues
 
 
-def _text_data_overlap_issues(fig, axes, renderer, threshold=0.30):
+def _text_data_overlap_issues(fig, axes, renderer, threshold=0.30, report=None):
     """Detect annotations that are visually buried under data artists.
 
     For each Axes, intersect every Text artist's display-coord bbox with
@@ -2346,7 +2383,11 @@ def _text_data_overlap_issues(fig, axes, renderer, threshold=0.30):
     """
     from matplotlib.text import Text as _Text
 
+    # Cycle-24: text-vs-text + bbox coverage audits added (B09 + B10).
     issues = []
+    if report is None:
+        report = {}
+    report.setdefault("bboxDataCoverageOverflowCount", 0)
     panel_label_set = {chr(code) for code in range(65, 91)}
     managed_gids = {"scifig_metric_box", "scifig_metric_table"}
 
@@ -2395,15 +2436,14 @@ def _text_data_overlap_issues(fig, axes, renderer, threshold=0.30):
                 continue
             # Skip artists that already have an opaque bbox — visual
             # occlusion resolved by the bbox itself.
-            if _has_opaque_bbox(child):
-                continue
+            has_opaque_bbox = _has_opaque_bbox(child)
             try:
                 tbox = child.get_window_extent(renderer=renderer)
                 if tbox.width <= 0 or tbox.height <= 0:
                     continue
             except Exception:
                 continue
-            text_artists.append((child, tbox, raw))
+            text_artists.append((child, tbox, raw, has_opaque_bbox))
 
         if not text_artists:
             continue
@@ -2424,8 +2464,27 @@ def _text_data_overlap_issues(fig, axes, renderer, threshold=0.30):
         if not data_bboxes:
             continue
 
-        for text_artist, tbox, raw in text_artists:
+        axes_box = ax.get_window_extent(renderer=renderer)
+        axes_area = max(_bbox_area(axes_box), 1.0)
+
+        for text_artist, tbox, raw, has_opaque_bbox in text_artists:
             tbox_area = max(tbox.width * tbox.height, 1.0)
+            if has_opaque_bbox:
+                coverage_ratio = tbox_area / axes_area
+                if coverage_ratio <= 0.40:
+                    continue
+                for artist, dbox in data_bboxes:
+                    if tbox.overlaps(dbox):
+                        report["bboxDataCoverageOverflowCount"] = report.get("bboxDataCoverageOverflowCount", 0) + 1
+                        issues.append({
+                            "panel": panel_id,
+                            "element": "annotation_text_bbox",
+                            "conflict": "bbox_oversized_data_coverage",
+                            "text": raw[:32],
+                            "bbox_data_coverage_ratio": round(coverage_ratio, 3),
+                        })
+                        break
+                continue
             for artist, dbox in data_bboxes:
                 if not tbox.overlaps(dbox):
                     continue
@@ -2446,6 +2505,70 @@ def _text_data_overlap_issues(fig, axes, renderer, threshold=0.30):
                     "overlap_ratio": round(ratio, 3),
                 })
                 break  # one overlap per text is enough to flag
+    return issues
+
+
+def _text_text_overlap_issues(axes, report, renderer=None, iou_threshold=0.15):
+    """Detect label-on-label collisions inside each audited Axes.
+
+    Cycle-24: text-vs-text + bbox coverage audits added (B09 + B10).
+    """
+    from matplotlib.text import Annotation as _Annotation
+    from matplotlib.text import Text as _Text
+
+    issues = []
+    report.setdefault("textTextOverlapCount", 0)
+    panel_label_set = {chr(code) for code in range(65, 91)}
+    managed_gids = {"scifig_metric_box", "scifig_metric_table", "scifig_panel_label"}
+
+    def _overlap_area(a, b):
+        x0 = max(a.x0, b.x0); x1 = min(a.x1, b.x1)
+        y0 = max(a.y0, b.y0); y1 = min(a.y1, b.y1)
+        if x1 <= x0 or y1 <= y0:
+            return 0.0
+        return (x1 - x0) * (y1 - y0)
+
+    for panel_id, ax in axes.items():
+        texts = []
+        seen = set()
+        candidates = list(ax.texts) + [obj for obj in ax.findobj(_Annotation)]
+        for child in candidates:
+            if id(child) in seen or not isinstance(child, _Text):
+                continue
+            seen.add(id(child))
+            raw = str(child.get_text()).strip()
+            if not raw or raw in panel_label_set:
+                continue
+            gid = getattr(child, "get_gid", lambda: None)()
+            if gid in managed_gids:
+                continue
+            try:
+                box = child.get_window_extent(renderer=renderer)
+            except Exception:
+                continue
+            if box is None or box.width <= 0 or box.height <= 0:
+                continue
+            texts.append((child, box, raw))
+
+        for idx, (_, box_a, text_a) in enumerate(texts):
+            for _, box_b, text_b in texts[idx + 1:]:
+                overlap = _overlap_area(box_a, box_b)
+                if overlap <= 0:
+                    continue
+                union = max(_bbox_area(box_a) + _bbox_area(box_b) - overlap, 1.0)
+                iou = overlap / union
+                if iou <= iou_threshold:
+                    continue
+                report["textTextOverlapCount"] = report.get("textTextOverlapCount", 0) + 1
+                issues.append({
+                    "panel": panel_id,
+                    "element": "annotation_text",
+                    "conflict": "text_text_overlap",
+                    "text": text_a[:32],
+                    "other_text": text_b[:32],
+                    "iou": round(iou, 3),
+                })
+                break
     return issues
 
 
@@ -2913,10 +3036,16 @@ def audit_figure_layout_contract(fig, axes=None, chartPlan=None, journalProfile=
     negative_axes_text = []
     metric_table_data_overlaps = _metric_table_data_overlap_issues(fig, axes_map, renderer)
     colorbar_panel_overlaps = _colorbar_panel_overlap_issues(fig, axes_map, renderer)
+    audit_counters = {
+        "bboxDataCoverageOverflowCount": 0,
+        "textTextOverlapCount": 0,
+    }
     text_data_overlaps = _text_data_overlap_issues(
         fig, axes_map, renderer,
         threshold=float(crowdingPlan.get("textDataOverlapThreshold", 0.30)),
+        report=audit_counters,
     )
+    text_text_overlaps = _text_text_overlap_issues(axes_map, audit_counters, renderer=renderer)
 
     for panel_id, artist in _iter_layout_artists(axes_map):
         try:
@@ -2982,6 +3111,10 @@ def audit_figure_layout_contract(fig, axes=None, chartPlan=None, journalProfile=
         failures.append("colorbar_panel_overlap")
     if text_data_overlaps:
         failures.append("annotation_text_buried_under_data")
+    if text_text_overlaps:
+        failures.append("text_text_overlap")
+    if audit_counters.get("bboxDataCoverageOverflowCount", 0) > 0:
+        failures.append("bbox_oversized_coverage")
     if whitespace_fraction > crowdingPlan.get("maxFigureWhitespaceFraction", 0.82):
         failures.append("figure_whitespace_fraction_above_maximum")
     if ink_fraction < crowdingPlan.get("minFigureInkFraction", 0.04):
@@ -2990,6 +3123,7 @@ def audit_figure_layout_contract(fig, axes=None, chartPlan=None, journalProfile=
     report = {
         "layoutContractEnforced": True,
         "layoutContractFailures": failures,
+        "audited_axes_count": len(axes_map),
         "crossPanelOverlapIssues": cross_panel_overlaps,
         "metricTableDataOverlapIssues": metric_table_data_overlaps,
         "metricTableDataOverlapCount": len(metric_table_data_overlaps),
@@ -2997,6 +3131,9 @@ def audit_figure_layout_contract(fig, axes=None, chartPlan=None, journalProfile=
         "colorbarPanelOverlapCount": len(colorbar_panel_overlaps),
         "textDataOverlapIssues": text_data_overlaps,
         "textDataOverlapCount": len(text_data_overlaps),
+        "textTextOverlapIssues": text_text_overlaps,
+        "textTextOverlapCount": audit_counters.get("textTextOverlapCount", 0),
+        "bboxDataCoverageOverflowCount": audit_counters.get("bboxDataCoverageOverflowCount", 0),
         "offCanvasArtistCount": len(off_canvas_artists),
         "offCanvasArtists": off_canvas_artists,
         "oversizedTextCount": len(oversized_text),

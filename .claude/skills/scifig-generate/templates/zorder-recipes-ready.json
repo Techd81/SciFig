@@ -1,0 +1,30 @@
+{
+  "version": "0.1.1",
+  "source": "template-mining/02-zorder-recipes.md",
+  "universal_tiers": {
+    "background": 0,
+    "grid": 1,
+    "data_low": 3,
+    "fill": 4,
+    "data": 6,
+    "data_high": 10,
+    "reference": 12,
+    "error": 14,
+    "annotation": 15,
+    "text_safe": 20,
+    "panel_label": 25
+  },
+  "family_overrides": {
+    "scatter_regression": {"grid": 0, "density_halo": 2, "points": 4, "trend_line": 11, "perfect_fit": 12, "metric_box": 20},
+    "forest": {"background_band": 1, "ci_bar": 6, "point_estimate": 10, "null_line": 12, "label": 20},
+    "dual_axis": {"bar": 4, "line": 9, "error": 12, "axis_label": 20},
+    "radar": {"polygon_grid": 1, "area_fill": 4, "outline": 8, "marker": 10, "axis_label": 20},
+    "shap_composite": {"background_bar": 3, "beeswarm": 8, "zero_line": 12, "feature_label": 20},
+    "heatmap_pairwise": {"cell": 3, "significance_star": 12, "cell_text": 20, "colorbar": 20},
+    "marginal_joint": {"marginal_hist": 2, "joint_points": 6, "density_contour": 9, "metric_box": 20},
+    "gradient_box": {"gradient_fill": 2, "box_edge": 8, "median": 12, "outlier": 14},
+    "time_series_pi": {"interval": 3, "line": 8, "event_marker": 12, "annotation": 20},
+    "lollipop": {"stem": 4, "marker": 10, "zero_line": 12, "label": 20},
+    "inset_distribution": {"main_data": 6, "inset_data": 8, "connector": 12, "inset_label": 20}
+  }
+}

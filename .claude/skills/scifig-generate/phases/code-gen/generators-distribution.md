@@ -80,7 +80,7 @@ def gen_histogram(df, dataProfile, chartPlan, rcParams, palette, col_map=None, a
             sns.kdeplot(subset, ax=ax, color=color, linewidth=0.8,
                         clip=(subset.min() - 0.5 * bin_width,
                               subset.max() + 0.5 * bin_width))
-        ax.legend(loc="upper left", bbox_to_anchor=(1.02, 1), borderaxespad=0, frameon=False, fontsize=5)
+        ax.legend(loc="upper right", frameon=False, fontsize=5)
     else:
         values = df[value_col].dropna()
         iqr = values.quantile(0.75) - values.quantile(0.25)
@@ -125,7 +125,7 @@ def gen_density(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=
             color = color_map[cat]
             sns.kdeplot(subset, ax=ax, fill=True, alpha=0.3,
                         color=color, linewidth=0.8, label=cat)
-        ax.legend(loc="upper left", bbox_to_anchor=(1.02, 1), borderaxespad=0, frameon=False, fontsize=5)
+        ax.legend(loc="upper right", frameon=False, fontsize=5)
     else:
         values = df[value_col].dropna()
         color = palette.get("categorical", ["#000000"])[0]
@@ -167,7 +167,7 @@ def gen_ecdf(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=Non
             ecdf_y = np.arange(1, len(sorted_vals) + 1) / len(sorted_vals)
             ax.step(sorted_vals, ecdf_y, where="post", color=color,
                     linewidth=0.8, label=cat)
-        ax.legend(loc="upper left", bbox_to_anchor=(1.02, 1), borderaxespad=0, frameon=False, fontsize=5)
+        ax.legend(loc="upper right", frameon=False, fontsize=5)
     else:
         values = df[value_col].dropna()
         color = palette.get("categorical", ["#000000"])[0]
@@ -395,7 +395,7 @@ def gen_violin_split(df, dataProfile, chartPlan, rcParams, palette, col_map=None
     # Legend
     legend_handles = [plt.Line2D([0], [0], color=color_map[c], linewidth=2,
                                   alpha=0.5, label=c) for c in categories]
-    ax.legend(handles=legend_handles, loc="upper left", bbox_to_anchor=(1.02, 1), borderaxespad=0, frameon=False, fontsize=5)
+    ax.legend(handles=legend_handles, loc="upper right", frameon=False, fontsize=5)
 
     if standalone:
         apply_chart_polish(ax, "violin_split")
@@ -1594,7 +1594,7 @@ def gen_control_chart(df, dataProfile, chartPlan, rcParams, palette, col_map=Non
 
     ax.set_xlabel("Observation")
     ax.set_ylabel(value_col)
-    ax.legend(loc="upper left", bbox_to_anchor=(1.02, 1), borderaxespad=0, frameon=False, fontsize=5)
+    ax.legend(loc="upper right", frameon=False, fontsize=5)
     if standalone:
         apply_chart_polish(ax, "control_chart")
     return ax
@@ -3055,7 +3055,7 @@ def gen_ordination_plot(df, dataProfile, chartPlan, rcParams, palette, col_map=N
                               angle=angle, edgecolor=color, facecolor=color,
                               alpha=0.12, linewidth=0.6)
                 ax.add_patch(ell)
-        ax.legend(loc="upper left", bbox_to_anchor=(1.02, 1), borderaxespad=0, frameon=False, fontsize=5)
+        ax.legend(loc="upper right", frameon=False, fontsize=5)
     else:
         ax.scatter(df[x_col], df[y_col], s=12, alpha=0.7,
                    color=palette.get("categorical", ["#0072B2"])[0],
@@ -3215,7 +3215,7 @@ def gen_bubble_scatter(df, dataProfile, chartPlan, rcParams, palette, col_map=No
             ax.scatter(df.loc[mask, x_col], df.loc[mask, y_col],
                        s=sizes[mask], color=color_map[cat], alpha=0.6,
                        edgecolor="white", linewidth=0.4, label=cat, zorder=2)
-        ax.legend(loc="upper left", bbox_to_anchor=(1.02, 1), borderaxespad=0, frameon=False, fontsize=5, title_fontsize=5)
+        ax.legend(loc="upper right", frameon=False, fontsize=5, title_fontsize=5)
     else:
         color = palette.get("categorical", ["#0072B2"])[0]
         ax.scatter(df[x_col], df[y_col], s=sizes, color=color, alpha=0.6,
@@ -3259,7 +3259,7 @@ def gen_connected_scatter(df, dataProfile, chartPlan, rcParams, palette, col_map
                     solid_capstyle="round", zorder=1)
             ax.scatter(sub[x_col], sub[y_col], s=14, color=color, alpha=0.7,
                        edgecolor="white", linewidth=0.3, zorder=2)
-        ax.legend(loc="upper left", bbox_to_anchor=(1.02, 1), borderaxespad=0, frameon=False, fontsize=5)
+        ax.legend(loc="upper right", frameon=False, fontsize=5)
     else:
         ordered = df.sort_values(x_col)
         color = palette.get("categorical", ["#0072B2"])[0]

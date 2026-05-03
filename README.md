@@ -23,6 +23,10 @@ SciFig Generate is a [Claude Code](https://docs.anthropic.com/en/docs/claude-cod
 
 Upload your data. SciFig validates the file path, infers data structure and scientific domain, recommends chart families and statistical tests, generates Nature / Cell / Science / Lancet / NEJM / JAMA-aligned matplotlib code, runs zero-touch finalizer passes (legend contract, layout audit, heatmap label sizing, text-occlusion guards), and exports SVG / PDF figures with source data, render-QA evidence, and a methods-ready statistical report.
 
+## Changelog
+
+- V0.1.1: cycle-24 finalizer enhancements (single-axis `fig.axes` audit, text-text overlap, bbox coverage), templates registry distillation, and doc drift fixes.
+
 <a id="gallery"></a>
 
 ## Gallery
@@ -177,7 +181,7 @@ Four-panel diagnostic atlas: PCA biplot, LDA separation, correlation heatmap (`.
 
 **Context Quality Panel**
 
-Multi-panel figure with categorical stratification. All annotations use `safe_annotate` with automatic overlap relocation by the finalizer.
+Multi-panel figure with categorical stratification. Annotation overlap relocation is opt-in via `add_safe_annotate` or `auto_relocate_annotations`; the finalizer does NOT auto-invoke relocation.
 
 </td>
 <td>
@@ -281,7 +285,7 @@ PCA biplot with LDA decision boundaries overlaid. Multi-class separation with co
 | Journal compliance | Hand-tune rcParams per journal, re-style for every submission | One token swap (`style="nature"` → `"cell"`) re-derives 15+ parameters |
 | Chart selection | Browse seaborn examples, guess what's appropriate | 121 publication-grade chart types catalogued by 13 scientific domains |
 | Statistical honesty | "Just put a t-test on it" | Auto-select test by data shape; refuse inferential claims when data only support description |
-| Multi-panel layout | Manual `GridSpec` per figure | 11 layout recipes mapped to narrative arcs (hero / comparison / triptych / 2×2 / …) |
+| Multi-panel layout | Manual `GridSpec` per figure | Registry-backed layout recipes in `templates/layout-recipes-ready.json` mapped to narrative arcs |
 | Color governance | Pick rainbow palette, ignore colorblindness | Wong / Okabe-Ito defaults, semantic mappings preserved across panels |
 | Final QA | Render, eyeball, hope reviewers don't catch overlaps | Geometric overlap audit + finalizer auto-corrections + render QA agent |
 | CJK labels | `Glyph N missing from font Arial` warnings, boxes instead of text | Cross-platform CJK fallback chain (YaHei / SimHei / Noto / Hiragino) filtered at runtime, zero warnings |
@@ -366,7 +370,7 @@ A 7-module knowledge base distilled from **77 reference cases** drives every vis
 template-mining/
 ├── 01-rcparams-kernel.md     # 4 variant kernels: default | hero | compact | polar
 ├── 02-zorder-recipes.md      # Per-family layering (scatter / forest / dual-axis / radar / shap / marginal)
-├── 03-palette-bank.md        # 14 named palettes with role mapping
+├── 03-palette-bank.md        # Named palettes with role mapping; runtime defaults live in templates/template-palette-registry.json
 ├── 04-grid-recipes.md        # 12 GridSpec / subplots layouts
 ├── 05-annotation-idioms.md   # safe_annotate, perfect_fit_diagonal, group_dividers, panel_label
 ├── 06-narrative-arcs.md      # 10 corpus arcs (hero, triptych, comparison, calibration, …)
@@ -461,8 +465,11 @@ Each phase reads the previous phase's artifact, owns its output, and routes bloc
 │   └── preference-collection.md    # Bilingual card templates + answer maps
 ├── template-mining/                # 7-module knowledge base (77 cases)
 └── templates/
-    ├── palette-presets.md          # Categorical / sequential / diverging palettes
-    └── panel-layout-recipes.md     # 12 multi-panel layout recipes
+    ├── template-palette-registry.json # Runtime categorical / sequential / diverging palettes
+    ├── layout-recipes-ready.json      # Runtime R0-R11 layout recipes
+    ├── zorder-recipes-ready.json      # Runtime zorder tiers and family overrides
+    ├── palette-presets.md             # Human-readable palette intent
+    └── panel-layout-recipes.md        # Human-readable layout rationale
 ```
 
 ## Contributing

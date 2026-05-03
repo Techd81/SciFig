@@ -267,8 +267,7 @@ def gen_waffle_chart(df, dataProfile, chartPlan, rcParams, palette, col_map=None
     # Legend
     handles = [plt.Rectangle((0, 0), 1, 1, facecolor=color_map.get(c, fallback_colors[i % len(fallback_colors)]))
                for i, c in enumerate(categories)]
-    ax.legend(handles, [str(c) for c in categories], loc="upper left",
-              bbox_to_anchor=(1.02, 1), frameon=False, fontsize=5)
+    ax.legend(handles, [str(c) for c in categories], loc="upper right", frameon=False, fontsize=5)
     ax.set_xlim(0, 10)
     ax.set_ylim(0, 10)
     ax.set_aspect("equal")
@@ -325,8 +324,7 @@ def gen_marimekko(df, dataProfile, chartPlan, rcParams, palette, col_map=None, a
 
     handles = [plt.Rectangle((0, 0), 1, 1, facecolor=color_map.get(c, fallback_colors[k % len(fallback_colors)]))
                for k, c in enumerate(categories)]
-    ax.legend(handles, [str(c) for c in categories], loc="upper left",
-              bbox_to_anchor=(1.02, 1), frameon=False, fontsize=5)
+    ax.legend(handles, [str(c) for c in categories], loc="upper right", frameon=False, fontsize=5)
     if standalone:
         apply_chart_polish(ax, "marimekko")
     return ax
@@ -378,8 +376,7 @@ def gen_nested_donut(df, dataProfile, chartPlan, rcParams, palette, col_map=None
 
     # Legend for outer ring
     handles = [plt.Rectangle((0, 0), 1, 1, facecolor=c) for c in outer_colors]
-    ax.legend(handles, [str(l) for l in outer_labels], loc="upper left",
-              bbox_to_anchor=(1.02, 1), frameon=False, fontsize=5)
+    ax.legend(handles, [str(l) for l in outer_labels], loc="upper right", frameon=False, fontsize=5)
     ax.set_aspect("equal")
     if standalone:
         apply_chart_polish(ax, "nested_donut")
@@ -419,7 +416,7 @@ def gen_stacked_area_comp(df, dataProfile, chartPlan, rcParams, palette, col_map
     ax.set_xlabel(x_col)
     ax.set_ylabel(value_col)
     ax.set_ylim(0, None)
-    ax.legend(loc="upper left", bbox_to_anchor=(1.02, 1), frameon=False, fontsize=5)
+    ax.legend(loc="upper right", frameon=False, fontsize=5)
     if standalone:
         apply_chart_polish(ax, "stacked_area_comp")
     return ax

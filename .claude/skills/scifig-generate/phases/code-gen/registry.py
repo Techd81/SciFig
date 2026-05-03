@@ -1,4 +1,9 @@
 ```python
+"""SINGLE SOURCE OF TRUTH for the 121-chart family registry.
+
+Phase-3 docs reference this dict; do not duplicate it elsewhere.
+"""
+
 # ──────────────────────────────────────────────────────────────
 # Chart Generator Registry
 # Maps chart type keys to generator function names.

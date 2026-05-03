@@ -186,12 +186,15 @@ render_qa = {
     "legendContractFailures": _runtime_crowding("legendContractFailures", []),
     "layoutContractEnforced": _runtime_crowding("layoutContractEnforced", False),
     "layoutContractFailures": _runtime_crowding("layoutContractFailures", []),
+    "audited_axes_count": _runtime_crowding("audited_axes_count", 0),
     "crossPanelOverlapIssues": _runtime_crowding("crossPanelOverlapIssues", []),
     "colorbarReflowCount": _runtime_crowding("colorbarReflowCount", 0),
     "colorbarPanelOverlapIssues": _runtime_crowding("colorbarPanelOverlapIssues", []),
     "colorbarPanelOverlapCount": _runtime_crowding("colorbarPanelOverlapCount", 0),
     "metricTableDataOverlapIssues": _runtime_crowding("metricTableDataOverlapIssues", []),
     "metricTableDataOverlapCount": _runtime_crowding("metricTableDataOverlapCount", 0),
+    "textTextOverlapCount": _runtime_crowding("textTextOverlapCount", 0),
+    "bboxDataCoverageOverflowCount": _runtime_crowding("bboxDataCoverageOverflowCount", 0),
     "negativeAxesTextCount": _runtime_crowding("negativeAxesTextCount", 0),
     "oversizedTextCount": _runtime_crowding("oversizedTextCount", 0),
     "figureWhitespaceFraction": _runtime_crowding("figureWhitespaceFraction", 0),
@@ -268,6 +271,9 @@ if not render_qa["layoutContractEnforced"]:
 if render_qa["layoutContractFailures"]:
     render_qa["overlapFailures"].append("layout_contract_failed")
 
+if render_qa["audited_axes_count"] == 0:
+    render_qa["overlapFailures"].append("audited_axes_count_zero")
+
 if render_qa["crossPanelOverlapIssues"]:
     render_qa["overlapFailures"].append("cross_panel_text_or_table_overlap")
 
@@ -276,6 +282,12 @@ if render_qa["colorbarPanelOverlapCount"] > 0:
 
 if render_qa["metricTableDataOverlapCount"] > 0:
     render_qa["overlapFailures"].append("metric_table_data_overlap")
+
+if render_qa["textTextOverlapCount"] > 0:
+    render_qa["overlapFailures"].append("text_text_overlap")
+
+if render_qa["bboxDataCoverageOverflowCount"] > 0:
+    render_qa["overlapFailures"].append("bbox_oversized_coverage")
 
 if render_qa["negativeAxesTextCount"] > 0:
     render_qa["overlapFailures"].append("negative_axes_text_without_reserved_slot")
@@ -382,8 +394,11 @@ Hard failures:
 - generated code saves a figure without `enforce_figure_legend_contract(...)`
 - `legendContractEnforced` is false or `legendContractFailures` is non-empty
 - `layoutContractEnforced` is false or `layoutContractFailures` is non-empty
+- `audited_axes_count == 0` or a single-panel inset axis is missing from the audit map
 - `colorbarPanelOverlapCount > 0`
 - `metricTableDataOverlapCount > 0` after helper relocation attempts
+- `textTextOverlapCount > 0`
+- `bboxDataCoverageOverflowCount > 0` (`bbox_oversized_coverage`; white bbox covers data area above the safe threshold)
 - risk tables, footnotes, or outside summaries are drawn with negative axes coordinates instead of a reserved GridSpec/subfigure slot
 - generated typography is poster-scale (`font.size >= 12`, `fontsize >= 13`, or panel labels above 12 pt)
 - any title, risk table, text box, or statistical bracket overlaps another panel's rendered layout box
@@ -463,6 +478,9 @@ metadata = {
     "legendContractFailures": render_qa["legendContractFailures"],
     "layoutContractEnforced": render_qa["layoutContractEnforced"],
     "layoutContractFailures": render_qa["layoutContractFailures"],
+    "audited_axes_count": render_qa["audited_axes_count"],
+    "textTextOverlapCount": render_qa["textTextOverlapCount"],
+    "bboxDataCoverageOverflowCount": render_qa["bboxDataCoverageOverflowCount"],
     "negativeAxesTextCount": render_qa["negativeAxesTextCount"],
     "oversizedTextCount": render_qa["oversizedTextCount"],
     "axisLegendRemovedCount": render_qa["axisLegendRemovedCount"],

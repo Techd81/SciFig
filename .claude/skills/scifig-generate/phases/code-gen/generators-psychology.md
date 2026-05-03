@@ -855,7 +855,7 @@ def gen_interaction_plot(df, dataProfile, chartPlan, rcParams, palette, col_map=
     ax.set_xlabel(x_col)
     ax.set_ylabel(value_col)
     ax.legend(title=group_col, fontsize=5, title_fontsize=5.5,
-              frameon=False, loc="upper left", bbox_to_anchor=(1.02, 1), borderaxespad=0)
+              frameon=False, loc="upper right", borderaxespad=0)
     if standalone:
         apply_chart_polish(ax, "interaction_plot")
     return ax
@@ -1089,7 +1089,7 @@ def gen_violin_grouped(df, dataProfile, chartPlan, rcParams, palette, col_map=No
     ax.set_xlabel(x_col)
     ax.set_ylabel(value_col)
     ax.legend(title=hue_col, fontsize=5, title_fontsize=5.5,
-              frameon=False, loc="upper left", bbox_to_anchor=(1.02, 1), borderaxespad=0)
+              frameon=False, loc="upper right", borderaxespad=0)
     if standalone:
         apply_chart_polish(ax, "violin_grouped")
     return ax
@@ -1222,7 +1222,7 @@ def gen_line(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=Non
         ax.set_ylabel(_display_col(y_col, col_map) if standalone else "")
         handles, labels = ax.get_legend_handles_labels()
         if labels:
-            ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.24), ncol=min(4, len(labels)),
+            ax.legend(loc="upper right", ncol=min(4, len(labels)),
                       frameon=False, fontsize=5)
         if ax.figure is not None:
             try:
@@ -1253,8 +1253,7 @@ def gen_line(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=Non
             ax.plot(ordered[x_col], ordered[y_col], marker="o", markersize=3,
                     lw=0.9, color=color_map.get(name, fallback[i % len(fallback)]),
                     label=str(name))
-        ax.legend(loc="upper left", bbox_to_anchor=(1.02, 1), borderaxespad=0,
-                  frameon=False, fontsize=5)
+        ax.legend(loc="upper right", frameon=False, fontsize=5)
         ax.set_xlabel(_display_col(x_col, col_map))
     else:
         ordered = df.sort_values(x_col)
@@ -1450,7 +1449,7 @@ def gen_training_curve(df, dataProfile, chartPlan, rcParams, palette, col_map=No
             sp = ax.figure.subplotpars
             ax.figure.subplots_adjust(left=max(sp.left, 0.16), bottom=max(sp.bottom, 0.30), right=min(sp.right, 0.96))
         else:
-            ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.24), ncol=min(4, len(labels)),
+            ax.legend(loc="upper right", ncol=min(4, len(labels)),
                       frameon=False, fontsize=5)
     if standalone:
         apply_chart_polish(ax, "training_curve")
@@ -1503,8 +1502,7 @@ def gen_ma_plot(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=
     ax.axhline(-1, color="#777777", lw=0.45, ls="--")
     ax.set_xlabel(f"log10({_display_col(mean_col, col_map)})")
     ax.set_ylabel(_display_col(fc_col, col_map))
-    ax.legend(loc="upper left", bbox_to_anchor=(1.02, 1), borderaxespad=0,
-              frameon=False, fontsize=5)
+    ax.legend(loc="upper right", frameon=False, fontsize=5)
     if standalone:
         apply_chart_polish(ax, "ma_plot")
     return ax
@@ -1545,8 +1543,7 @@ def gen_tsne(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=Non
             ax.scatter(x_vals[mask], y_vals[mask], s=12, alpha=0.75,
                        color=color_map[cat], edgecolors="white", linewidth=0.25,
                        label=str(cat))
-        ax.legend(loc="upper left", bbox_to_anchor=(1.02, 1), borderaxespad=0,
-                  frameon=False, fontsize=5)
+        ax.legend(loc="upper right", frameon=False, fontsize=5)
     else:
         ax.scatter(x_vals, y_vals, s=12, alpha=0.75,
                    color=palette.get("categorical", ["#1F4E79"])[0],
@@ -1608,8 +1605,7 @@ def gen_oncoprint(df, dataProfile, chartPlan, rcParams, palette, col_map=None, a
     ax.set_xlabel(f"Samples (n={len(samples)})")
     ax.set_ylabel("Genes")
     handles = [plt.Rectangle((0, 0), 1, 1, facecolor=cmap_colors[i + 1]) for i in range(len(alteration_types))]
-    ax.legend(handles, alteration_types, loc="upper left", bbox_to_anchor=(1.02, 1),
-              borderaxespad=0, frameon=False, fontsize=5)
+    ax.legend(handles, alteration_types, loc="upper right", frameon=False, fontsize=5)
     if standalone:
         apply_chart_polish(ax, "oncoprint")
     return ax
@@ -1776,8 +1772,7 @@ def gen_spatial_feature(df, dataProfile, chartPlan, rcParams, palette, col_map=N
             sub = df[df[group_col] == cat]
             ax.scatter(sub[x_col], sub[y_col], color=color_map[cat], s=12,
                        alpha=0.85, linewidth=0, label=str(cat))
-        ax.legend(loc="upper left", bbox_to_anchor=(1.02, 1), borderaxespad=0,
-                  frameon=False, fontsize=5)
+        ax.legend(loc="upper right", frameon=False, fontsize=5)
     else:
         ax.scatter(df[x_col], df[y_col], color=palette.get("categorical", ["#1F4E79"])[0],
                    s=12, alpha=0.85, linewidth=0)
@@ -1898,8 +1893,7 @@ def gen_stacked_bar_comp(df, dataProfile, chartPlan, rcParams, palette, col_map=
     ax.set_xticks(x)
     ax.set_xticklabels(pivot.index.astype(str), rotation=45, ha="right", fontsize=5)
     ax.set_ylabel("Proportion" if pivot.to_numpy().max() <= 1.0 else _display_col(value_col, col_map))
-    ax.legend(loc="upper left", bbox_to_anchor=(1.02, 1), borderaxespad=0,
-              frameon=False, fontsize=5)
+    ax.legend(loc="upper right", frameon=False, fontsize=5)
     if standalone:
         apply_chart_polish(ax, "stacked_bar_comp")
     return ax

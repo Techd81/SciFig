@@ -49,7 +49,7 @@ def gen_histogram(df, dataProfile, chartPlan, rcParams, palette, col_map=None, a
             sns.kdeplot(subset, ax=ax, color=color, linewidth=0.8,
                         clip=(subset.min() - 0.5 * bin_width,
                               subset.max() + 0.5 * bin_width))
-        ax.legend(loc="upper left", bbox_to_anchor=(1.02, 1), borderaxespad=0, frameon=False, fontsize=5)
+        ax.legend(loc="upper right", frameon=False, fontsize=5)
     else:
         values = df[value_col].dropna()
         iqr = values.quantile(0.75) - values.quantile(0.25)
@@ -94,7 +94,7 @@ def gen_density(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=
             color = color_map[cat]
             sns.kdeplot(subset, ax=ax, fill=True, alpha=0.3,
                         color=color, linewidth=0.8, label=cat)
-        ax.legend(loc="upper left", bbox_to_anchor=(1.02, 1), borderaxespad=0, frameon=False, fontsize=5)
+        ax.legend(loc="upper right", frameon=False, fontsize=5)
     else:
         values = df[value_col].dropna()
         color = palette.get("categorical", ["#000000"])[0]
@@ -136,7 +136,7 @@ def gen_ecdf(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=Non
             ecdf_y = np.arange(1, len(sorted_vals) + 1) / len(sorted_vals)
             ax.step(sorted_vals, ecdf_y, where="post", color=color,
                     linewidth=0.8, label=cat)
-        ax.legend(loc="upper left", bbox_to_anchor=(1.02, 1), borderaxespad=0, frameon=False, fontsize=5)
+        ax.legend(loc="upper right", frameon=False, fontsize=5)
     else:
         values = df[value_col].dropna()
         color = palette.get("categorical", ["#000000"])[0]
@@ -364,7 +364,7 @@ def gen_violin_split(df, dataProfile, chartPlan, rcParams, palette, col_map=None
     # Legend
     legend_handles = [plt.Line2D([0], [0], color=color_map[c], linewidth=2,
                                   alpha=0.5, label=c) for c in categories]
-    ax.legend(handles=legend_handles, loc="upper left", bbox_to_anchor=(1.02, 1), borderaxespad=0, frameon=False, fontsize=5)
+    ax.legend(handles=legend_handles, loc="upper right", frameon=False, fontsize=5)
 
     if standalone:
         apply_chart_polish(ax, "violin_split")
@@ -555,7 +555,7 @@ def gen_violin_grouped(df, dataProfile, chartPlan, rcParams, palette, col_map=No
     ax.set_xlabel(x_col)
     ax.set_ylabel(value_col)
     ax.legend(title=hue_col, fontsize=5, title_fontsize=5.5,
-              frameon=False, loc="upper left", bbox_to_anchor=(1.02, 1), borderaxespad=0)
+              frameon=False, loc="upper right", borderaxespad=0)
     if standalone:
         apply_chart_polish(ax, "violin_grouped")
     return ax

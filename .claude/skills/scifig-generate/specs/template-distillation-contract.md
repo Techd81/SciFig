@@ -221,3 +221,37 @@ binding regardless of which path executes at runtime.
 - Prefer one strong article-derived motif plus one support motif over many weak decorations.
 - Keep all generated output source-data friendly and reproducible.
 - In each autonomous cycle, compare the new smoke bundle against the previous cycle and promote at least one reusable lesson before the next commit.
+
+### Wave-2 Distillation Output (V0.1.1)
+
+The following ready-to-import registries are the authoritative runtime outputs
+of the V0.1.1 template distillation wave:
+
+| Registry | Responsibility | Importer |
+|----------|----------------|----------|
+| `templates/template-palette-registry.json` | Named palettes plus semantic role colors. | `template_mining_helpers.resolve_palette` and `role_color` |
+| `templates/layout-recipes-ready.json` | `R0`-`R11` GridSpec/subplots recipes with reserved legend/colorbar/inset slots. | `template_mining_helpers.build_grid` and Phase 3 layout planning |
+| `templates/zorder-recipes-ready.json` | Universal zorder tiers plus family overrides. | `template_mining_helpers.apply_zorder_recipe` |
+
+Phase 3 documentation may link to these files, but must not duplicate palette,
+layout, or zorder defaults inline.
+
+### Family-Level Smoke Matrix (V0.1.1)
+
+`template-mining/_extraction/binding_probe.py` must verify the strict generator
+bindings plus this 10 family x 5 check smoke matrix. Each row is grep-backed
+against generator source, Phase 3/4 contracts, helper code, and ready registry
+files.
+
+| Family | legend_compliance | zorder_declared | colorbar_slot_reserved | inset_audit_inclusion | text_safe_bbox |
+|--------|-------------------|-----------------|------------------------|-----------------------|----------------|
+| scatter_regression | finalizer path | zorder recipe | reserved slot contract | normalize_axes_map | text safety audit |
+| ale_pdp | finalizer path | zorder recipe | reserved slot contract | normalize_axes_map | text safety audit |
+| shap_composite | finalizer path | zorder recipe | reserved slot contract | normalize_axes_map | text safety audit |
+| dual_axis | finalizer path | zorder recipe | reserved slot contract | normalize_axes_map | text safety audit |
+| heatmap | finalizer path | zorder recipe | reserved slot contract | normalize_axes_map | text safety audit |
+| multipanel_grid | finalizer path | zorder recipe | reserved slot contract | normalize_axes_map | text safety audit |
+| single_focus | finalizer path | zorder recipe | reserved slot contract | normalize_axes_map | text safety audit |
+| global_local | finalizer path | zorder recipe | reserved slot contract | normalize_axes_map | text safety audit |
+| n_by_n_pairwise | finalizer path | zorder recipe | reserved slot contract | normalize_axes_map | text safety audit |
+| marginal_joint | finalizer path | zorder recipe | reserved slot contract | normalize_axes_map | text safety audit |

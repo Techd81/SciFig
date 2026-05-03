@@ -1,0 +1,89 @@
+# Finalizer-Safe Template Contract
+
+This is the canonical contract every Phase-3 generator must follow.
+
+## Required imports
+
+Generator code should use helper APIs and registry files instead of local
+defaults:
+
+```python
+from template_mining_helpers import (
+    apply_journal_kernel,
+    resolve_palette,
+    role_color,
+    build_grid,
+    apply_zorder_recipe,
+    add_metric_box,
+    safe_annotate,
+    add_panel_label,
+    add_perfect_fit_diagonal,
+    add_zero_reference,
+)
+```
+
+Registry-backed resources:
+
+- `templates/template-palette-registry.json`
+- `templates/layout-recipes-ready.json`
+- `templates/zorder-recipes-ready.json`
+
+## Banned patterns
+
+| Pattern | Do not use | Use instead |
+|---------|------------|-------------|
+| Outside-right legends | `ax.legend(..., bbox_to_anchor=(1.02, 1))` | collect handles/labels and let `enforce_figure_legend_contract` create the bottom-center figure legend |
+| Negative-bottom legends | `ax.legend(..., bbox_to_anchor=(0.5, -0.24))` | reserve a bottom legend slot through the layout recipe |
+| Inline palette lists | `colors = ["#1F3A5F", "#C8553D"]` | `colors = resolve_palette("nature_radar_dual")` |
+| Ad-hoc zorder defaults | `zorder=999` | semantic layers passed to `apply_zorder_recipe(...)` |
+| Handwritten finalizer replacements | local `def enforce_figure_legend_contract(...)` | embedded `phases/code-gen/helpers.py` finalizer |
+
+## Required finalizer hooks
+
+Every generated script must end each saved figure with this sequence:
+
+```python
+axes_map = normalize_axes_map(fig, axes_map)
+legend_contract_report = enforce_figure_legend_contract(
+    fig, axes_map, chartPlan, journalProfile
+)
+layout_report = audit_figure_layout_contract(
+    fig, axes_map, chartPlan, journalProfile, strict=False
+)
+record_render_contract_report("figure1", chartPlan, legend_contract_report)
+```
+
+The generator payload should preserve shared legend intent:
+
+```python
+styledCode["sharedLegend"] = chartPlan.get("sharedLegend", False)
+```
+
+Cycle-24 audit fields are required in persisted runtime reports:
+
+- `audited_axes_count`
+- `textTextOverlapCount`
+- `bboxDataCoverageOverflowCount`
+
+## Generator opt-outs
+
+Reserved `gid` values:
+
+- `scifig_metric_box`
+- `scifig_metric_table`
+- `scifig_inplot_label`
+- `scifig_panel_label`
+- `scifig_no_safety_bbox`
+
+Use opt-outs only when the helper contract already covers readability. Raw text
+without a white safety bbox must be rare and documented in the generator.
+
+## Source-side lint integration
+
+After editing any split generator source, run:
+
+```powershell
+python phases/code-gen/source-lint.py
+```
+
+Any hit from `BANNED_LEGEND_PATTERNS` blocks finalization.
