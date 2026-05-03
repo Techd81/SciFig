@@ -1,6 +1,6 @@
 # Ready Import Registries
 
-This folder contains generator-ready resources distilled from `template-mining/`.
+This folder contains generator-ready resources extracted from `template-mining/`.
 The JSON files are the single source of truth for runtime defaults; prose files
 remain human-readable rationale.
 
