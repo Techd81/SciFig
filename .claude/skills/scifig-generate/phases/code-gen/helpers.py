@@ -49,10 +49,10 @@ CROWDING_DEFAULTS = {
     "legendAllowedModes": ["bottom_center"],
     "legendLabelMaxChars": 32,
     "legendFontSizePt": 7,
-    "legendBottomAnchorY": 0.01,
+    "legendBottomAnchorY": 0.015,
     "legendBottomMarginNoLegend": 0.05,
     "legendBottomMarginMin": 0.06,
-    "legendBottomMarginMax": 0.10,
+    "legendBottomMarginMax": 0.16,
     "maxLegendColumns": 6,
     "legendFrame": True,
     "legendFrameStyle": {
@@ -2443,6 +2443,26 @@ def _bbox_area(box):
     return max(0.0, box.width) * max(0.0, box.height)
 
 
+def _bbox_overlap_area(first, second):
+    if first is None or second is None:
+        return 0.0
+    x0 = max(first.x0, second.x0)
+    x1 = min(first.x1, second.x1)
+    y0 = max(first.y0, second.y0)
+    y1 = min(first.y1, second.y1)
+    if x1 <= x0 or y1 <= y0:
+        return 0.0
+    return (x1 - x0) * (y1 - y0)
+
+
+def _axes_share_visual_panel(first_box, second_box, threshold=0.85):
+    """Return true for overlaid axes such as twinx/twiny panels."""
+    smaller_area = min(_bbox_area(first_box), _bbox_area(second_box))
+    if smaller_area <= 0:
+        return False
+    return (_bbox_overlap_area(first_box, second_box) / smaller_area) >= threshold
+
+
 def _metric_table_data_overlap_issues(fig, axes, renderer):
     issues = []
     for panel_id, ax in axes.items():
@@ -3186,6 +3206,8 @@ def audit_figure_layout_contract(fig, axes=None, chartPlan=None, journalProfile=
 
         for other_id, other_box in axes_boxes.items():
             if other_id != panel_id and artist_box.overlaps(other_box):
+                if _axes_share_visual_panel(axes_boxes.get(panel_id), other_box):
+                    continue
                 cross_panel_overlaps.append({
                     "element": "text_or_table",
                     "host_panel": panel_id,
@@ -3332,6 +3354,7 @@ def _reflow_legend_with_height_increase(fig, handles, labels, legend_labels, occ
                 fontsize,
                 ncol=1,
                 frame_style=crowdingPlan.get("legendFrameStyle"),
+                anchor_y=crowdingPlan.get("legendBottomAnchorY", CROWDING_DEFAULTS["legendBottomAnchorY"]),
             )
             ok = enforce_non_overlapping_legend(
                 fig,
@@ -3375,7 +3398,7 @@ def _bottom_margin_for_legend(fig, legend=None, crowdingPlan=None):
     legend_box = _bbox_in_figure_coords(fig, legend)
     target = float(legend_box.y1) + 0.018
     lower = float(plan.get("legendBottomMarginMin", 0.06))
-    upper = float(plan.get("legendBottomMarginMax", 0.10))
+    upper = float(plan.get("legendBottomMarginMax", CROWDING_DEFAULTS["legendBottomMarginMax"]))
     return min(upper, max(lower, target))
 
 
@@ -3470,7 +3493,7 @@ def _apply_legend_frame_style(legend, frame_style=None):
     return True
 
 
-def create_figure_legend(fig, handles, labels, legend_mode, fontsize, ncol=1, frame_style=None):
+def create_figure_legend(fig, handles, labels, legend_mode, fontsize, ncol=1, frame_style=None, anchor_y=None):
     invalidate_layout_cache(fig)
     legend_mode = _normalize_legend_mode(legend_mode)
     common = {
@@ -3485,8 +3508,9 @@ def create_figure_legend(fig, handles, labels, legend_mode, fontsize, ncol=1, fr
         "labelspacing": 0.35,
         "columnspacing": 0.8,
     }
+    anchor_y = CROWDING_DEFAULTS["legendBottomAnchorY"] if anchor_y is None else float(anchor_y)
     legend = fig.legend(handles, labels, loc="lower center",
-                        bbox_to_anchor=(0.5, 0.01), **common)
+                        bbox_to_anchor=(0.5, anchor_y), **common)
     _apply_legend_frame_style(legend, frame_style)
     return legend
 
@@ -3501,12 +3525,16 @@ def enforce_non_overlapping_legend(fig, legend, legend_mode, occupied_axes, has_
         subplotpars = fig.subplotpars
         if _normalize_legend_mode(legend_mode) == "bottom_center":
             next_bottom = min(
-                float(plan.get("legendBottomMarginMax", 0.10)),
+                float(plan.get("legendBottomMarginMax", CROWDING_DEFAULTS["legendBottomMarginMax"])),
                 subplotpars.top - 0.12,
                 subplotpars.bottom + 0.04,
             )
             if next_bottom <= subplotpars.bottom + 1e-6:
                 break
+            plan["legendBottomMarginMin"] = max(
+                float(plan.get("legendBottomMarginMin", CROWDING_DEFAULTS["legendBottomMarginMin"])),
+                next_bottom,
+            )
             fig.subplots_adjust(bottom=max(subplotpars.bottom, next_bottom))
         else:
             next_top = max(subplotpars.bottom + 0.12, subplotpars.top - 0.04)
@@ -3571,6 +3599,7 @@ def place_shared_legend(fig, axes, occupied_axes, crowdingPlan, journalProfile, 
                 fontsize,
                 ncol=ncol,
                 frame_style=frame_style,
+                anchor_y=crowdingPlan.get("legendBottomAnchorY", CROWDING_DEFAULTS["legendBottomAnchorY"]),
             )
             ok = enforce_non_overlapping_legend(
                 fig,
@@ -3814,11 +3843,11 @@ def enforce_figure_legend_contract(fig, axes=None, chartPlan=None, journalProfil
     plan["crowdingPlan"]["legendPlacementPriority"] = ["bottom_center"]
     plan["crowdingPlan"]["legendAllowedModes"] = ["bottom_center"]
     plan["crowdingPlan"]["legendFrame"] = True
-    plan["crowdingPlan"]["legendFrameStyle"] = dict(CROWDING_DEFAULTS["legendFrameStyle"])
-    plan["crowdingPlan"]["legendFontSizePt"] = 7
-    plan["crowdingPlan"]["legendBottomAnchorY"] = 0.01
-    plan["crowdingPlan"]["legendBottomMarginMin"] = 0.06
-    plan["crowdingPlan"]["legendBottomMarginMax"] = 0.10
+    plan["crowdingPlan"].setdefault("legendFrameStyle", dict(CROWDING_DEFAULTS["legendFrameStyle"]))
+    plan["crowdingPlan"].setdefault("legendFontSizePt", 7)
+    plan["crowdingPlan"].setdefault("legendBottomAnchorY", CROWDING_DEFAULTS["legendBottomAnchorY"])
+    plan["crowdingPlan"].setdefault("legendBottomMarginMin", 0.06)
+    plan["crowdingPlan"].setdefault("legendBottomMarginMax", CROWDING_DEFAULTS["legendBottomMarginMax"])
     plan["crowdingPlan"]["forbidOutsideRightLegend"] = True
     plan["crowdingPlan"]["forbidInAxesLegend"] = True
 

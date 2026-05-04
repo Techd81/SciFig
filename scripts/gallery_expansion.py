@@ -25,7 +25,7 @@ RAW = os.path.join(BASE, '.workflow', '.scratchpad', 'test-data', 'raw')
 def apply_nature():
     plt.rcParams.update({
         'font.family': 'sans-serif',
-        'font.sans-serif': ['Arial', 'Helvetica', 'DejaVu Sans'],
+        'font.sans-serif': ['DejaVu Sans', 'Arial', 'Helvetica'],
         'font.size': 6,
         'axes.linewidth': 0.6,
         'axes.labelsize': 7,
@@ -39,8 +39,10 @@ def apply_nature():
         'ytick.direction': 'out',
         'xtick.major.size': 3,
         'ytick.major.size': 3,
-        'legend.fontsize': 5.5,
-        'legend.frameon': False,
+        'legend.fontsize': 7,
+        'legend.frameon': True,
+        'legend.edgecolor': '#cccccc',
+        'legend.borderpad': 0.4,
         'figure.dpi': 200,
         'savefig.dpi': 200,
         'lines.linewidth': 1.0,
@@ -65,6 +67,12 @@ def save(fig, name):
     w, h = fig.get_size_inches()
     print(f'  {name}: {int(w*DPI)}x{int(h*DPI)}px')
     plt.close(fig)
+
+
+def panel_label(ax, label):
+    ax.text(-0.06, 1.08, label, transform=ax.transAxes,
+            fontsize=9, fontweight='bold', va='bottom',
+            ha='left', clip_on=False)
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -95,8 +103,10 @@ def gen_iris_radar():
     ax.set_ylim(0, 1.08)
     ax.spines['polar'].set_linewidth(0.4)
     ax.grid(True, lw=0.3, alpha=0.4)
-    ax.legend(loc='upper right', bbox_to_anchor=(1.18, 1.12), fontsize=6)
-    fig.tight_layout()
+    fig.legend(handles=[ax.get_lines()[i] for i in range(len(normed))],
+               labels=['setosa', 'versicolor', 'virginica'],
+               loc='lower center', ncol=3, bbox_to_anchor=(0.5, 0.015),
+               fontsize=7, frameon=True, edgecolor='#cccccc', borderpad=0.4)
     save(fig, 'iris_radar_hero.png')
     print('  [1/7] Iris radar done')
 
@@ -124,10 +134,10 @@ def gen_covid_heatmap():
     ax.set_xticks(range(0, len(piv.columns), 3))
     ax.set_xticklabels([d.strftime('%b\n%Y') for d in piv.columns[::3]], fontsize=5)
     ax.set_xlabel('')
-    ax.set_title('Cumulative COVID-19 Cases by State (log₁₀)', fontsize=7, pad=6)
+    ax.set_title('Cumulative COVID-19 Cases by State (log10)', fontsize=7, pad=6)
     cb = fig.colorbar(im, ax=ax, shrink=0.7, pad=0.02)
     cb.ax.tick_params(labelsize=5)
-    cb.set_label('log₁₀(cases + 1)', fontsize=5.5)
+    cb.set_label('log10(cases + 1)', fontsize=5.5)
     ax.spines['top'].set_visible(True)
     ax.spines['right'].set_visible(True)
     ax.spines['top'].set_linewidth(0.4)
@@ -214,9 +224,10 @@ def gen_power_streamgraph():
     ax.set_ylim(y_centered.min() * 1.1, y_centered.max() * 1.1)
     ax.set_ylabel('Power (Wh)')
     ax.set_xlabel('Time (sampled)')
-    ax.set_title('Household Power Consumption — Sub-metering Streamgraph', fontsize=7, pad=6)
-    ax.legend(loc='upper right', fontsize=5.5)
-    fig.tight_layout()
+    ax.set_title('Household Power Consumption - Sub-metering Streamgraph', fontsize=7, pad=6, loc='center')
+    fig.legend(loc='lower center', ncol=3, bbox_to_anchor=(0.5, 0.015),
+               fontsize=7, frameon=True, edgecolor='#cccccc', borderpad=0.4)
+    fig.tight_layout(rect=[0, 0.075, 1, 1])
     save(fig, 'power_streamgraph_hero.png')
     print('  [4/7] Power streamgraph done')
 
@@ -240,7 +251,7 @@ def gen_citibike_dotplot():
     ax.set_yticks(y)
     ax.set_yticklabels(names, fontsize=5.5)
     ax.set_xlabel('Number of Rides')
-    ax.set_title('Top 15 Citi Bike Stations — Ride Count', fontsize=7, pad=6)
+    ax.set_title('Top 15 Citi Bike Stations - Ride Count', fontsize=7, pad=6, loc='center')
     ax.spines['left'].set_linewidth(0.4)
     ax.set_xlim(0, stations.max() * 1.1)
     fig.tight_layout()
@@ -262,9 +273,9 @@ def gen_exoplanet_bubble():
                     s=np.clip(sub['pl_orbper'].fillna(1) * 0.3, 3, 80),
                     alpha=0.55, edgecolors='none', linewidths=0.3)
 
-    ax.set_xlabel('Planet Radius (R⊕)')
-    ax.set_ylabel('Planet Mass (M⊕)')
-    ax.set_title('Exoplanet Mass–Radius Relation', fontsize=7, pad=6)
+    ax.set_xlabel('Planet Radius (Earth radii)')
+    ax.set_ylabel('Planet Mass (Earth masses)')
+    ax.set_title('Exoplanet Mass-Radius Relation', fontsize=7, pad=6, loc='center')
     ax.set_yscale('log')
     ax.set_xscale('log')
     cb = fig.colorbar(sc, ax=ax, shrink=0.7, pad=0.02)
@@ -295,7 +306,7 @@ def gen_iris_atlas():
                     color=colors[s], label=s.replace('Iris-', ''))
     ax1.set_xlabel('Sepal Length')
     ax1.set_ylabel('Petal Length')
-    ax1.set_title('A', fontsize=8, fontweight='bold', loc='left', pad=2)
+    panel_label(ax1, 'A')
 
     # Panel B: Box plots
     ax2 = fig.add_subplot(gs[0, 1])
@@ -308,7 +319,7 @@ def gen_iris_atlas():
         patch.set_alpha(0.6)
     ax2.set_xticklabels([s.replace('Iris-', '') for s in species], fontsize=5.5)
     ax2.set_ylabel('Petal Length')
-    ax2.set_title('B', fontsize=8, fontweight='bold', loc='left', pad=2)
+    panel_label(ax2, 'B')
 
     # Panel C: Parallel coordinates
     ax3 = fig.add_subplot(gs[0, 2])
@@ -325,7 +336,7 @@ def gen_iris_atlas():
     ax3.set_xticks(x_feat)
     ax3.set_xticklabels(['SL', 'SW', 'PL', 'PW'], fontsize=5.5)
     ax3.set_ylabel('Normalized')
-    ax3.set_title('C', fontsize=8, fontweight='bold', loc='left', pad=2)
+    panel_label(ax3, 'C')
 
     # Panel D: Histogram (petal_l)
     ax4 = fig.add_subplot(gs[1, 0])
@@ -334,7 +345,7 @@ def gen_iris_atlas():
         ax4.hist(sub['petal_l'], bins=12, alpha=0.5, color=colors[s], label=s.replace('Iris-', ''))
     ax4.set_xlabel('Petal Length')
     ax4.set_ylabel('Count')
-    ax4.set_title('D', fontsize=8, fontweight='bold', loc='left', pad=2)
+    panel_label(ax4, 'D')
 
     # Panel E: Radar summary
     ax5 = fig.add_subplot(gs[1, 1], polar=True)
@@ -350,7 +361,7 @@ def gen_iris_atlas():
     ax5.set_xticks(angles)
     ax5.set_xticklabels(['SL', 'SW', 'PL', 'PW'], fontsize=5.5)
     ax5.set_yticklabels([])
-    ax5.set_title('E', fontsize=8, fontweight='bold', loc='left', pad=8)
+    panel_label(ax5, 'E')
     ax5.grid(True, lw=0.3, alpha=0.4)
 
     # Panel F: Violin plot (petal_w)
@@ -367,15 +378,16 @@ def gen_iris_atlas():
     ax6.set_xticks([1, 2, 3])
     ax6.set_xticklabels([s.replace('Iris-', '') for s in species], fontsize=5.5)
     ax6.set_ylabel('Petal Width')
-    ax6.set_title('F', fontsize=8, fontweight='bold', loc='left', pad=2)
+    panel_label(ax6, 'F')
 
     # Shared legend
     handles = [plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=colors[s],
                           markersize=5, label=s.replace('Iris-', '')) for s in species]
-    fig.legend(handles=handles, loc='lower center', ncol=3, fontsize=6,
-               bbox_to_anchor=(0.5, -0.01))
-    fig.suptitle('Iris Feature Atlas', fontsize=9, fontweight='bold', y=1.01)
-    fig.tight_layout(rect=[0, 0.03, 1, 0.99])
+    fig.legend(handles=handles, loc='lower center', ncol=3, fontsize=7,
+               bbox_to_anchor=(0.5, 0.015),
+               frameon=True, edgecolor='#cccccc', borderpad=0.4)
+    fig.suptitle('Iris Feature Atlas', fontsize=9, fontweight='bold', y=0.995, x=0.5, ha='center')
+    fig.tight_layout(rect=[0, 0.075, 1, 0.97])
     save(fig, 'iris_feature_atlas.png')
     print('  [7/7] Iris atlas done')
 
