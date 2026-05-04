@@ -121,10 +121,10 @@ def resolve_journal_profile(workflowPreferences):
         "single_width_mm": 89,
         "double_width_mm": 183,
         "max_height_mm": 170,
-        "font_family": ["Arial", "Helvetica", "DejaVu Sans"],
+        "font_family": ["DejaVu Sans", "Arial", "Helvetica"],
         "font_size_body_pt": 6,
-        "font_size_small_pt": 5,
-        "font_size_panel_label_pt": 8,
+        "font_size_small_pt": 7,
+        "font_size_panel_label_pt": 9,
         "axis_linewidth_pt": 0.6,
         "tick_width_pt": 0.6,
         "panel_gap_rel": 0.22,
@@ -134,7 +134,7 @@ def resolve_journal_profile(workflowPreferences):
             "hero_plus_stacked_support": 134,
             "story_board_2x2": 146
         },
-        "panel_label_offset_xy": [-0.12, 1.05],
+        "panel_label_offset_xy": [-0.06, 1.08],
         "legend_retry_limit": 5
     }
 
@@ -270,13 +270,13 @@ def build_rcparams(journalProfile):
 
         # Typography
         "font.family": "sans-serif",
-        "font.sans-serif": journalProfile["font_family"],
+        "font.sans-serif": ["DejaVu Sans", *[f for f in journalProfile["font_family"] if f != "DejaVu Sans"]],
         "font.size": journalProfile["font_size_body_pt"],
         "axes.labelsize": journalProfile.get("font_size_body_pt", 6),
         "axes.titlesize": journalProfile.get("font_size_body_pt", 6) + 1,
         "xtick.labelsize": journalProfile.get("font_size_body_pt", 6) - 1,
         "ytick.labelsize": journalProfile.get("font_size_body_pt", 6) - 1,
-        "legend.fontsize": journalProfile.get("font_size_small_pt", 5),
+        "legend.fontsize": 7,
 
         # Axes spines (Nature/Cell: remove top/right for "open L" style)
         "axes.linewidth": journalProfile["axis_linewidth_pt"],
@@ -303,8 +303,9 @@ def build_rcparams(journalProfile):
         "lines.solid_joinstyle": "round",
 
         # Legend
-        "legend.frameon": False,
-        "legend.borderpad": 0.3,
+        "legend.frameon": True,
+        "legend.edgecolor": "#cccccc",
+        "legend.borderpad": 0.4,
 
         # Output
         "figure.dpi": 150,
@@ -509,6 +510,8 @@ The canonical helper runtime is `phases/code-gen/helpers.py`. Do not duplicate h
 - `sanitize_columns`, `apply_chart_polish`, `apply_visual_content_pass`, `apply_template_radar_signature`, `apply_template_triangular_heatmap_signature`, `apply_crowding_management`, `reflow_colorbars_outside_panels`, `enforce_figure_legend_contract`, `audit_figure_layout_contract`
 - metadata fields: `legendContractEnforced`, `layoutContractEnforced`, `legendOutsidePlotArea`, `axisLegendRemainingCount`, `layoutContractFailures`, `colorbarReflowCount`, `colorbarPanelOverlapCount`, `metricTableDataOverlapCount`, `metricTableRelocatedCount`, `metricTableSuppressedCount`, `metricTableFallbackBoxCount`, `visualGrammarMotifsApplied`, `templateMotifsApplied`, `templateCaseAnchors`, `templateTechniqueRefs`, `templateMatchMode`, `metricTableCount`, `referenceLineCount`, `densityHaloCount`, `marginalAxesCount`, `densityColorEncodingCount`
 - hard rule: generated code may create temporary `ax.legend(...)` handles, but final output must call `enforce_figure_legend_contract(...)` immediately before the first `savefig` and leave no axis legends behind
+- title rule: `fig.suptitle(...)` and `ax.set_title(...)` default to centered alignment; never use left/right title positions for panel labels.
+- label rule: use ASCII-safe labels (`Earth radii`, `Earth masses`, `log10`, `-`) and avoid fragile glyphs such as `⊕`, subscript digits, and em dashes.
 
 If a helper behavior needs to change, edit `phases/code-gen/helpers.py` and update tests; do not paste a local replacement here.
 ### Step 3.4b: Improved Multi-panel Composition
@@ -518,10 +521,10 @@ Use `panelBlueprint` as the source of truth and embed the canonical source from 
 Composition rules that must remain true:
 
 - Shared legends/colorbars are external layout elements, not plotted-area annotations.
-- Bottom-center rounded framed shared legend is mandatory for final composites. Outside-right, top-center, in-axes, and `loc="best"` publication legends are forbidden.
+- Bottom-center rectangular framed shared legend is mandatory for final composites. Outside-right, top-center, in-axes, and `loc="best"` publication legends are forbidden.
 - Risk tables, side summaries, and footnotes need reserved GridSpec/subfigure slots; no negative `ax.transAxes` text unless a slot is reserved.
 - Print-scale typography only: body 5-7 pt, axes labels 6-8 pt, panel labels 8-10 pt, compact titles 7-9 pt.
-- Panel labels use consistent anchor/font/offset, and axis link groups are used only when scales are semantically identical.
+- Panel labels use `add_panel_label(..., x=-0.06, y=1.08, fontsize=9)` outside the data rectangle, and axis link groups are used only when scales are semantically identical.
 ### Step 3.4c: Generator Source Contract
 
 All charts in `CHART_GENERATORS` are backed by dedicated implementations loaded from the split source files listed in Step 3.6. Do not keep example generator bodies in this phase document; they drift from the tested source. If a future registry entry is added before its generator lands, emit a template-backed skeleton and note the gap in `styledCode["generatorCoverage"]`.

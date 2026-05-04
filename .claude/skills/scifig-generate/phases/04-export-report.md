@@ -474,6 +474,9 @@ metadata = {
     "legendModeUsed": render_qa["legendModeUsed"],
     "legendAllowedModes": render_qa["legendAllowedModes"],
     "legendFrameApplied": render_qa["legendFrameApplied"],
+    "centeredTitleCount": render_qa.get("centeredTitleCount", 0),
+    "sideTitleMovedCount": render_qa.get("sideTitleMovedCount", 0),
+    "asciiTextReplacementCount": render_qa.get("asciiTextReplacementCount", 0),
     "legendContractEnforced": render_qa["legendContractEnforced"],
     "legendContractFailures": render_qa["legendContractFailures"],
     "layoutContractEnforced": render_qa["layoutContractEnforced"],
@@ -491,7 +494,7 @@ metadata = {
     "delegationReports": chartPlan.get("delegationReports", {}),
     "renderQa": render_qa,
     "seed": styledCode["seed"],
-    "scifigVersion": "0.2.0"
+    "scifigVersion": "0.1.1"
 }
 
 panel_manifest = {

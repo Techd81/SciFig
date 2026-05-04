@@ -34,6 +34,8 @@ Registry-backed resources:
 |---------|------------|-------------|
 | Outside-right legends | `ax.legend(..., bbox_to_anchor=(1.02, 1))` | collect handles/labels and let `enforce_figure_legend_contract` create the bottom-center figure legend |
 | Negative-bottom legends | `ax.legend(..., bbox_to_anchor=(0.5, -0.24))` | reserve a bottom legend slot through the layout recipe |
+| Left/right titles | `ax.set_title("A", loc="left")` or `fig.suptitle(..., ha="left")` | centered titles plus `add_panel_label(..., x=-0.06, y=1.08, fontsize=9)` for panel letters |
+| Fragile label glyphs | `R⊕`, `M⊕`, `log₁₀`, `—` | `Earth radii`, `Earth masses`, `log10`, `-` |
 | Inline palette lists | `colors = ["#1F3A5F", "#C8553D"]` | `colors = resolve_palette("nature_radar_dual")` |
 | Ad-hoc zorder defaults | `zorder=999` | semantic layers passed to `apply_zorder_recipe(...)` |
 | Handwritten finalizer replacements | local `def enforce_figure_legend_contract(...)` | embedded `phases/code-gen/helpers.py` finalizer |

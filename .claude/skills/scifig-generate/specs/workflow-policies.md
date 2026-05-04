@@ -128,13 +128,17 @@ CROWDING_POLICY = {
     "legend_label_max_chars": 32,
     "max_legend_columns": 6,
     "legend_frame": True,
+    "legend_font_size_pt": 7,
+    "legend_bottom_anchor_y": 0.01,
+    "legend_bottom_margin_min": 0.06,
+    "legend_bottom_margin_max": 0.10,
     "legend_frame_style": {
         "facecolor": "#FFFFFF",
-        "edgecolor": "#222222",
+        "edgecolor": "#cccccc",
         "linewidth": 0.55,
-        "alpha": 0.96,
-        "pad": 0.28,
-        "boxstyle": "round",
+        "alpha": 1.0,
+        "pad": 0.4,
+        "boxstyle": "square",
     },
     "legend_center_placement_only": True,
     "forbid_outside_right_legend": True,
@@ -168,7 +172,7 @@ LAYOUT_SCORE_WEIGHTS = {
 }
 ```
 
-Before Phase 3 locks the plan, score each candidate layout for group count, label length, legend burden, colorbar need, panel count, and chart aspect ratio. Prefer a lower-scoring layout even when it has fewer panels. In composite figures, every panel-level legend is only a temporary handle source: the final output must have one framed figure-level legend centered at the bottom, below every plotting panel, so it cannot collide with the figure title. `outside_right`, top-center, `loc="best"`, and any in-axes legend are forbidden in final publication output. Every saved figure must pass through the skill helper `enforce_figure_legend_contract(...)` immediately before `savefig`; missing embedded helper source, custom replacement helpers, missing `legendContractEnforced`, remaining axis legend, unframed final legend, or final legend overlap is a hard failure. Risk tables, footnotes, and outside summaries require a reserved GridSpec/subfigure/table slot; negative `ax.transAxes` text coordinates such as `y=-0.18` are forbidden because they can collide with lower panels. Print-scale typography is mandatory: body 5-7 pt, axis labels 6-8 pt, panel labels 8-10 pt, titles 7-9 pt, and any generated `font.size >= 12`, `fontsize >= 13`, or panel label >12 pt is a hard failure. If a rendered legend, colorbar, title, table, risk table, or direct label overlaps another panel's layout box, reflow before export. Colorbar axes must occupy reserved non-panel slots; the canonical helper first runs `reflow_colorbars_outside_panels(...)`, records `colorbarReflowCount` when it moves a colorbar, and hard-fails only if `colorbarPanelOverlapCount > 0` remains after reflow. If an in-axes metric table overlaps bar/rectangle data marks, the canonical helper must first try its `metricTableLocationPriority`, record `metricTableRelocatedCount` when a clean sidecar slot is found, and suppress the table only if every location still covers data; when suppression occurs, preserve the top rows as an outside metric box and record `metricTableFallbackBoxCount`. Never accept a metric table that covers plotted values.
+Before Phase 3 locks the plan, score each candidate layout for group count, label length, legend burden, colorbar need, panel count, and chart aspect ratio. Prefer a lower-scoring layout even when it has fewer panels. In composite figures, every panel-level legend is only a temporary handle source: the final output must have one rectangular framed figure-level legend centered at the bottom, below every plotting panel, using 7 pt text, `bbox_to_anchor=(0.5, 0.01)`, and a compact 0.06-0.10 bottom margin so it cannot collide with the figure title or float far from the panels. `outside_right`, top-center, `loc="best"`, and any in-axes legend are forbidden in final publication output. Every saved figure must pass through the skill helper `enforce_figure_legend_contract(...)` immediately before `savefig`; missing embedded helper source, custom replacement helpers, missing `legendContractEnforced`, remaining axis legend, unframed final legend, or final legend overlap is a hard failure. Figure titles and axes titles are centered by default; panel labels must use `add_panel_label(..., x=-0.06, y=1.08, fontsize=9)` outside the data rectangle rather than left-positioned titles. Text labels must use ASCII-safe forms such as `Earth radii`, `Earth masses`, `log10`, and `-` instead of fragile glyphs (`⊕`, subscript digits, em dashes). Risk tables, footnotes, and outside summaries require a reserved GridSpec/subfigure/table slot; negative `ax.transAxes` text coordinates such as `y=-0.18` are forbidden because they can collide with lower panels. Print-scale typography is mandatory: body 5-7 pt, axis labels 6-8 pt, panel labels 8-10 pt, titles 7-9 pt, and any generated `font.size >= 12`, `fontsize >= 13`, or panel label >12 pt is a hard failure. If a rendered legend, colorbar, title, table, risk table, or direct label overlaps another panel's layout box, reflow before export. Colorbar axes must occupy reserved non-panel slots; the canonical helper first runs `reflow_colorbars_outside_panels(...)`, records `colorbarReflowCount` when it moves a colorbar, and hard-fails only if `colorbarPanelOverlapCount > 0` remains after reflow. If an in-axes metric table overlaps bar/rectangle data marks, the canonical helper must first try its `metricTableLocationPriority`, record `metricTableRelocatedCount` when a clean sidecar slot is found, and suppress the table only if every location still covers data; when suppression occurs, preserve the top rows as an outside metric box and record `metricTableFallbackBoxCount`. Never accept a metric table that covers plotted values.
 
 ## Performance Policy
 
@@ -230,6 +234,9 @@ Phase 4 must produce `render_qa.json` with:
 - `legendCenterPlacementOnly`
 - `legendFrameApplied`
 - `legendFrameStyle`
+- `centeredTitleCount`
+- `sideTitleMovedCount`
+- `asciiTextReplacementCount`
 - `forbidOutsideRightLegend`
 - `axisLegendRemovedCount`
 - `axisLegendRemainingCount`

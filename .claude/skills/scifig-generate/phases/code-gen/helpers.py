@@ -48,15 +48,20 @@ CROWDING_DEFAULTS = {
     "legendPlacementPriority": ["bottom_center"],
     "legendAllowedModes": ["bottom_center"],
     "legendLabelMaxChars": 32,
+    "legendFontSizePt": 7,
+    "legendBottomAnchorY": 0.01,
+    "legendBottomMarginNoLegend": 0.05,
+    "legendBottomMarginMin": 0.06,
+    "legendBottomMarginMax": 0.10,
     "maxLegendColumns": 6,
     "legendFrame": True,
     "legendFrameStyle": {
         "facecolor": "#FFFFFF",
-        "edgecolor": "#222222",
+        "edgecolor": "#cccccc",
         "linewidth": 0.55,
-        "alpha": 0.96,
-        "pad": 0.28,
-        "boxstyle": "round",
+        "alpha": 1.0,
+        "pad": 0.4,
+        "boxstyle": "square",
     },
     "legendCenterPlacementOnly": True,
     "forbidOutsideRightLegend": True,
@@ -2179,6 +2184,113 @@ def shorten_legend_labels(labels, max_chars=32):
     return output, shortened
 
 
+ASCII_TEXT_REPLACEMENTS = (
+    ("R⊕", "Earth radii"),
+    ("M⊕", "Earth masses"),
+    ("R_⊕", "Earth radii"),
+    ("M_⊕", "Earth masses"),
+    ("log₁₀", "log10"),
+    ("₀", "0"),
+    ("₁", "1"),
+    ("₂", "2"),
+    ("₃", "3"),
+    ("₄", "4"),
+    ("₅", "5"),
+    ("₆", "6"),
+    ("₇", "7"),
+    ("₈", "8"),
+    ("₉", "9"),
+    ("—", "-"),
+    ("–", "-"),
+    ("−", "-"),
+    ("×", "x"),
+    ("±", "+/-"),
+    ("≤", "<="),
+    ("≥", ">="),
+    ("⊕", "Earth"),
+)
+
+
+def ascii_safe_text(value):
+    text = str(value)
+    for old, new in ASCII_TEXT_REPLACEMENTS:
+        text = text.replace(old, new)
+    return text
+
+
+def sanitize_figure_text(fig):
+    """Replace fragile label glyphs that render as boxes on minimal systems."""
+    from matplotlib.text import Text
+
+    changed = 0
+    for text_artist in fig.findobj(match=Text):
+        try:
+            current = text_artist.get_text()
+        except Exception:
+            continue
+        safe = ascii_safe_text(current)
+        if safe != current:
+            text_artist.set_text(safe)
+            changed += 1
+    if changed:
+        invalidate_layout_cache(fig)
+    return {"asciiTextReplacementCount": changed}
+
+
+def center_figure_titles(fig, axes):
+    """Normalize suptitle and Axes titles to centered alignment before QA."""
+    centered = 0
+    moved_side_titles = 0
+
+    suptitle = getattr(fig, "_suptitle", None)
+    if suptitle is not None and str(suptitle.get_text()).strip():
+        suptitle.set_x(0.5)
+        suptitle.set_ha("center")
+        centered += 1
+
+    for ax in axes.values():
+        center_title = getattr(ax, "title", None)
+        side_titles = [
+            getattr(ax, "_left_title", None),
+            getattr(ax, "_right_title", None),
+        ]
+        if center_title is not None and str(center_title.get_text()).strip():
+            try:
+                _, y_pos = center_title.get_position()
+            except Exception:
+                y_pos = 1.0
+            center_title.set_position((0.5, y_pos))
+            center_title.set_ha("center")
+            centered += 1
+
+        for side_title in side_titles:
+            if side_title is None:
+                continue
+            text = str(side_title.get_text()).strip()
+            if not text:
+                continue
+            if center_title is not None and not str(center_title.get_text()).strip():
+                ax.set_title(
+                    text,
+                    loc="center",
+                    fontsize=side_title.get_fontsize(),
+                    fontweight=side_title.get_fontweight(),
+                    fontstyle=side_title.get_fontstyle(),
+                    color=side_title.get_color(),
+                    pad=4,
+                )
+                centered += 1
+            side_title.set_text("")
+            moved_side_titles += 1
+
+    if centered or moved_side_titles:
+        invalidate_layout_cache(fig)
+    return {
+        "centeredTitleCount": centered,
+        "sideTitleMovedCount": moved_side_titles,
+    }
+
+
 def trim_excess_text_annotations(ax, max_keep):
     if max_keep is None:
         return 0
@@ -3221,7 +3333,14 @@ def _reflow_legend_with_height_increase(fig, handles, labels, legend_labels, occ
                 ncol=1,
                 frame_style=crowdingPlan.get("legendFrameStyle"),
             )
-            ok = enforce_non_overlapping_legend(fig, legend, mode, occupied_axes, retry_limit=3)
+            ok = enforce_non_overlapping_legend(
+                fig,
+                legend,
+                mode,
+                occupied_axes,
+                retry_limit=3,
+                crowdingPlan=crowdingPlan,
+            )
             if ok:
                 return legend, mode
     for existing in list(fig.legends):
@@ -3243,7 +3362,24 @@ def _disable_layout_engine_for_manual_margins(fig):
         pass
 
 
-def apply_subplot_margins(fig, legend_mode, has_colorbar=False, legend=None):
+def _legend_font_size(crowdingPlan=None, journalProfile=None):
+    plan = crowdingPlan if isinstance(crowdingPlan, dict) else {}
+    profile = journalProfile if isinstance(journalProfile, dict) else {}
+    return float(plan.get("legendFontSizePt", profile.get("legend_font_size_pt", 7)))
+
+
+def _bottom_margin_for_legend(fig, legend=None, crowdingPlan=None):
+    plan = {**CROWDING_DEFAULTS, **(crowdingPlan or {})}
+    if legend is None:
+        return float(plan.get("legendBottomMarginNoLegend", 0.05))
+    legend_box = _bbox_in_figure_coords(fig, legend)
+    target = float(legend_box.y1) + 0.018
+    lower = float(plan.get("legendBottomMarginMin", 0.06))
+    upper = float(plan.get("legendBottomMarginMax", 0.10))
+    return min(upper, max(lower, target))
+
+
+def apply_subplot_margins(fig, legend_mode, has_colorbar=False, legend=None, crowdingPlan=None):
     legend_mode = _normalize_legend_mode(legend_mode)
     _disable_layout_engine_for_manual_margins(fig)
     invalidate_layout_cache(fig)
@@ -3251,7 +3387,7 @@ def apply_subplot_margins(fig, legend_mode, has_colorbar=False, legend=None):
     subplotpars = fig.subplotpars
     left = max(subplotpars.left, 0.16)
     top = min(subplotpars.top, 0.95)
-    bottom = max(subplotpars.bottom, 0.18)
+    bottom = _bottom_margin_for_legend(fig, legend, crowdingPlan)
     right = min(subplotpars.right, 0.95)
 
     if has_colorbar:
@@ -3260,7 +3396,7 @@ def apply_subplot_margins(fig, legend_mode, has_colorbar=False, legend=None):
     if legend is not None:
         legend_box = _bbox_in_figure_coords(fig, legend)
         if legend_mode == "bottom_center":
-            bottom = max(bottom, min(0.36, legend_box.y1 + 0.055))
+            bottom = _bottom_margin_for_legend(fig, legend, crowdingPlan)
         else:
             top = min(top, max(0.26, legend_box.y0 - 0.055))
 
@@ -3273,7 +3409,7 @@ def apply_subplot_margins(fig, legend_mode, has_colorbar=False, legend=None):
         renderer = get_cached_renderer(fig)
         legend_box = legend.get_window_extent(renderer=renderer).transformed(fig.transFigure.inverted())
         if legend_mode == "bottom_center":
-            bottom = max(bottom, min(0.36, legend_box.y1 + 0.055))
+            bottom = _bottom_margin_for_legend(fig, legend, crowdingPlan)
         else:
             top = min(top, max(0.26, legend_box.y0 - 0.055))
 
@@ -3311,11 +3447,11 @@ def _legend_column_options(label_count, legend_mode, max_columns):
 def _apply_legend_frame_style(legend, frame_style=None):
     style = {
         "facecolor": "#FFFFFF",
-        "edgecolor": "#222222",
+        "edgecolor": "#cccccc",
         "linewidth": 0.55,
-        "alpha": 0.96,
-        "pad": 0.28,
-        "boxstyle": "round",
+        "alpha": 1.0,
+        "pad": 0.4,
+        "boxstyle": "square",
     }
     style.update(frame_style or {})
     frame = legend.get_frame()
@@ -3325,7 +3461,10 @@ def _apply_legend_frame_style(legend, frame_style=None):
     frame.set_linewidth(style["linewidth"])
     frame.set_alpha(style["alpha"])
     if hasattr(frame, "set_boxstyle"):
-        frame.set_boxstyle(f"{style.get('boxstyle', 'round')},pad={style['pad']}")
+        try:
+            frame.set_boxstyle(f"{style.get('boxstyle', 'square')},pad={style['pad']}")
+        except Exception:
+            frame.set_boxstyle(f"square,pad={style['pad']}")
     legend.set_gid("scifig_shared_legend")
     legend.set_zorder(1000)
     return True
@@ -3337,10 +3476,10 @@ def create_figure_legend(fig, handles, labels, legend_mode, fontsize, ncol=1, fr
     common = {
         "ncol": ncol,
         "frameon": True,
-        "fancybox": True,
+        "fancybox": False,
         "fontsize": fontsize,
         "borderaxespad": 0.0,
-        "borderpad": 0.35,
+        "borderpad": 0.4,
         "handlelength": 1.2,
         "handletextpad": 0.4,
         "labelspacing": 0.35,
@@ -3352,15 +3491,22 @@ def create_figure_legend(fig, handles, labels, legend_mode, fontsize, ncol=1, fr
     return legend
 
 
-def enforce_non_overlapping_legend(fig, legend, legend_mode, occupied_axes, has_colorbar=False, retry_limit=5):
+def enforce_non_overlapping_legend(fig, legend, legend_mode, occupied_axes, has_colorbar=False, retry_limit=5, crowdingPlan=None):
+    plan = {**CROWDING_DEFAULTS, **(crowdingPlan or {})}
     for _ in range(retry_limit):
-        apply_subplot_margins(fig, legend_mode, has_colorbar=has_colorbar, legend=legend)
+        apply_subplot_margins(fig, legend_mode, has_colorbar=has_colorbar, legend=legend, crowdingPlan=plan)
         if not legend_overlaps_axes(fig, legend, occupied_axes):
             return True
 
         subplotpars = fig.subplotpars
         if _normalize_legend_mode(legend_mode) == "bottom_center":
-            next_bottom = min(subplotpars.top - 0.12, subplotpars.bottom + 0.04)
+            next_bottom = min(
+                float(plan.get("legendBottomMarginMax", 0.10)),
+                subplotpars.top - 0.12,
+                subplotpars.bottom + 0.04,
+            )
+            if next_bottom <= subplotpars.bottom + 1e-6:
+                break
             fig.subplots_adjust(bottom=max(subplotpars.bottom, next_bottom))
         else:
             next_top = max(subplotpars.bottom + 0.12, subplotpars.top - 0.04)
@@ -3371,7 +3517,7 @@ def enforce_non_overlapping_legend(fig, legend, legend_mode, occupied_axes, has_
         return True
 
     invalidate_layout_cache(fig)
-    apply_subplot_margins(fig, legend_mode, has_colorbar=has_colorbar, legend=legend)
+    apply_subplot_margins(fig, legend_mode, has_colorbar=has_colorbar, legend=legend, crowdingPlan=plan)
     return not legend_overlaps_axes(fig, legend, occupied_axes)
 
 
@@ -3395,7 +3541,7 @@ def place_shared_legend(fig, axes, occupied_axes, crowdingPlan, journalProfile, 
     priority = crowdingPlan.get("legendPlacementPriority") or ["bottom_center"]
     allowed_modes = _center_legend_modes(crowdingPlan.get("legendAllowedModes"))
     candidate_modes = _center_legend_modes(priority + [requested_mode] + allowed_modes)
-    fontsize = journalProfile.get("font_size_small_pt", 5)
+    fontsize = _legend_font_size(crowdingPlan, journalProfile)
     max_label_chars = crowdingPlan.get("legendLabelMaxChars", 32)
     max_columns = crowdingPlan.get("maxLegendColumns", 6)
     frame_style = crowdingPlan.get("legendFrameStyle")
@@ -3433,6 +3579,7 @@ def place_shared_legend(fig, axes, occupied_axes, crowdingPlan, journalProfile, 
                 occupied_axes,
                 has_colorbar=has_colorbar,
                 retry_limit=crowdingPlan.get("renderRetryLimit", 5),
+                crowdingPlan=crowdingPlan,
             )
             if ok:
                 info["legendNColumns"] = ncol
@@ -3511,7 +3658,7 @@ def apply_crowding_management(fig, axes, chartPlan, journalProfile):
         )
 
     if legend_info.get("layoutReflowNeeded") and crowdingPlan.get("legendExternalHardLimit", True):
-        fontsize = journalProfile.get("font_size_small_pt", 5)
+        fontsize = _legend_font_size(crowdingPlan, journalProfile)
         max_label_chars = crowdingPlan.get("legendLabelMaxChars", 32)
         legend_labels, _ = shorten_legend_labels(labels, max_label_chars)
         reflow_legend, reflow_mode = _reflow_legend_with_height_increase(
@@ -3526,7 +3673,13 @@ def apply_crowding_management(fig, axes, chartPlan, journalProfile):
         else:
             legend_info["legendOutsidePlotArea"] = False
 
-    apply_subplot_margins(fig, legend_mode_used, has_colorbar=shared_colorbar_applied, legend=legend)
+    apply_subplot_margins(
+        fig,
+        legend_mode_used,
+        has_colorbar=shared_colorbar_applied,
+        legend=legend,
+        crowdingPlan=crowdingPlan,
+    )
     if chartPlan.get("visualContentPlan", {}).get("outsideLayoutElements"):
         fig.subplots_adjust(right=min(fig.subplotpars.right, 0.78))
     if shared_colorbar_applied and shared_colorbar_mappable is not None:
@@ -3544,6 +3697,7 @@ def apply_crowding_management(fig, axes, chartPlan, journalProfile):
                 occupied_axes,
                 has_colorbar=shared_colorbar_applied,
                 retry_limit=crowdingPlan.get("renderRetryLimit", 5),
+                crowdingPlan=crowdingPlan,
             )
             final_legend_overlap = not ok
             legend_info["legendOutsidePlotArea"] = ok
@@ -3660,10 +3814,15 @@ def enforce_figure_legend_contract(fig, axes=None, chartPlan=None, journalProfil
     plan["crowdingPlan"]["legendPlacementPriority"] = ["bottom_center"]
     plan["crowdingPlan"]["legendAllowedModes"] = ["bottom_center"]
     plan["crowdingPlan"]["legendFrame"] = True
+    plan["crowdingPlan"]["legendFrameStyle"] = dict(CROWDING_DEFAULTS["legendFrameStyle"])
+    plan["crowdingPlan"]["legendFontSizePt"] = 7
+    plan["crowdingPlan"]["legendBottomAnchorY"] = 0.01
+    plan["crowdingPlan"]["legendBottomMarginMin"] = 0.06
+    plan["crowdingPlan"]["legendBottomMarginMax"] = 0.10
     plan["crowdingPlan"]["forbidOutsideRightLegend"] = True
     plan["crowdingPlan"]["forbidInAxesLegend"] = True
 
-    profile = journalProfile or {"font_size_small_pt": 5}
+    profile = journalProfile or {"font_size_small_pt": 7}
     report = apply_crowding_management(fig, axes_map, plan, profile)
     failures = []
     legend_exists = bool(report.get("hasFigureLegend")) or len(fig.legends) > 0
@@ -3687,6 +3846,14 @@ def enforce_figure_legend_contract(fig, axes=None, chartPlan=None, journalProfil
     colorbar_reflow_count = reflow_colorbars_outside_panels(fig, axes_map, plan["crowdingPlan"])
     plan["crowdingPlan"]["colorbarReflowCount"] = colorbar_reflow_count
     report["colorbarReflowCount"] = colorbar_reflow_count
+
+    title_alignment = center_figure_titles(fig, axes_map)
+    plan["crowdingPlan"].update(title_alignment)
+    report.update(title_alignment)
+
+    text_sanitize = sanitize_figure_text(fig)
+    plan["crowdingPlan"].update(text_sanitize)
+    report.update(text_sanitize)
 
     # Zero-touch retrofit: every in-axes annotation gets zorder>=20 + white bbox
     # (cycle-22 anti-occlusion) BEFORE layout audit so the audit sees the

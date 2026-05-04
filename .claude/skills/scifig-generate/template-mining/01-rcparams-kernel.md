@@ -11,7 +11,8 @@ warnings.filterwarnings('ignore')
 
 plt.rcParams.update({
     # --- Typography ---
-    'font.family':      ['Times New Roman', 'Arial', 'DejaVu Sans'],
+    'font.family':      ['DejaVu Sans', 'Arial', 'Helvetica', 'Times New Roman'],
+    'font.sans-serif':  ['DejaVu Sans', 'Arial', 'Helvetica'],
     'mathtext.fontset': 'stix',          # LaTeX-like math
     'font.size':        6.5,             # print-scale body baseline; never use poster-scale defaults
 
@@ -27,6 +28,10 @@ plt.rcParams.update({
     # --- Lines ---
     'lines.linewidth':  0.9,
     'lines.markersize': 3.5,
+    'legend.fontsize':  7,
+    'legend.frameon':   True,
+    'legend.edgecolor': '#cccccc',
+    'legend.borderpad': 0.4,
 
     # --- Save ---
     'savefig.bbox':     'tight',         # auto-trim margins
@@ -43,7 +48,8 @@ Source cases: case Nature radar, GAM scatter+residual, forest plot, mirror radia
 
 ```python
 plt.rcParams.update({
-    'font.family':      ['Times New Roman', 'Arial', 'SimHei', 'DejaVu Sans'],
+    'font.family':      ['DejaVu Sans', 'Arial', 'Helvetica', 'Times New Roman', 'SimHei'],
+    'font.sans-serif':  ['DejaVu Sans', 'Arial', 'Helvetica', 'SimHei'],
     'mathtext.fontset': 'stix',
     'font.size':        7.5,
     'axes.linewidth':   0.75,
@@ -62,7 +68,8 @@ Source cases: Nature Pearson n×n, SHAP 上三下二, gradient box 2×2, density
 
 ```python
 plt.rcParams.update({
-    'font.family':      ['Arial', 'Times New Roman', 'DejaVu Sans'],
+    'font.family':      ['DejaVu Sans', 'Arial', 'Helvetica', 'Times New Roman'],
+    'font.sans-serif':  ['DejaVu Sans', 'Arial', 'Helvetica'],
     'mathtext.fontset': 'stix',
     'font.size':        6.5,
     'axes.linewidth':   0.65,
@@ -82,7 +89,8 @@ Polar plots already have heavy spine logic; keep typography clean.
 
 ```python
 plt.rcParams.update({
-    'font.family':       ['Times New Roman', 'Arial', 'DejaVu Sans'],
+    'font.family':       ['DejaVu Sans', 'Arial', 'Helvetica', 'Times New Roman'],
+    'font.sans-serif':   ['DejaVu Sans', 'Arial', 'Helvetica'],
     'mathtext.fontset':  'stix',
     'font.size':         7.0,
     'axes.linewidth':    0.75,
@@ -113,6 +121,7 @@ Behavioural rules:
 2. **journalProfile fields take precedence** for `font_family`, `font_size_body_pt`, `axis_linewidth_pt` — this is what binds the kernel to the chosen Nature/Cell/Lancet/etc profile.
 3. **Never call `plt.rcParams.update` directly** in chart generators after this — they should rely on the kernel.
 4. **Always keep `tick.direction='in'`**. Even if the user requests "presentation style", keep it; this single token is what makes a figure read as journal-grade.
+5. **DejaVu Sans stays first** in the fallback chain so ASCII-safe scientific labels render on clean Windows/Linux/macOS systems before optional journal fonts are installed.
 
 ## Anti-patterns from non-顶刊 figures
 
@@ -122,7 +131,7 @@ These patterns appear in tutorial/blog code but are **absent** from all 77 refer
 |--------------|---------|--------------|
 | `plt.style.use('seaborn-v0_8-darkgrid')` | dark grid is presentation-style, not journal | the kernel above |
 | `tick.direction='out'` (matplotlib default) | reads as "Excel chart" | `tick.direction='in'` |
-| Default sans-serif font | fails review at editorial typesetting | `Times New Roman / Arial` stack |
+| Default sans-serif font without DejaVu fallback | fragile glyph rendering on clean systems | `DejaVu Sans / Arial / Helvetica` stack |
 | `dpi=300` for raster export | borderline for double-column print | `dpi=600` |
 | Unset `savefig.bbox` | wastes whitespace, breaks layout in PDFs | `savefig.bbox='tight'` |
 | `lines.linewidth=1.0` (default) | spaghetti at print scale | 1.5 default, 2.0 hero |

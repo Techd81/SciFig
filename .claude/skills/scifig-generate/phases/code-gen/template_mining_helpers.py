@@ -179,20 +179,24 @@ def _register_bundled_fonts(force: bool = False) -> dict:
 # ============================================================================
 
 _KERNEL_BASE = {
-    # Font fallback chain (cycle-23):
-    #   [Times New Roman, Arial, DejaVu Sans] (Latin / scientific) 鈫?
+    # Font fallback chain (V0.1.1):
+    #   [DejaVu Sans, Arial, Helvetica, Times New Roman] (Latin / scientific)
     #   [Microsoft YaHei, SimHei, Noto Sans CJK SC, Noto Sans CJK JP, Hiragino Sans]
     #   (CJK glyph coverage 鈥?first family available wins per glyph).
     # matplotlib walks the list and picks the first family that has each
-    # glyph; this means English text still renders in Times/Arial while
-    # Chinese / Japanese / Korean characters fall through to YaHei / Noto
+    # glyph; this means English text has DejaVu coverage first while
+    # Chinese / Japanese / Korean characters can fall through to YaHei / Noto
     # without raising "Glyph N missing from font" warnings on Windows /
-    # macOS / Linux respectively. Final DejaVu Sans is matplotlib's bundled
-    # universal fallback for any glyph still uncovered.
-    "font.family":       ["Times New Roman", "Arial",
+    # macOS / Linux respectively. DejaVu Sans ships with matplotlib and
+    # prevents fragile scientific labels from rendering as boxes.
+    "font.family":       ["DejaVu Sans", "Arial", "Helvetica",
+                           "Times New Roman", "Microsoft YaHei", "SimHei",
+                           "Noto Sans CJK SC", "Noto Sans CJK JP",
+                           "Hiragino Sans"],
+    "font.sans-serif":   ["DejaVu Sans", "Arial", "Helvetica",
                            "Microsoft YaHei", "SimHei",
                            "Noto Sans CJK SC", "Noto Sans CJK JP",
-                           "Hiragino Sans", "DejaVu Sans"],
+                           "Hiragino Sans"],
     "axes.unicode_minus": False,  # CJK fonts often miss U+2212; use ASCII '-' for axis ticks
     "mathtext.fontset":  "stix",
     "font.size":         6.5,
@@ -203,6 +207,10 @@ _KERNEL_BASE = {
     "ytick.major.width": 0.6,
     "lines.linewidth":   0.9,
     "lines.markersize":  3.5,
+    "legend.fontsize":   7,
+    "legend.frameon":    True,
+    "legend.edgecolor":  "#cccccc",
+    "legend.borderpad":  0.4,
     "savefig.bbox":      "tight",
     "savefig.dpi":       600,
 }
@@ -210,10 +218,14 @@ _KERNEL_BASE = {
 _VARIANTS = {
     "default": {},
     "hero":    {"font.size": 7.5, "axes.linewidth": 0.75, "lines.linewidth": 1.2},
-    "compact": {"font.family": ["Arial", "Times New Roman",
-                                  "Microsoft YaHei", "SimHei",
+    "compact": {"font.family": ["DejaVu Sans", "Arial", "Helvetica",
+                                  "Times New Roman", "Microsoft YaHei", "SimHei",
                                   "Noto Sans CJK SC", "Noto Sans CJK JP",
-                                  "Hiragino Sans", "DejaVu Sans"],
+                                  "Hiragino Sans"],
+                "font.sans-serif": ["DejaVu Sans", "Arial", "Helvetica",
+                                      "Microsoft YaHei", "SimHei",
+                                      "Noto Sans CJK SC", "Noto Sans CJK JP",
+                                      "Hiragino Sans"],
                 "font.size": 6.5, "axes.linewidth": 0.65,
                 "lines.linewidth": 0.9, "lines.markersize": 3.5},
     "polar":   {"font.size": 7.0, "axes.linewidth": 0.75,
@@ -243,6 +255,15 @@ def _filter_available_fonts(font_chain: list) -> list:
         return list(font_chain)
     available = [name for name in font_chain if name in installed]
     return available if available else list(font_chain)
+
+
+def _prefer_dejavu_first(font_chain: list) -> list:
+    """Keep DejaVu Sans first so ASCII-safe labels render on clean systems."""
+    out = ["DejaVu Sans"]
+    for name in font_chain:
+        if name and name not in out:
+            out.append(name)
+    return out
 
 
 def apply_journal_kernel(variant: str = "default",
@@ -284,17 +305,21 @@ def apply_journal_kernel(variant: str = "default",
 
     if journalProfile:
         if journalProfile.get("font_family"):
-            rc["font.family"] = list(journalProfile["font_family"])
+            rc["font.family"] = _prefer_dejavu_first(list(journalProfile["font_family"]))
+            rc["font.sans-serif"] = _prefer_dejavu_first(list(journalProfile["font_family"]))
         if journalProfile.get("font_size_body_pt"):
             rc["font.size"] = float(journalProfile["font_size_body_pt"])
         if journalProfile.get("axis_linewidth_pt"):
             rc["axes.linewidth"] = float(journalProfile["axis_linewidth_pt"])
+        rc["legend.fontsize"] = float(journalProfile.get("legend_font_size_pt", 7))
 
     # Filter font.family to only installed families (suppresses findfont
     # warnings for cross-platform CJK fallbacks). MUST happen after the
     # journalProfile override so user-specified fonts are still honored.
     if isinstance(rc.get("font.family"), list):
         rc["font.family"] = _filter_available_fonts(rc["font.family"])
+    if isinstance(rc.get("font.sans-serif"), list):
+        rc["font.sans-serif"] = _filter_available_fonts(rc["font.sans-serif"])
 
     rc["xtick.direction"] = "in"
     rc["ytick.direction"] = "in"
@@ -535,11 +560,12 @@ def add_group_dividers(ax: Axes,
 
 
 def add_panel_label(ax: Axes, label: str, *,
-                     x: float = -0.12, y: float = 1.05,
-                     fontsize: int = 8) -> None:
+                     x: float = -0.06, y: float = 1.08,
+                     fontsize: int = 9) -> None:
     """Bold panel label (a/b/c) outside the data rectangle (idiom I13)."""
     ax.text(x, y, label, transform=ax.transAxes,
-            fontweight="bold", fontsize=fontsize, va="top", ha="right")
+            fontweight="bold", fontsize=fontsize, va="bottom", ha="right",
+            gid="scifig_panel_label", clip_on=False)
 
 
 def apply_scatter_regression_floor(ax: Axes, *,

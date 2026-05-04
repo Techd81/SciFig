@@ -75,12 +75,14 @@ fig, axes, palette = bootstrap_chart(arc="hero", panel_count=1,
                                      journalProfile=journalProfile)
 ```
 
-## Finalizer Auto-corrections (cycle-22 + cycle-24)
+## Finalizer Auto-corrections (cycle-22 + cycle-24 + V0.1.1)
 
-`enforce_figure_legend_contract(...)` runs three **zero-touch retrofit passes** before `audit_figure_layout_contract` so common occlusion modes are repaired automatically without modifying generator source. Generators do not need to call these helpers explicitly — they fire from inside the contract finalizer.
+`enforce_figure_legend_contract(...)` runs five **zero-touch retrofit passes** before `audit_figure_layout_contract` so common occlusion modes are repaired automatically without modifying generator source. Generators do not need to call these helpers explicitly — they fire from inside the contract finalizer.
 
 | Pass | What it does | Generator-visible side effect |
 |------|--------------|------------------------------|
+| `center_figure_titles` | Centers `fig.suptitle(...)` and moves left/right `ax.set_title(...)` text into the centered title slot. | Left-aligned titles are normalized; panel letters should come from `add_panel_label(...)`, not title positions. |
+| `sanitize_figure_text` | Replaces fragile label glyphs such as `R⊕`, `M⊕`, `log₁₀`, and em dashes with ASCII-safe text. | Labels render reliably on clean systems without missing-glyph boxes. |
 | `_promote_inaxes_text_safety` | Promotes every in-axes `Text` artist to `zorder>=20` and adds a rounded white bbox (alpha 0.85) when none exists. | `ax.text(... fontsize=10)` at default zorder=3 will be silently lifted to zorder=20 with a white background. |
 | `_shrink_heatmap_cell_labels` | Detects `QuadMesh` axes (sns.heatmap / pcolormesh) and reformats numeric cell labels to fit physical cell width via `choose_heatmap_fmt`. When fmt forced to `.0f` (very dense), applies graceful degradation: keeps only diagonal cells and `\|val\| ≥ 0.5`, removing the noise. | `sns.heatmap(annot=True, fmt=".3f")` may have its labels reformatted to `.2f` / `.1f` / `.0f` and some non-significant cells may lose their annotation entirely. |
 | `_text_data_overlap_issues` (audit) | Reports text-vs-line/scatter/patch geometric overlap > 30%. White-bbox text is treated as already-resolved and skipped. | `audit["textDataOverlapCount"]` and the `annotation_text_buried_under_data` failure flag. |
@@ -250,20 +252,22 @@ Blocking agent findings must route back to the owning phase before advancing. Ne
 3. Do not mix unrelated semantic color mappings across panels of the same figure.
 4. Do not use rainbow colormaps unless the variable is cyclic and the legend explicitly justifies it.
 5. Keep all figure text editable, sans serif, and legible at final print size.
-6. Treat every legend as a figure-level layout element in final output, not as an axes annotation. When panels share group, color, marker, or line semantics, keep one shared rounded-frame `fig.legend` at the figure bottom center, outside every plotting area and below the panels so it cannot collide with the title. Never use `loc="best"`, in-axes, top-center, or outside-right legends for publication output.
+6. Treat every legend as a figure-level layout element in final output, not as an axes annotation. When panels share group, color, marker, or line semantics, keep one shared rectangular-frame `fig.legend` at the figure bottom center, outside every plotting area and below the panels, using 7 pt text, `bbox_to_anchor=(0.5, 0.01)`, and a compact 0.06-0.10 bottom margin. Never use `loc="best"`, in-axes, top-center, or outside-right legends for publication output.
 7. Every generated script must call `enforce_figure_legend_contract(...)` immediately before the first `savefig` for each figure. Direct `ax.legend(...)` calls are temporary handle sources only; if the finalizer is missing, or if any axis legend remains after the finalizer, return to Phase 3.
 8. Do not hand-write replacement runtime helpers when the skill already provides them. Generated code must embed and execute the helper source from `phases/code-gen/helpers.py`, so `legendContractEnforced`, `layoutContractEnforced`, overlap checks, and typography gates are real runtime results rather than local approximations.
 9. Use shared legends or shared colorbars when panels encode the same semantics.
 10. Multi-panel figures must have an explicit panel blueprint before code generation.
-11. For implemented single-panel charts, increase Nature/Cell-style information density through data-derived summaries, in-plot explanatory labels, reference lines, callouts, insets, sample-size labels, metric tables, prediction diagnostics, marginal distributions, density-colored points, density halos, matrix labels, and effect-size context before adding new chart types.
-12. Treat `specs/template-visual-motifs.md` as the grammar for learning from reference examples. Add motifs to `visualContentPlan.templateMotifs` and render them through existing generators/helpers; do not register a new chart key until a real generator exists and passes QA.
-13. When learning from `template/articles`, promote reusable code into `helpers.py`, `template_mining_helpers.py`, or split generator files before expanding coordinator prose.
-14. Do not invent statistics for visual impact. Every p-value, AUC, effect size, threshold count, or fitted parameter must come from the supplied data or a documented upstream result.
-15. Prefer vector export and generate source-data friendly artifacts for quantitative panels.
-16. If domain inference is weak, fall back to general rules instead of overfitting to a guessed specialty; however, explicit AI/ML/computer-science signals (`model`, `algorithm`, RF, XGBoost, SHAP, train/test metrics, AUC/F1/RMSE/R2, residuals) are strong domain evidence and must route to the `computer_ai_ml` template packages before biomedical defaults.
-17. If statistical assumptions are uncertain, downgrade to a conservative or descriptive choice and explain why.
-18. If rendered QA reports overlap, cross-panel title/table/text collision, colorbar overlap with any panel layout box, metric-table overlap with bar/rectangle data marks, negative axes text without a reserved slot, poster-scale font sizes, blank/tiny output, missing `legendContractEnforced`, missing `layoutContractEnforced`, any remaining in-axes legend, too few visual enhancements, missing template/reference visual grammar motifs, missing in-plot explanatory labels, non-editable vector text, or missing formats, return to Phase 3 or Phase 2 before declaring completion.
-19. Use `specs/workflow-policies.md` for thresholds and budgets; do not add new magic numbers in phase logic without naming the policy.
+11. Titles default to centered alignment. Use `add_panel_label(..., x=-0.06, y=1.08, fontsize=9)` for A/B/C/D labels outside the data rectangle; do not use left-positioned titles as panel labels.
+12. Use ASCII-safe scientific labels (`Earth radii`, `Earth masses`, `log10`, `-`) instead of fragile glyphs (`⊕`, subscript digits, em dashes) unless the user explicitly requires symbol typography and supplied fonts cover it.
+13. For implemented single-panel charts, increase Nature/Cell-style information density through data-derived summaries, in-plot explanatory labels, reference lines, callouts, insets, sample-size labels, metric tables, prediction diagnostics, marginal distributions, density-colored points, density halos, matrix labels, and effect-size context before adding new chart types.
+14. Treat `specs/template-visual-motifs.md` as the grammar for learning from reference examples. Add motifs to `visualContentPlan.templateMotifs` and render them through existing generators/helpers; do not register a new chart key until a real generator exists and passes QA.
+15. When learning from `template/articles`, promote reusable code into `helpers.py`, `template_mining_helpers.py`, or split generator files before expanding coordinator prose.
+16. Do not invent statistics for visual impact. Every p-value, AUC, effect size, threshold count, or fitted parameter must come from the supplied data or a documented upstream result.
+17. Prefer vector export and generate source-data friendly artifacts for quantitative panels.
+18. If domain inference is weak, fall back to general rules instead of overfitting to a guessed specialty; however, explicit AI/ML/computer-science signals (`model`, `algorithm`, RF, XGBoost, SHAP, train/test metrics, AUC/F1/RMSE/R2, residuals) are strong domain evidence and must route to the `computer_ai_ml` template packages before biomedical defaults.
+19. If statistical assumptions are uncertain, downgrade to a conservative or descriptive choice and explain why.
+20. If rendered QA reports overlap, cross-panel title/table/text collision, colorbar overlap with any panel layout box, metric-table overlap with bar/rectangle data marks, negative axes text without a reserved slot, poster-scale font sizes, blank/tiny output, missing `legendContractEnforced`, missing `layoutContractEnforced`, any remaining in-axes legend, too few visual enhancements, missing template/reference visual grammar motifs, missing in-plot explanatory labels, non-editable vector text, or missing formats, return to Phase 3 or Phase 2 before declaring completion.
+21. Use `specs/workflow-policies.md` for thresholds and budgets; do not add new magic numbers in phase logic without naming the policy.
 
 ## Input Processing
 
@@ -321,7 +325,7 @@ Keep exactly one active phase. Expand the active phase into concrete sub-tasks, 
 - Before Phase 3, ensure the panel blueprint and palette plan are explicit.
 - Before Phase 3, resolve blocking chart/stat/layout/palette agent findings.
 - Before Phase 4, ensure code generation includes source-data, render-QA, and metadata hooks.
-- Before completion, require `renderQa.hardFail == false`, `legendContractEnforced == true`, `layoutContractEnforced == true`, `legendOutsidePlotArea == true`, `axisLegendRemainingCount == 0`, `layoutContractFailures == []`, `colorbarPanelOverlapCount == 0`, colorbar reflow recorded in `colorbarReflowCount` when used, `metricTableDataOverlapCount == 0`, metric-table relocation/suppression/fallback counts recorded when used, `legendModeUsed in ["bottom_center", "none"]`, exactly one rounded-frame shared bottom-center legend when a legend exists, and enough data-derived visual content to satisfy `visualContentPlan.minTotalEnhancements` and `visualContentPlan.minInPlotLabelsPerFigure`.
+- Before completion, require `renderQa.hardFail == false`, `legendContractEnforced == true`, `layoutContractEnforced == true`, `legendOutsidePlotArea == true`, `axisLegendRemainingCount == 0`, `layoutContractFailures == []`, `colorbarPanelOverlapCount == 0`, colorbar reflow recorded in `colorbarReflowCount` when used, `metricTableDataOverlapCount == 0`, metric-table relocation/suppression/fallback counts recorded when used, `legendModeUsed in ["bottom_center", "none"]`, exactly one rectangular-frame shared bottom-center legend when a legend exists, centered title normalization recorded, ASCII text replacement recorded, and enough data-derived visual content to satisfy `visualContentPlan.minTotalEnhancements` and `visualContentPlan.minInPlotLabelsPerFigure`.
 
 ## Related Commands
 

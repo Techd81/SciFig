@@ -100,7 +100,7 @@ Reusable layout blueprints for multi-panel scientific figures.
 - Shared y-axis: align ticks across panels in same row
 - Shared x-axis: align ticks across panels in same column
 - Colorbar: `shrink=0.6`, positioned in a reserved non-panel slot; the helper may reflow overlapping colorbars and Phase 4 fails if overlap remains.
-- Legend: treat as a figure-level layout element, never as a panel annotation. If panels share group, color, marker, or line semantics, keep one shared rounded-frame legend at figure bottom center, outside every plotting area and below the panels. Outside-right, top-center, and in-axes legends are forbidden.
+- Legend: treat as a figure-level layout element, never as a panel annotation. If panels share group, color, marker, or line semantics, keep one shared rectangular-frame legend at figure bottom center, outside every plotting area and below the panels. Outside-right, top-center, and in-axes legends are forbidden.
 - Legend collision policy: never use `loc="best"` or any in-axes legend for publication output. If space is tight, adjust legend columns, shorten labels, reduce handle/text spacing, increase figure margins, or reflow panels before allowing the legend to overlap curves, bars, points, error bars, confidence intervals, grids, or heatmap cells.
 
 ## Layout Scoring
@@ -138,11 +138,11 @@ for ax in [ax_a, ax_b, ax_c, ax_d]:
     legend = ax.get_legend()
     if legend is not None:
         legend.remove()
-fig.subplots_adjust(bottom=0.22)
+fig.subplots_adjust(bottom=0.08)
 fig.legend(handles, labels, loc="lower center", ncol=min(len(labels), 4),
-           frameon=True, fancybox=False, framealpha=0.96,
-           edgecolor="#222222", facecolor="#FFFFFF",
-           fontsize=5, bbox_to_anchor=(0.5, 0.02))
+           frameon=True, fancybox=False, framealpha=1.0,
+           edgecolor="#cccccc", facecolor="#FFFFFF", borderpad=0.4,
+           fontsize=7, bbox_to_anchor=(0.5, 0.01))
 ```
 
 ## Shared Colorbar Pattern
@@ -341,7 +341,7 @@ cbar.set_label("Value", fontsize=5)
 **Rules**
 - Prefer `model_architecture_board` over a plain topology chart when edge/module metrics exist.
 - Keep metric panels as real axes, not floating text only; use the in-axis dashboard only as a fallback for single-panel outputs.
-- Suppress redundant legends and keep panel labels inside axes so render QA can hard-fail overlap.
+- Suppress redundant legends and keep panel labels outside axes with `add_panel_label(..., x=-0.06, y=1.08, fontsize=9)` so render QA can hard-fail overlap.
 
 ## Composition Rules
 

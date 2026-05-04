@@ -25,6 +25,7 @@ Upload your data. SciFig validates the file path, infers data structure and scie
 
 ## Changelog
 
+- V0.1.1: Fix gallery style consistency for centered titles, compact bottom legends, outside panel labels, and ASCII-safe scientific labels.
 - V0.1.0: Initial release.
 
 <a id="gallery"></a>
@@ -190,7 +191,7 @@ Legend contract: exactly one shared bottom-center `fig.legend` per figure. Outsi
 
 ### CJK Font Fallback
 
-Runtime-filtered fallback chain: `Microsoft YaHei → SimHei → Noto Sans CJK SC → Noto Sans CJK JP → Hiragino Sans → DejaVu Sans`. Only installed families survive. Zero `findfont` warnings.
+Runtime-filtered fallback chain: `DejaVu Sans → Arial → Helvetica → Microsoft YaHei → SimHei → Noto Sans CJK SC → Noto Sans CJK JP → Hiragino Sans`. Only installed families survive. Zero `findfont` warnings.
 
 ## Architecture
 
@@ -265,6 +266,7 @@ MIT — see [LICENSE](LICENSE). Copyright (c) 2026 Techd.
 
 ## 更新日志
 
+- V0.1.1：修复图库样式一致性问题，包括标题居中、底部图例紧凑排布、面板标签移到轴外，以及科学标签使用 ASCII 安全文本。
 - V0.1.0：首次发布。
 
 ## 图库
