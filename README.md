@@ -142,6 +142,7 @@ output/
 | Layout | Manual GridSpec per figure | 11 registry-backed layout recipes + narrative arcs |
 | Color | Rainbow palette | Wong / Okabe-Ito defaults, colorblind-safe, cross-panel consistent |
 | QA | Render → eyeball → hope | Geometric overlap audit + 3-pass finalizer + render QA |
+| Manual fixes | Drag labels after exporting, then lose reproducibility | Editable SVG is the canonical source; PNG is regenerated from it |
 | CJK | Missing glyph warnings, boxes | Runtime-filtered fallback chain, zero warnings |
 
 ## Features

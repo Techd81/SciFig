@@ -1,7 +1,12 @@
 ```python
 # Shared Helper Functions for Chart Generators and Crowding Control
 
+import json
 import re
+import shutil
+import subprocess
+import xml.etree.ElementTree as ET
+from pathlib import Path
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -61,7 +66,7 @@ CROWDING_DEFAULTS = {
         "linewidth": 0.55,
         "alpha": 1.0,
         "pad": 0.4,
-        "boxstyle": "square",
+        "boxstyle": "round",
     },
     "legendCenterPlacementOnly": True,
     "forbidOutsideRightLegend": True,
@@ -2378,7 +2383,7 @@ def _axis_layout_bbox(ax, renderer):
 def legend_overlaps_axes(fig, legend, axes):
     renderer = get_cached_renderer(fig)
     legend_box = legend.get_window_extent(renderer=renderer)
-    return any(legend_box.overlaps(_axis_layout_bbox(ax, renderer)) for ax in axes)
+    return any(legend_box.overlaps(ax.get_window_extent(renderer=renderer)) for ax in axes)
 
 
 def elements_overlap_axes(fig, axes):
@@ -3474,7 +3479,7 @@ def _apply_legend_frame_style(legend, frame_style=None):
         "linewidth": 0.55,
         "alpha": 1.0,
         "pad": 0.4,
-        "boxstyle": "square",
+        "boxstyle": "round",
     }
     style.update(frame_style or {})
     frame = legend.get_frame()
@@ -3485,9 +3490,9 @@ def _apply_legend_frame_style(legend, frame_style=None):
     frame.set_alpha(style["alpha"])
     if hasattr(frame, "set_boxstyle"):
         try:
-            frame.set_boxstyle(f"{style.get('boxstyle', 'square')},pad={style['pad']}")
+            frame.set_boxstyle(f"{style.get('boxstyle', 'round')},pad={style['pad']}")
         except Exception:
-            frame.set_boxstyle(f"square,pad={style['pad']}")
+            frame.set_boxstyle(f"round,pad={style['pad']}")
     legend.set_gid("scifig_shared_legend")
     legend.set_zorder(1000)
     return True
@@ -3815,6 +3820,514 @@ def apply_crowding_management(fig, axes, chartPlan, journalProfile):
         "layoutReflowApplied": legend_info.get("layoutReflowNeeded", False) is False and legend_info.get("heightIncreased", False),
         "overlapIssues": overlap_issues,
     }
+
+
+def _sanitize_svg_component_id(value):
+    safe = re.sub(r"[^A-Za-z0-9_.:-]+", ".", str(value or "component")).strip(".")
+    if not safe:
+        safe = "component"
+    if safe[0].isdigit():
+        safe = "id." + safe
+    return safe
+
+
+def _set_gid_if_missing(artist, gid):
+    if artist is None:
+        return None
+    gid = _sanitize_svg_component_id(gid)
+    try:
+        current = artist.get_gid()
+        if not current:
+            artist.set_gid(gid)
+            return gid
+        return str(current)
+    except Exception:
+        return None
+
+
+def assign_editable_svg_ids(fig, axes=None, figure_id="figure1"):
+    """Assign stable SVG IDs to movable figure components before SVG export."""
+    axes_map = normalize_axes_map(fig, axes)
+    assigned = []
+    fig_gid = _set_gid_if_missing(fig, f"scifig.figure.{figure_id}")
+    if fig_gid:
+        assigned.append(fig_gid)
+
+    suptitle = getattr(fig, "_suptitle", None)
+    if suptitle is not None and suptitle.get_text():
+        gid = _set_gid_if_missing(suptitle, "scifig.title.main")
+        if gid:
+            assigned.append(gid)
+
+    for panel_id, ax in axes_map.items():
+        panel_key = _sanitize_svg_component_id(panel_id)
+        gid = _set_gid_if_missing(ax, f"scifig.panel.{panel_key}.axes")
+        if gid:
+            assigned.append(gid)
+        title_specs = [
+            ("title.center", getattr(ax, "title", None)),
+            ("title.left", getattr(ax, "_left_title", None)),
+            ("title.right", getattr(ax, "_right_title", None)),
+        ]
+        for role, title in title_specs:
+            if title is not None and title.get_text():
+                gid = _set_gid_if_missing(title, f"scifig.panel.{panel_key}.{role}")
+                if gid:
+                    assigned.append(gid)
+        label_specs = [
+            ("xlabel", getattr(ax.xaxis, "label", None)),
+            ("ylabel", getattr(ax.yaxis, "label", None)),
+        ]
+        for role, label in label_specs:
+            if label is not None and label.get_text():
+                gid = _set_gid_if_missing(label, f"scifig.panel.{panel_key}.{role}")
+                if gid:
+                    assigned.append(gid)
+        for index, text in enumerate(getattr(ax, "texts", []), start=1):
+            if not text.get_text():
+                continue
+            current = text.get_gid()
+            if current:
+                gid = str(current)
+            else:
+                gid = _set_gid_if_missing(text, f"scifig.panel.{panel_key}.annotation.{index:03d}")
+            if gid:
+                assigned.append(gid)
+        legend = ax.get_legend()
+        if legend is not None:
+            gid = _set_gid_if_missing(legend, f"scifig.panel.{panel_key}.legend")
+            if gid:
+                assigned.append(gid)
+
+    for index, legend in enumerate(getattr(fig, "legends", []), start=1):
+        gid = _set_gid_if_missing(legend, "scifig.legend.bottom" if index == 1 else f"scifig.legend.figure.{index:03d}")
+        if gid:
+            assigned.append(gid)
+        for text_index, text in enumerate(legend.get_texts(), start=1):
+            text_gid = _set_gid_if_missing(text, f"{gid}.text.{text_index:03d}" if gid else f"scifig.legend.text.{text_index:03d}")
+            if text_gid:
+                assigned.append(text_gid)
+
+    return {"assignedSvgIdCount": len(set(assigned)), "assignedSvgIds": sorted(set(assigned))}
+
+
+def _artist_bbox_record(fig, renderer, artist, component_id, role, panel_id=None, editable=True):
+    try:
+        if artist is None or not artist.get_visible():
+            return None
+        bbox = artist.get_window_extent(renderer=renderer)
+    except Exception:
+        return None
+    if bbox is None or bbox.width <= 0 or bbox.height <= 0:
+        return None
+    fig_bbox = fig.bbox
+    width = float(fig_bbox.width) or 1.0
+    height = float(fig_bbox.height) or 1.0
+    return {
+        "id": str(component_id),
+        "role": role,
+        "panelId": panel_id,
+        "manualMoveAllowed": bool(editable),
+        "bboxPixels": {
+            "x0": float(bbox.x0),
+            "y0": float(bbox.y0),
+            "x1": float(bbox.x1),
+            "y1": float(bbox.y1),
+            "width": float(bbox.width),
+            "height": float(bbox.height),
+        },
+        "bboxFigureFraction": {
+            "x0": float((bbox.x0 - fig_bbox.x0) / width),
+            "y0": float((bbox.y0 - fig_bbox.y0) / height),
+            "x1": float((bbox.x1 - fig_bbox.x0) / width),
+            "y1": float((bbox.y1 - fig_bbox.y0) / height),
+            "centerX": float(((bbox.x0 + bbox.x1) * 0.5 - fig_bbox.x0) / width),
+            "centerY": float(((bbox.y0 + bbox.y1) * 0.5 - fig_bbox.y0) / height),
+        },
+    }
+
+
+def _manifest_component_centered(components, roles, tolerance=0.035):
+    if isinstance(roles, str):
+        roles = {roles}
+    else:
+        roles = set(roles)
+    matches = [item for item in components if item.get("role") in roles]
+    if not matches:
+        return None
+    return all(abs(item.get("bboxFigureFraction", {}).get("centerX", 0.5) - 0.5) <= tolerance for item in matches)
+
+
+def build_editable_svg_manifest(fig, axes=None, figure_id="figure1", chartPlan=None):
+    """Build a component manifest for user-editable SVG post-processing."""
+    axes_map = normalize_axes_map(fig, axes)
+    id_report = assign_editable_svg_ids(fig, axes_map, figure_id=figure_id)
+    fig.canvas.draw()
+    renderer = fig.canvas.get_renderer()
+    components = []
+
+    suptitle = getattr(fig, "_suptitle", None)
+    if suptitle is not None and suptitle.get_text():
+        component_id = suptitle.get_gid() or "scifig.title.main"
+        record = _artist_bbox_record(fig, renderer, suptitle, component_id, "main_title", editable=True)
+        if record:
+            components.append(record)
+
+    for panel_id, ax in axes_map.items():
+        ax_gid = ax.get_gid() or f"scifig.panel.{panel_id}.axes"
+        record = _artist_bbox_record(fig, renderer, ax, ax_gid, "panel_axes", panel_id=panel_id, editable=False)
+        if record:
+            components.append(record)
+        title_specs = [
+            ("panel_title", getattr(ax, "title", None)),
+            ("panel_title_left", getattr(ax, "_left_title", None)),
+            ("panel_title_right", getattr(ax, "_right_title", None)),
+        ]
+        for role, title in title_specs:
+            if title is not None and title.get_text():
+                record = _artist_bbox_record(fig, renderer, title, title.get_gid() or role, role, panel_id=panel_id, editable=True)
+                if record:
+                    components.append(record)
+        for role, label in (("x_axis_label", getattr(ax.xaxis, "label", None)), ("y_axis_label", getattr(ax.yaxis, "label", None))):
+            if label is not None and label.get_text():
+                record = _artist_bbox_record(fig, renderer, label, label.get_gid() or role, role, panel_id=panel_id, editable=True)
+                if record:
+                    components.append(record)
+        for text in getattr(ax, "texts", []):
+            if not text.get_text():
+                continue
+            gid = text.get_gid() or "scifig.annotation"
+            role = "panel_label" if gid in ("scifig_panel_label", "scifig.panel_label") or "panel.label" in gid else "annotation"
+            record = _artist_bbox_record(fig, renderer, text, gid, role, panel_id=panel_id, editable=True)
+            if record:
+                components.append(record)
+        legend = ax.get_legend()
+        if legend is not None:
+            record = _artist_bbox_record(fig, renderer, legend, legend.get_gid() or f"scifig.panel.{panel_id}.legend", "axis_legend", panel_id=panel_id, editable=True)
+            if record:
+                components.append(record)
+
+    for legend in getattr(fig, "legends", []):
+        legend_id = legend.get_gid() or "scifig.legend.bottom"
+        record = _artist_bbox_record(fig, renderer, legend, legend_id, "bottom_legend", editable=True)
+        if record:
+            components.append(record)
+
+    figure_width_px = float(fig.bbox.width)
+    figure_height_px = float(fig.bbox.height)
+    manifest = {
+        "figureId": figure_id,
+        "editableSvgContractVersion": 1,
+        "canonicalSource": "editable_svg",
+        "figureSizePixels": {"width": figure_width_px, "height": figure_height_px},
+        "manualEditPolicy": {
+            "allowedRoles": ["main_title", "panel_title", "panel_label", "annotation", "bottom_legend", "axis_label"],
+            "lockedRoles": ["panel_axes", "data_layer"],
+        },
+        "componentCount": len(components),
+        "components": components,
+        "titleCentered": _manifest_component_centered(components, "main_title"),
+        "bottomLegendCentered": _manifest_component_centered(components, "bottom_legend", tolerance=0.08),
+        "assignedSvgIdCount": id_report["assignedSvgIdCount"],
+        "chartPlanSummary": {
+            "primaryChart": (chartPlan or {}).get("primaryChart") if isinstance(chartPlan, dict) else None,
+            "secondaryCharts": (chartPlan or {}).get("secondaryCharts", []) if isinstance(chartPlan, dict) else [],
+        },
+    }
+    return manifest
+
+
+def _read_json_report(path, default):
+    path = Path(path)
+    if not path.exists():
+        return default
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return default
+
+
+def _upsert_figure_record(path, record, collection_key):
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = _read_json_report(path, {collection_key: []})
+    if isinstance(payload, list):
+        payload = {collection_key: payload}
+    if not isinstance(payload, dict):
+        payload = {collection_key: []}
+    records = [item for item in payload.get(collection_key, []) if item.get("figureId") != record.get("figureId")]
+    records.append(record)
+    payload[collection_key] = records
+    path.write_text(json.dumps(payload, indent=2, ensure_ascii=False, default=str), encoding="utf-8")
+    return payload
+
+
+def _svg_text_is_editable(svg_path):
+    try:
+        root = ET.parse(svg_path).getroot()
+    except Exception:
+        text = Path(svg_path).read_text(encoding="utf-8", errors="ignore")
+        return "<text" in text
+    return any(str(element.tag).endswith("text") for element in root.iter())
+
+
+def _svg_id_set(svg_path):
+    ids = set()
+    try:
+        root = ET.parse(svg_path).getroot()
+        for element in root.iter():
+            value = element.attrib.get("id")
+            if value:
+                ids.add(value)
+    except Exception:
+        text = Path(svg_path).read_text(encoding="utf-8", errors="ignore")
+        ids.update(re.findall(r'\bid="([^"]+)"', text))
+    return ids
+
+
+def find_svg_renderer():
+    """Find a renderer that can rasterize SVG into PNG and optionally PDF."""
+    for name in ("inkscape", "resvg", "rsvg-convert"):
+        exe = shutil.which(name)
+        if exe:
+            return {"name": name, "executable": exe}
+    try:
+        import cairosvg  # noqa: F401
+        return {"name": "cairosvg", "executable": "python-module"}
+    except Exception:
+        return None
+
+
+def _run_svg_renderer(svg_path, out_path, fmt, dpi):
+    renderer = find_svg_renderer()
+    if not renderer:
+        raise RuntimeError("No SVG renderer found; install Inkscape, resvg, rsvg-convert, or cairosvg.")
+    svg_path = Path(svg_path)
+    out_path = Path(out_path)
+    fmt = fmt.lower()
+    name = renderer["name"]
+    if name == "inkscape":
+        command = [
+            renderer["executable"],
+            str(svg_path),
+            f"--export-type={fmt}",
+            f"--export-filename={out_path}",
+        ]
+        if fmt in ("png", "tiff"):
+            command.append(f"--export-dpi={dpi}")
+        completed = subprocess.run(command, capture_output=True, text=True)
+        if completed.returncode != 0:
+            raise RuntimeError((completed.stderr or completed.stdout or "Inkscape export failed").strip())
+    elif name == "resvg":
+        if fmt != "png":
+            raise RuntimeError("resvg fallback supports PNG only; install Inkscape or cairosvg for PDF.")
+        command = [renderer["executable"], "--dpi", str(int(dpi)), str(svg_path), str(out_path)]
+        completed = subprocess.run(command, capture_output=True, text=True)
+        if completed.returncode != 0:
+            raise RuntimeError((completed.stderr or completed.stdout or "resvg export failed").strip())
+    elif name == "rsvg-convert":
+        command = [renderer["executable"], "-f", fmt, "-o", str(out_path), str(svg_path)]
+        if fmt in ("png", "tiff"):
+            command[1:1] = ["-d", str(int(dpi)), "-p", str(int(dpi))]
+        completed = subprocess.run(command, capture_output=True, text=True)
+        if completed.returncode != 0:
+            raise RuntimeError((completed.stderr or completed.stdout or "rsvg-convert export failed").strip())
+    elif name == "cairosvg":
+        import cairosvg
+        if fmt == "png":
+            cairosvg.svg2png(url=str(svg_path), write_to=str(out_path), dpi=float(dpi))
+        elif fmt == "pdf":
+            cairosvg.svg2pdf(url=str(svg_path), write_to=str(out_path), dpi=float(dpi))
+        else:
+            raise RuntimeError(f"cairosvg fallback does not support {fmt!r}.")
+    if not out_path.exists() or out_path.stat().st_size < 512:
+        raise RuntimeError(f"SVG renderer did not create a usable {fmt.upper()} file: {out_path}")
+    return renderer
+
+
+def _build_svg_render_qa(figure_id, svg_path, manifest, requested_formats, renderer=None, outputs=None,
+                         error=None, source_label="editable_svg", derivative_sources=None, warnings=None):
+    svg_path = Path(svg_path)
+    ids = _svg_id_set(svg_path) if svg_path.exists() else set()
+    expected_ids = {
+        component.get("id")
+        for component in manifest.get("components", [])
+        if component.get("id") and component.get("manualMoveAllowed", True)
+    }
+    missing_ids = sorted(expected_ids - ids)
+    editable_text = _svg_text_is_editable(svg_path) if svg_path.exists() else False
+    outputs = outputs or {}
+    derivative_sources = derivative_sources or {}
+    warnings = list(warnings or [])
+    qa = {
+        "figureId": figure_id,
+        "editableSvgPath": str(svg_path),
+        "canonicalSource": source_label,
+        "requestedFormats": list(requested_formats),
+        "renderer": renderer,
+        "outputs": outputs,
+        "editableTextCheck": "passed" if editable_text else "failed",
+        "componentIdsPresent": not missing_ids,
+        "missingComponentIds": missing_ids,
+        "titleCentered": manifest.get("titleCentered"),
+        "bottomLegendCentered": manifest.get("bottomLegendCentered"),
+        "pngSource": derivative_sources.get("png") if "png" in outputs else None,
+        "pdfSource": derivative_sources.get("pdf") if "pdf" in outputs else None,
+        "editableSvgWarnings": warnings,
+        "hardFail": False,
+        "failures": [],
+    }
+    if not svg_path.exists() or svg_path.stat().st_size < 1024:
+        qa["failures"].append("editable_svg_missing_or_tiny")
+    if not editable_text:
+        qa["failures"].append("svg_text_not_editable")
+    if missing_ids:
+        qa["failures"].append("manifest_component_ids_missing_from_svg")
+    for fmt, path in outputs.items():
+        if not path:
+            continue
+        artifact = Path(path)
+        if artifact.suffix and (not artifact.exists() or artifact.stat().st_size < 512):
+            qa["failures"].append(f"{fmt}_missing_or_tiny")
+    if error:
+        qa["failures"].append(str(error))
+    qa["hardFail"] = bool(qa["failures"])
+    return qa
+
+
+def export_editable_svg_bundle(fig, figure_id="figure1", output_dir="output", axes=None, chartPlan=None,
+                               raster_dpi=300, normalized_formats=None, strict=True):
+    """Export editable SVG as the canonical source and derive strict PNG from it."""
+    requested = list(normalized_formats or ["pdf", "svg"])
+    requested = [str(fmt).lower().lstrip(".") for fmt in requested]
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    reports_dir = output_dir / "reports"
+    reports_dir.mkdir(parents=True, exist_ok=True)
+    plt.rcParams.update({"svg.fonttype": "none"})
+
+    manifest = build_editable_svg_manifest(fig, axes=axes, figure_id=figure_id, chartPlan=chartPlan)
+    editable_svg = output_dir / f"{figure_id}.editable.svg"
+    canonical_svg = output_dir / f"{figure_id}.svg"
+    fig.savefig(editable_svg, format="svg", facecolor="white", edgecolor="none", bbox_inches=None)
+    shutil.copyfile(editable_svg, canonical_svg)
+
+    outputs = {"editable_svg": str(editable_svg), "svg": str(canonical_svg)}
+    derivative_sources = {"svg": "editable_svg", "editable_svg": "editable_svg"}
+    render_warnings = []
+    renderer_info = None
+    render_error = None
+    for fmt in requested:
+        if fmt == "svg":
+            continue
+        if fmt in ("png", "pdf", "tiff"):
+            out_path = output_dir / f"{figure_id}.{fmt}"
+            try:
+                renderer_info = _run_svg_renderer(editable_svg, out_path, fmt, raster_dpi)
+                outputs[fmt] = str(out_path)
+                derivative_sources[fmt] = "editable_svg"
+            except Exception as exc:
+                if fmt == "pdf":
+                    fig.savefig(out_path, format="pdf", facecolor="white", edgecolor="none", bbox_inches=None)
+                    outputs[fmt] = str(out_path)
+                    derivative_sources[fmt] = "matplotlib_pdf_fallback"
+                    render_warnings.append(f"pdf_from_svg_renderer_unavailable: {exc}")
+                    continue
+                render_error = f"{fmt}_from_svg_failed: {exc}"
+                if strict:
+                    _upsert_figure_record(reports_dir / "editable_svg_manifest.json", manifest, "figures")
+                    qa = _build_svg_render_qa(
+                        figure_id,
+                        editable_svg,
+                        manifest,
+                        requested,
+                        renderer=renderer_info,
+                        outputs=outputs,
+                        error=render_error,
+                        derivative_sources=derivative_sources,
+                        warnings=render_warnings,
+                    )
+                    _upsert_figure_record(reports_dir / "svg_render_qa.json", qa, "figures")
+                    raise RuntimeError(render_error) from exc
+        else:
+            outputs[fmt] = None
+
+    manifest["paths"] = outputs
+    _upsert_figure_record(reports_dir / "editable_svg_manifest.json", manifest, "figures")
+    qa = _build_svg_render_qa(
+        figure_id,
+        editable_svg,
+        manifest,
+        requested,
+        renderer=renderer_info,
+        outputs=outputs,
+        error=render_error,
+        derivative_sources=derivative_sources,
+        warnings=render_warnings,
+    )
+    _upsert_figure_record(reports_dir / "svg_render_qa.json", qa, "figures")
+    if strict and qa["hardFail"]:
+        raise RuntimeError("Editable SVG QA failed: " + ", ".join(qa["failures"]))
+    return {"manifest": manifest, "svgRenderQa": qa, "paths": outputs}
+
+
+def revalidate_edited_svg_bundle(edited_svg_path, figure_id="figure1", output_dir="output",
+                                 raster_dpi=300, normalized_formats=None, strict=True):
+    """Use a hand-edited SVG as the final source and regenerate derivative assets."""
+    requested = list(normalized_formats or ["svg", "png", "pdf"])
+    requested = [str(fmt).lower().lstrip(".") for fmt in requested]
+    edited_svg_path = Path(edited_svg_path)
+    if not edited_svg_path.exists():
+        raise FileNotFoundError(f"Edited SVG not found: {edited_svg_path}")
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    reports_dir = output_dir / "reports"
+    reports_dir.mkdir(parents=True, exist_ok=True)
+    final_svg = output_dir / f"{figure_id}.final.svg"
+    canonical_svg = output_dir / f"{figure_id}.svg"
+    shutil.copyfile(edited_svg_path, final_svg)
+    shutil.copyfile(final_svg, canonical_svg)
+
+    manifest_payload = _read_json_report(reports_dir / "editable_svg_manifest.json", {"figures": []})
+    manifest_records = manifest_payload.get("figures", []) if isinstance(manifest_payload, dict) else []
+    manifest = next((item for item in manifest_records if item.get("figureId") == figure_id), {"figureId": figure_id, "components": []})
+    outputs = {"final_svg": str(final_svg), "svg": str(canonical_svg)}
+    derivative_sources = {"svg": "edited_svg", "final_svg": "edited_svg"}
+    render_warnings = []
+    renderer_info = None
+    render_error = None
+    for fmt in requested:
+        if fmt == "svg":
+            continue
+        if fmt in ("png", "pdf", "tiff"):
+            out_path = output_dir / f"{figure_id}.{fmt}"
+            try:
+                renderer_info = _run_svg_renderer(final_svg, out_path, fmt, raster_dpi)
+                outputs[fmt] = str(out_path)
+                derivative_sources[fmt] = "edited_svg"
+            except Exception as exc:
+                if fmt == "pdf":
+                    render_warnings.append(f"pdf_from_edited_svg_renderer_unavailable: {exc}")
+                    continue
+                render_error = f"{fmt}_from_edited_svg_failed: {exc}"
+                if strict:
+                    break
+    qa = _build_svg_render_qa(
+        figure_id,
+        final_svg,
+        manifest,
+        requested,
+        renderer=renderer_info,
+        outputs=outputs,
+        error=render_error,
+        source_label="edited_svg",
+        derivative_sources=derivative_sources,
+        warnings=render_warnings,
+    )
+    _upsert_figure_record(reports_dir / "svg_render_qa.json", qa, "figures")
+    if strict and qa["hardFail"]:
+        raise RuntimeError("Edited SVG QA failed: " + ", ".join(qa["failures"]))
+    return {"svgRenderQa": qa, "paths": outputs}
 
 
 def _default_panel_blueprint_for_axes(axes):

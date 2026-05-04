@@ -203,7 +203,7 @@ Use `Agent` only after the data-status, file-path, and mode gates are complete. 
 | `layout-aesthetics` | After build_panel_blueprint in Phase 2 | `chartPlan.delegationReports.aesthetics` | advisory only — whitespace balance, visual weight distribution, panel proportions |
 | `content-richness` | After build_visual_content_plan in Phase 2 | `chartPlan.delegationReports.content_richness` | advisory only — annotation density, label informativeness, marker diversity |
 | `code-reviewer` | Before Phase 3 completion | `styledCode.codeReview` | syntax/import failures, generator drift, forbidden `loc="best"`, missing metadata/source hooks |
-| `rendered-qa` | After script execution and before final outputBundle | `outputBundle.renderQa` | blank/tiny output, overlap, in-axes legend, missing format, non-editable SVG/PDF text |
+| `rendered-qa` | After script execution and before final outputBundle | `outputBundle.renderQa` | blank/tiny output, overlap, in-axes legend, missing format, non-editable SVG/PDF text, PNG not derived from editable SVG |
 | `visual-impact-scorer` | After rendered-qa, before outputBundle packaging | `outputBundle.renderQa.impactScore` | impactScore < 40 → warning, impactScore < 20 → hardFail |
 
 Blocking findings route back to the owning phase rather than being buried in the final report.
@@ -246,6 +246,15 @@ Phase 4 must produce `render_qa.json` with:
 - `contentDensityFailures`
 - `blankOrTinyOutputs`
 - `editableTextCheck`
+- `editableSvgManifestLoaded`
+- `svgRenderQaLoaded`
+- `componentIdsPresent`
+- `missingComponentIds`
+- `pngSource`
+- `pdfSource`
+- `editableSvgWarnings`
+- `editableSvgHardFail`
+- `editableSvgFailures`
 - `paletteContrastCheck`
 - `visualEnhancementCount`
 - `inPlotExplanatoryLabelCount`
@@ -271,4 +280,8 @@ Phase 4 must produce `render_qa.json` with:
 - `statProvenanceWarnings`
 - `impactScore` (0-100 from visual-impact-scorer agent)
 
-Any hard failure returns to Phase 3 for styling/layout/code or Phase 2 for an overpacked plan. `legendContractEnforced != true`, non-empty `legendContractFailures`, `layoutContractEnforced != true`, non-empty `layoutContractFailures`, `axisLegendRemainingCount > 0`, `legendOutsidePlotArea == false`, `figureLegendCount != 1` when a legend exists, `legendModeUsed != "bottom_center"` when a legend exists, `legendFrameApplied == false` when a legend exists, negative axes text without a reserved slot, poster-scale font sizes, cross-panel table/title/text overlap, colorbar overlap with panel layout boxes, metric-table overlap with bar/rectangle data marks, missing in-plot explanatory labels, missing required reference motifs, or `visualEnhancementCount < visualContentPlan.minTotalEnhancements` are hard failures. `impactScore < 20` is a hard fail; `impactScore < 40` is a warning.
+Any hard failure returns to Phase 3 for styling/layout/code or Phase 2 for an overpacked plan. `legendContractEnforced != true`, non-empty `legendContractFailures`, `layoutContractEnforced != true`, non-empty `layoutContractFailures`, `axisLegendRemainingCount > 0`, `legendOutsidePlotArea == false`, `figureLegendCount != 1` when a legend exists, `legendModeUsed != "bottom_center"` when a legend exists, `legendFrameApplied == false` when a legend exists, negative axes text without a reserved slot, poster-scale font sizes, cross-panel table/title/text overlap, colorbar overlap with panel layout boxes, metric-table overlap with bar/rectangle data marks, missing in-plot explanatory labels, missing required reference motifs, or `visualEnhancementCount < visualContentPlan.minTotalEnhancements` are hard failures. Missing `editable_svg_manifest.json`, missing `svg_render_qa.json`, `editableTextCheck != "passed"`, `componentIdsPresent != true`, `editableSvgHardFail == true`, or `pngSource` not in `("editable_svg", "edited_svg")` when PNG is requested are hard failures. `pdfSource` outside `("editable_svg", "edited_svg")` is a warning when no SVG renderer is available, because PNG visual identity is the strict requirement. `impactScore < 20` is a hard fail; `impactScore < 40` is a warning.
+
+## Editable SVG Policy
+
+SVG export is the canonical manual-adjustment source, not a side format. Phase 3 must call `export_editable_svg_bundle(...)` after `enforce_figure_legend_contract(...)` and before closing the figure. The helper must keep `svg.fonttype = "none"`, assign stable SVG IDs to movable title, legend, panel-label, axis-label, and annotation artists, write `editable_svg_manifest.json`, render requested PNG derivatives from the same editable SVG, and render PDF from SVG when an SVG renderer is available. Direct final `fig.savefig(...png)` is forbidden because it can drift from the SVG that users edit.

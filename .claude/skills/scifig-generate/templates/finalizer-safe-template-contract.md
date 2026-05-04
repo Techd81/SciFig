@@ -53,7 +53,23 @@ layout_report = audit_figure_layout_contract(
     fig, axes_map, chartPlan, journalProfile, strict=False
 )
 record_render_contract_report("figure1", chartPlan, legend_contract_report)
+editable_export_report = export_editable_svg_bundle(
+    fig,
+    "figure1",
+    Path("output"),
+    axes=axes_map,
+    chartPlan=chartPlan,
+    raster_dpi=workflowPreferences.get("rasterDpi", 300),
+    normalized_formats=workflowPreferences.get("exportFormats", ["pdf", "svg"]),
+    strict=True,
+)
 ```
+
+The exported SVG is not an ordinary side artifact. It is the editable canonical
+source: text stays as `<text>`, movable components get stable SVG IDs, and any
+requested PNG is rendered from that SVG so the raster output matches the
+editable file. PDF also uses the SVG renderer when available; otherwise the
+helper records a PDF fallback warning rather than blocking SVG-only workflows.
 
 The generator payload should preserve shared legend intent:
 
@@ -66,6 +82,9 @@ Cycle-24 audit fields are required in persisted runtime reports:
 - `audited_axes_count`
 - `textTextOverlapCount`
 - `bboxDataCoverageOverflowCount`
+- `editable_svg_manifest.json`
+- `svg_render_qa.json`
+- `pngSource == "editable_svg" | "edited_svg"` when PNG is requested
 
 ## Generator opt-outs
 

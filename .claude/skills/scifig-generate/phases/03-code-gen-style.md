@@ -654,14 +654,21 @@ for role, col in dataProfile.get("semanticRoles", {}).items():
     if col:
         roles_code += f'"{role}": "{col}", '
 
-# Resolve export formats from workflow preferences or policy defaults.
+# Resolve export formats from workflow preferences or policy defaults. SVG is
+# always emitted as the canonical editable source; PNG derivatives are rendered
+# from that SVG so raster output matches the editable file; PDF follows the SVG
+# renderer when available and records a fallback warning otherwise.
 normalized_formats = workflowPreferences.get("exportFormats", ["pdf", "svg"])
 export_dpi = workflowPreferences.get("rasterDpi", 300)
-savefig_lines = "\\n".join([
-    f'fig.savefig("output/figure1.{fmt}", bbox_inches="tight", dpi={export_dpi})' if fmt in ("png", "tiff")
-    else f'fig.savefig("output/figure1.{fmt}", bbox_inches="tight")'
-    for fmt in normalized_formats
-])
+
+def _editable_export_call(figure_id, axes_expr, plan_expr):
+    return (
+        f'editable_export_report = export_editable_svg_bundle('
+        f'fig, "{figure_id}", Path("output"), axes={axes_expr}, chartPlan={plan_expr}, '
+        f'raster_dpi={export_dpi}, normalized_formats={repr(normalized_formats)}, strict=True)'
+    )
+
+savefig_lines = _editable_export_call("figure1", "audit_axes_map", "chartPlan")
 
 helper_source = Path(".claude/skills/scifig-generate/phases/code-gen/helpers.py").read_text(encoding="utf-8").strip()
 helper_source = helper_source.replace("```python", "", 1).rsplit("```", 1)[0].strip()
@@ -697,8 +704,9 @@ chartPlan = {{"primaryChart": "{chartPlan['primaryChart']}", "secondaryCharts": 
 palette = {repr(colorSystem)}
 
 fig = gen_multipanel(chartPlan, journalProfile, palette, dataProfile_dict, rcParams, col_map=col_map)
+audit_axes_map = normalize_axes_map(fig, fig.axes)
 visual_density_report = audit_visual_density_contract(chartPlan, strict=True)
-legend_contract_report = enforce_figure_legend_contract(fig, fig.axes, chartPlan, journalProfile)
+legend_contract_report = enforce_figure_legend_contract(fig, audit_axes_map, chartPlan, journalProfile)
 record_render_contract_report("figure1", chartPlan, legend_contract_report)
 {savefig_lines}
 plt.close()
@@ -727,11 +735,7 @@ plt.close()
     for sec_chart in chartPlan.get("secondaryCharts", []):
         sec_gen = CHART_GENERATORS.get(sec_chart, "")
         if sec_gen:
-            sec_savefig_lines = "\\n".join([
-                f'fig.savefig("output/{sec_chart}.{fmt}", bbox_inches="tight", dpi={export_dpi})' if fmt in ("png", "tiff")
-                else f'fig.savefig("output/{sec_chart}.{fmt}", bbox_inches="tight")'
-                for fmt in normalized_formats
-            ])
+            sec_savefig_lines = _editable_export_call(sec_chart, "audit_secondary_axes_map", "secondaryPlan")
             secondary_calls += f"""
 # Secondary chart: {sec_chart}
 secondaryPlan = {{"primaryChart": "{sec_chart}", "secondaryCharts": [], "panelBlueprint": {{"layout": {{"recipe": "single", "grid": "1x1"}}, "panels": [{{"id": "A", "role": "hero", "chart": "{sec_chart}", "source": "secondary"}}], "requestedLayout": "single", "finalLayout": "single", "sharedLegend": False, "sharedColorbar": False}}, "crowdingPlan": {repr(chartPlan.get("crowdingPlan", {}))}, "visualContentPlan": {repr(chartPlan.get("visualContentPlan", {}))}, "templateCasePlan": {repr(chartPlan.get("templateCasePlan", {}))}}
@@ -852,6 +856,9 @@ codeReview = {
     "colorbarContractMetadataPresent": "colorbarReflowCount" in full_code_string and "colorbarPanelOverlapCount" in full_code_string,
     "embeddedHelperSourcePresent": "# Embedded helper source from the skill package" in full_code_string and "exec(aaa, globals())" in full_code_string,
     "embeddedTemplateMiningHelpersPresent": "# Embedded template-mining helpers" in full_code_string and "exec(ccc, globals())" in full_code_string and "add_polygon_polar_grid" in full_code_string,
+    "editableSvgExportPresent": "export_editable_svg_bundle(" in full_code_string and "editable_export_report" in full_code_string,
+    "editableSvgManifestPresent": "editable_svg_manifest.json" in full_code_string and "svg_render_qa.json" in full_code_string,
+    "pngDerivedFromEditableSvg": "fig.savefig(\"output/figure1.png\"" not in full_code_string and "pngSource" in full_code_string,
     "singleLegendContractDefinition": full_code_string.count("def enforce_figure_legend_contract(") == 1,
     "negativeLegendAnchorScan": re.search(r"bbox_to_anchor\s*=\s*\([^)]*-\d", full_code_string) is None,
     "negativeAxesTextScan": re.search(r"(risk_table_y|table_y|footnote_y|label_y)\s*=\s*-\d", full_code_string) is None,
@@ -887,6 +894,12 @@ if "# Embedded template-mining helpers" not in full_code_string or "exec(ccc, gl
     codeReview["blockingFindings"].append("missing_embedded_template_mining_helpers")
 if "add_polygon_polar_grid" not in full_code_string or "resolve_palette" not in full_code_string:
     codeReview["blockingFindings"].append("template_mining_helpers_api_unreferenced_after_embed")
+if "export_editable_svg_bundle(" not in full_code_string or "editable_export_report" not in full_code_string:
+    codeReview["blockingFindings"].append("missing_editable_svg_export")
+if "editable_svg_manifest.json" not in full_code_string or "svg_render_qa.json" not in full_code_string:
+    codeReview["blockingFindings"].append("missing_editable_svg_manifest_or_qa")
+if 'fig.savefig("output/figure1.png"' in full_code_string:
+    codeReview["blockingFindings"].append("png_saved_directly_instead_of_svg_derived")
 if full_code_string.count("def enforce_figure_legend_contract(") != 1:
     codeReview["blockingFindings"].append("custom_or_duplicate_legend_contract_finalizer")
 if re.search(r"bbox_to_anchor\s*=\s*\(1\.0\d", full_code_string):
@@ -945,7 +958,7 @@ styledCode = {
 > 3. Generated code includes output directory creation, source-data hooks, and metadata writing
 > 4. Panel labels, legends, and colorbars are resolved once at figure scope where possible
 > 5. `codeReview.blockingFindings` is empty after syntax/import drift, missing generator coverage, forbidden `loc="best"`, missing embedded helper source, custom legend finalizer, negative axes text/table slots, poster-scale font sizes, source-data/metadata hooks, reference visual grammar gates, and panelBlueprint checks
-> 6. `full_code_string` embeds helper source from `phases/code-gen/helpers.py` and multi-panel source from `phases/code-gen/generators-multipanel.py`, keeps `crowdingPlan` and `visualContentPlan` attached to `chartPlan`, passes `ax` and `col_map` to generators, runs `apply_visual_content_pass(...)` before `enforce_figure_legend_contract(...)`, persists each `legend_contract_report` to `output/reports/render_contracts.json` before `savefig`, tracks `legendContractEnforced`, `layoutContractEnforced`, `layoutContractFailures`, `colorbarReflowCount`, `colorbarPanelOverlapCount`, `metricTableDataOverlapCount`, `metricTableRelocatedCount`, `metricTableSuppressedCount`, `metricTableFallbackBoxCount`, `axisLegendRemainingCount`, `visualGrammarMotifsApplied`, `templateMotifsApplied`, `metricTableCount`, `referenceLineCount`, `densityHaloCount`, `marginalAxesCount`, and `densityColorEncodingCount`, and writes `savefig` calls for all `workflowPreferences["exportFormats"]`, using `workflowPreferences["rasterDpi"]` for raster outputs
+> 6. `full_code_string` embeds helper source from `phases/code-gen/helpers.py` and multi-panel source from `phases/code-gen/generators-multipanel.py`, keeps `crowdingPlan` and `visualContentPlan` attached to `chartPlan`, passes `ax` and `col_map` to generators, runs `apply_visual_content_pass(...)` before `enforce_figure_legend_contract(...)`, persists each `legend_contract_report` to `output/reports/render_contracts.json` before `export_editable_svg_bundle(...)`, tracks `legendContractEnforced`, `layoutContractEnforced`, `layoutContractFailures`, `colorbarReflowCount`, `colorbarPanelOverlapCount`, `metricTableDataOverlapCount`, `metricTableRelocatedCount`, `metricTableSuppressedCount`, `metricTableFallbackBoxCount`, `axisLegendRemainingCount`, `visualGrammarMotifsApplied`, `templateMotifsApplied`, `metricTableCount`, `referenceLineCount`, `densityHaloCount`, `marginalAxesCount`, and `densityColorEncodingCount`, and derives requested PNG outputs from the canonical editable SVG using `workflowPreferences["rasterDpi"]`
 
 
 > **Generator code**: Read [code-gen/generators-distribution.md](code-gen/generators-distribution.md) for distribution chart generators (violin_paired, violin_split, dot_strip, histogram, density, ecdf, joyplot, ridge, and 40+ additional chart types across genomics, engineering, ecology, and more).

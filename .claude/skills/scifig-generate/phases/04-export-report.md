@@ -59,6 +59,15 @@ assert "record_render_contract_report(" in source and "render_contracts.json" in
 assert "audit_figure_layout_contract" in source and "layoutContractFailures" in source, (
     "Generated code missing rendered layout contract checks"
 )
+assert "export_editable_svg_bundle(" in source and "editable_export_report" in source, (
+    "Generated code must export an editable SVG bundle instead of ordinary direct savefig outputs"
+)
+assert "editable_svg_manifest.json" in source and "svg_render_qa.json" in source, (
+    "Generated code must persist editable SVG component manifest and SVG render QA"
+)
+assert 'fig.savefig("output/figure1.png"' not in source, (
+    "Generated code must not save final PNG directly from matplotlib; PNG must be rendered from editable SVG"
+)
 assert "exec(aaa, globals())" in source, "Generated code missing embedded skill helper execution"
 assert source.count("def enforce_figure_legend_contract(") == 1, (
     "Generated code defines a custom or duplicate legend contract helper"
@@ -108,6 +117,8 @@ required_support_files = [
     Path("output/reports/stats_report.md"),
     Path("output/reports/panel_manifest.json"),
     Path("output/reports/metadata.json"),
+    Path("output/reports/editable_svg_manifest.json"),
+    Path("output/reports/svg_render_qa.json"),
     Path("output/requirements.txt")
 ]
 ```
@@ -123,6 +134,20 @@ render_contract_path = Path("output/reports/render_contracts.json")
 render_contracts = []
 if render_contract_path.exists():
     render_contracts = json.loads(render_contract_path.read_text(encoding="utf-8"))
+
+editable_manifest_path = Path("output/reports/editable_svg_manifest.json")
+editable_manifest_records = []
+if editable_manifest_path.exists():
+    editable_payload = json.loads(editable_manifest_path.read_text(encoding="utf-8"))
+    editable_manifest_records = editable_payload.get("figures", []) if isinstance(editable_payload, dict) else editable_payload
+
+svg_render_qa_path = Path("output/reports/svg_render_qa.json")
+svg_render_qa_records = []
+if svg_render_qa_path.exists():
+    svg_payload = json.loads(svg_render_qa_path.read_text(encoding="utf-8"))
+    svg_render_qa_records = svg_payload.get("figures", []) if isinstance(svg_payload, dict) else svg_payload
+
+primary_svg_qa = next((record for record in svg_render_qa_records if record.get("figureId") == "figure1"), svg_render_qa_records[0] if svg_render_qa_records else {})
 
 runtime_crowding_records = [item.get("crowdingPlan", {}) for item in render_contracts]
 runtime_visual_records = [item.get("visualContentPlan", {}) for item in render_contracts]
@@ -239,7 +264,19 @@ render_qa = {
     "minFigureInkFraction": _runtime_crowding("minFigureInkFraction", 0.04),
     "maxFigureWhitespaceFraction": _runtime_crowding("maxFigureWhitespaceFraction", 0.82),
     "paletteContrastCheck": chartPlan.get("palettePlan", {}).get("contrastAuditRequired", True),
-    "editableTextCheck": "required_for_svg_pdf",
+    "editableSvgManifestPath": str(editable_manifest_path),
+    "editableSvgManifestLoaded": bool(editable_manifest_records),
+    "svgRenderQaPath": str(svg_render_qa_path),
+    "svgRenderQaLoaded": bool(svg_render_qa_records),
+    "editableTextCheck": primary_svg_qa.get("editableTextCheck", "missing"),
+    "componentIdsPresent": primary_svg_qa.get("componentIdsPresent", False),
+    "missingComponentIds": primary_svg_qa.get("missingComponentIds", []),
+    "pngSource": primary_svg_qa.get("pngSource"),
+    "pdfSource": primary_svg_qa.get("pdfSource"),
+    "editableSvgHardFail": primary_svg_qa.get("hardFail", True),
+    "editableSvgFailures": primary_svg_qa.get("failures", []),
+    "editableSvgWarnings": primary_svg_qa.get("editableSvgWarnings", []),
+    "editableSvgOutputs": primary_svg_qa.get("outputs", {}),
     "overlapFailures": [],
     "contentDensityFailures": [],
     "blankOrTinyOutputs": [],
@@ -255,6 +292,27 @@ for item in expected:
 
 if not render_qa["renderContractReportLoaded"]:
     render_qa["overlapFailures"].append("missing_render_contract_report")
+
+if not render_qa["editableSvgManifestLoaded"]:
+    render_qa["overlapFailures"].append("missing_editable_svg_manifest")
+
+if not render_qa["svgRenderQaLoaded"]:
+    render_qa["overlapFailures"].append("missing_svg_render_qa")
+
+if render_qa["editableTextCheck"] != "passed":
+    render_qa["overlapFailures"].append("editable_svg_text_not_editable")
+
+if not render_qa["componentIdsPresent"]:
+    render_qa["overlapFailures"].append("editable_svg_component_ids_missing")
+
+if "png" in normalized_formats and render_qa["pngSource"] not in ("editable_svg", "edited_svg"):
+    render_qa["overlapFailures"].append("png_not_derived_from_editable_svg")
+
+if "pdf" in normalized_formats and render_qa["pdfSource"] not in ("editable_svg", "edited_svg"):
+    render_qa["editableSvgWarnings"].append("pdf_not_derived_from_editable_svg")
+
+if render_qa["editableSvgHardFail"]:
+    render_qa["overlapFailures"].append("editable_svg_qa_failed")
 
 if not render_qa["legendOutsidePlotArea"]:
     render_qa["overlapFailures"].append("legend_overlaps_plot_area")
@@ -410,6 +468,9 @@ Hard failures:
 - required template visual grammar is missing: planned motif layers such as joint marginal axes, density-colored scatter, prediction diagnostic matrix, correlation evidence matrix, interval band, or dual-axis error sidecar were not applied
 - output artifact is missing, blank, or implausibly small
 - requested vector text is not editable in SVG/PDF
+- editable SVG component manifest or SVG render QA is missing
+- final PNG was saved directly or otherwise not derived from the editable SVG
+- editable SVG has no real `<text>` elements, missing component IDs, or failed SVG QA
 - `legendOutsidePlotArea` is false
 - `figureLegendCount` is not exactly 1 when a legend exists
 - inline statistical callouts have no provenance in `statPlan`, input columns, or `visualContentPlan.statProvenance`
@@ -490,6 +551,11 @@ metadata = {
     "figureLegendCount": render_qa["figureLegendCount"],
     "legendOutsidePlotArea": render_qa["legendOutsidePlotArea"],
     "sharedColorbarApplied": render_qa["sharedColorbarApplied"],
+    "editableSvgManifestPath": render_qa["editableSvgManifestPath"],
+    "svgRenderQaPath": render_qa["svgRenderQaPath"],
+    "editableTextCheck": render_qa["editableTextCheck"],
+    "pngSource": render_qa["pngSource"],
+    "pdfSource": render_qa["pdfSource"],
     "visualContentPlan": runtime_visual or chartPlan.get("visualContentPlan", {}),
     "delegationReports": chartPlan.get("delegationReports", {}),
     "renderQa": render_qa,
@@ -582,6 +648,8 @@ outputBundle = {
     "figures": {
         "pdf": "output/figure1.pdf" if "pdf" in normalized_formats else None,
         "svg": "output/figure1.svg" if "svg" in normalized_formats else None,
+        "editableSvg": "output/figure1.editable.svg",
+        "finalSvg": "output/figure1.final.svg" if Path("output/figure1.final.svg").exists() else None,
         "png": "output/figure1.png" if "png" in normalized_formats else None,
         "tiff": "output/figure1.tiff" if "tiff" in normalized_formats else None
     },
@@ -591,7 +659,9 @@ outputBundle = {
     "panelManifest": "output/reports/panel_manifest.json",
     "requirements": "output/requirements.txt",
     "metadata": "output/reports/metadata.json",
-    "renderQa": "output/reports/render_qa.json"
+    "renderQa": "output/reports/render_qa.json",
+    "editableSvgManifest": "output/reports/editable_svg_manifest.json",
+    "svgRenderQa": "output/reports/svg_render_qa.json"
 }
 ```
 
@@ -617,10 +687,20 @@ If the user requests changes:
 
 The `dataProfile` from Phase 1 should be reused unless the input file or semantic interpretation changes.
 
+If automatic layout passes are insufficient but the figure is otherwise correct, hand-edit the canonical SVG and revalidate:
+
+```powershell
+python scripts/scifig_revalidate_edited_svg.py output/figure1.edited.svg --output-dir output --figure-id figure1 --formats svg,png,pdf
+```
+
+The revalidation command treats `figure1.edited.svg` as the final source, writes
+`figure1.final.svg`, regenerates requested PNG derivatives and renderer-backed
+PDF derivatives from that SVG, and updates `output/reports/svg_render_qa.json`.
+
 ## Output
 
 - **Variable**: `outputBundle`
-- **Files**: `output/figure1.*`, `output/source_data/*`, `output/reports/*`, `output/requirements.txt`
+- **Files**: `output/figure1.editable.svg`, `output/figure1.*`, `output/source_data/*`, `output/reports/*`, `output/requirements.txt`
 - **TodoWrite**: Mark Phase 4 completed, workflow complete
 
 ## Next Phase
