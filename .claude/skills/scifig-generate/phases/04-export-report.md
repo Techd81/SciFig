@@ -560,7 +560,7 @@ metadata = {
     "delegationReports": chartPlan.get("delegationReports", {}),
     "renderQa": render_qa,
     "seed": styledCode["seed"],
-    "scifigVersion": "0.1.1"
+    "scifigVersion": "0.1.2"
 }
 
 panel_manifest = {
