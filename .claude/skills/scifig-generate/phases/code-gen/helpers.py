@@ -2,9 +2,11 @@
 # Shared Helper Functions for Chart Generators and Crowding Control
 
 import json
+import os
 import re
 import shutil
 import subprocess
+import tempfile
 import xml.etree.ElementTree as ET
 from pathlib import Path
 import numpy as np
@@ -4085,6 +4087,74 @@ def _svg_id_set(svg_path):
     return ids
 
 
+def _find_chromium_executable():
+    candidates = []
+    for name in ("chrome", "chrome.exe", "chromium", "chromium-browser", "msedge", "msedge.exe"):
+        exe = shutil.which(name)
+        if exe:
+            candidates.append(exe)
+    for env_name, suffixes in {
+        "ProgramFiles": [
+            ("Google", "Chrome", "Application", "chrome.exe"),
+            ("Microsoft", "Edge", "Application", "msedge.exe"),
+        ],
+        "ProgramFiles(x86)": [
+            ("Google", "Chrome", "Application", "chrome.exe"),
+            ("Microsoft", "Edge", "Application", "msedge.exe"),
+        ],
+        "LOCALAPPDATA": [
+            ("Google", "Chrome", "Application", "chrome.exe"),
+            ("Microsoft", "Edge", "Application", "msedge.exe"),
+        ],
+    }.items():
+        base = os.environ.get(env_name)
+        if not base:
+            continue
+        for suffix in suffixes:
+            candidates.append(str(Path(base).joinpath(*suffix)))
+    for exe in candidates:
+        if exe and Path(exe).exists():
+            name = "msedge" if "edge" in Path(exe).name.lower() else "chrome"
+            return {"name": name, "executable": exe}
+    return None
+
+
+def _svg_length_to_px(value):
+    if value is None:
+        return None
+    match = re.match(r"^\s*([0-9.]+)\s*([A-Za-z]*)\s*$", str(value))
+    if not match:
+        return None
+    number = float(match.group(1))
+    unit = match.group(2).lower() or "px"
+    factors = {
+        "px": 1.0,
+        "pt": 96.0 / 72.0,
+        "in": 96.0,
+        "cm": 96.0 / 2.54,
+        "mm": 96.0 / 25.4,
+    }
+    return number * factors.get(unit, 1.0)
+
+
+def _svg_canvas_size_px(svg_path):
+    width_px = height_px = None
+    try:
+        root = ET.parse(svg_path).getroot()
+        width_px = _svg_length_to_px(root.get("width"))
+        height_px = _svg_length_to_px(root.get("height"))
+        if (not width_px or not height_px) and root.get("viewBox"):
+            parts = [float(part) for part in re.split(r"[\s,]+", root.get("viewBox").strip()) if part]
+            if len(parts) == 4:
+                width_px = width_px or parts[2]
+                height_px = height_px or parts[3]
+    except Exception:
+        pass
+    width_px = int(round(width_px or 1200))
+    height_px = int(round(height_px or 800))
+    return max(16, min(width_px, 8192)), max(16, min(height_px, 8192))
+
+
 def find_svg_renderer():
     """Find a renderer that can rasterize SVG into PNG and optionally PDF."""
     for name in ("inkscape", "resvg", "rsvg-convert"):
@@ -4095,13 +4165,16 @@ def find_svg_renderer():
         import cairosvg  # noqa: F401
         return {"name": "cairosvg", "executable": "python-module"}
     except Exception:
+        chromium = _find_chromium_executable()
+        if chromium:
+            return chromium
         return None
 
 
 def _run_svg_renderer(svg_path, out_path, fmt, dpi):
     renderer = find_svg_renderer()
     if not renderer:
-        raise RuntimeError("No SVG renderer found; install Inkscape, resvg, rsvg-convert, or cairosvg.")
+        raise RuntimeError("No SVG renderer found; install Inkscape, resvg, rsvg-convert, cairosvg, Chrome, or Edge.")
     svg_path = Path(svg_path)
     out_path = Path(out_path)
     fmt = fmt.lower()
@@ -4140,6 +4213,28 @@ def _run_svg_renderer(svg_path, out_path, fmt, dpi):
             cairosvg.svg2pdf(url=str(svg_path), write_to=str(out_path), dpi=float(dpi))
         else:
             raise RuntimeError(f"cairosvg fallback does not support {fmt!r}.")
+    elif name in ("chrome", "msedge"):
+        if fmt != "png":
+            raise RuntimeError(f"{name} fallback supports PNG only; install Inkscape or cairosvg for PDF.")
+        width_px, height_px = _svg_canvas_size_px(svg_path)
+        with tempfile.TemporaryDirectory(prefix="scifig-chrome-render-") as user_data_dir:
+            command = [
+                renderer["executable"],
+                "--headless=new",
+                "--disable-gpu",
+                "--disable-background-networking",
+                "--hide-scrollbars",
+                "--no-first-run",
+                "--no-default-browser-check",
+                f"--user-data-dir={user_data_dir}",
+                "--force-device-scale-factor=1",
+                f"--window-size={width_px},{height_px}",
+                f"--screenshot={out_path}",
+                svg_path.as_uri(),
+            ]
+            completed = subprocess.run(command, capture_output=True, text=True, timeout=60)
+            if completed.returncode != 0:
+                raise RuntimeError((completed.stderr or completed.stdout or f"{name} SVG screenshot failed").strip())
     if not out_path.exists() or out_path.stat().st_size < 512:
         raise RuntimeError(f"SVG renderer did not create a usable {fmt.upper()} file: {out_path}")
     return renderer
