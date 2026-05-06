@@ -1,4 +1,3 @@
-```python
 """SINGLE SOURCE OF TRUTH for the 121-chart family registry.
 
 Phase-3 docs reference this dict; do not duplicate it elsewhere.
@@ -156,4 +155,3 @@ CHART_GENERATORS = {
     "heatmap_symmetric": "gen_heatmap_symmetric",
     "violin_grouped": "gen_violin_grouped"
 }
-```

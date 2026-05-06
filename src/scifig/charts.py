@@ -142,7 +142,8 @@ def _draw_line(ax: Any, df: pd.DataFrame, x_col: str, value: str, group: Optiona
         for i, (name, part) in enumerate(df.groupby(group, sort=False)):
             ordered = part.sort_values(x_col)
             ax.plot(ordered[x_col], ordered[value], marker="o", ms=2.5, lw=0.9, color=colors[i % len(colors)], label=str(name))
-        ax.legend(loc="best", frameon=True)
+        # NOTE: do not call ax.legend(); Figure.render() collects handles into a single bottom-center fig.legend.
+        # In single-panel use, callers can attach handles via ax.get_legend_handles_labels().
     else:
         ordered = df.sort_values(x_col)
         ax.plot(ordered[x_col], ordered[value], marker="o", ms=2.5, lw=0.9, color=colors[1 % len(colors)])
@@ -177,7 +178,7 @@ def _draw_scatter(ax: Any, df: pd.DataFrame, x_col: str, y_col: str, group: Opti
     if group and group in df.columns:
         for i, (name, part) in enumerate(df.groupby(group, sort=False)):
             ax.scatter(part[x_col], part[y_col], s=15, color=colors[i % len(colors)], alpha=0.75, linewidths=0, label=str(name))
-        ax.legend(loc="best", frameon=True)
+        # NOTE: do not call ax.legend(); Figure.render() collects handles into a single bottom-center fig.legend.
     else:
         ax.scatter(df[x_col], df[y_col], s=15, color=colors[1 % len(colors)], alpha=0.75, linewidths=0)
     ax.set_xlabel(x_col)

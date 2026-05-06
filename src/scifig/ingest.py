@@ -93,12 +93,18 @@ def map_semantic_roles(df: pd.DataFrame) -> Dict[str, str]:
                 break
     numeric = [str(col) for col in df.select_dtypes(include=[np.number]).columns]
     categorical = [str(col) for col in df.columns if str(col) not in numeric]
-    if "value" not in roles and numeric:
-        roles["value"] = numeric[-1]
     if "x" not in roles and len(numeric) >= 2:
         roles["x"] = numeric[0]
     if "y" not in roles and len(numeric) >= 2:
         roles["y"] = numeric[1]
+    if "value" not in roles and numeric:
+        # Pick a numeric column not already bound to x/y/time to avoid role overlap.
+        used = {roles.get(r) for r in ("x", "y", "time")}
+        available = [col for col in numeric if col not in used]
+        if available:
+            roles["value"] = available[-1]
+        elif "y" not in roles:
+            roles["value"] = numeric[-1]
     if "group" not in roles and categorical:
         roles["group"] = categorical[0]
     return roles
