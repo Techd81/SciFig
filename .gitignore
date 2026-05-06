@@ -176,9 +176,9 @@ doc/
 .workflow/
 CLAUDE.md
 .ace-tool/
-pyproject.toml
-scifig/
-tests/
+/SciFig/
+/tests/*
+!/tests/test_package_core.py
 
 # CCW temp
 .ccw/

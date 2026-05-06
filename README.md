@@ -25,6 +25,7 @@ Upload your data. SciFig validates the file path, infers data structure and scie
 
 ## Changelog
 
+- V0.1.3: Add pip-installable `scifig` package foundation with Python API, CLI, 121-chart registry, typed contracts, and package-core tests.
 - V0.1.2: Add editable SVG output with matching PNG regeneration, plus manual SVG revalidation for adjusted labels and legends.
 - V0.1.1: Fix gallery style consistency for centered titles, compact bottom legends, outside panel labels, and ASCII-safe scientific labels.
 - V0.1.0: Initial release.
@@ -268,6 +269,7 @@ MIT — see [LICENSE](LICENSE). Copyright (c) 2026 Techd.
 
 ## 更新日志
 
+- V0.1.3：新增可 `pip` 安装的 `scifig` package 基础能力，包括 Python API、CLI、121 图表注册表、类型契约和 package-core 测试。
 - V0.1.2：新增可编辑 SVG 输出，并从 SVG 重新生成一致的 PNG；支持用户手动调整标签和图例后重新验证导出。
 - V0.1.1：修复图库样式一致性问题，包括标题居中、底部图例紧凑排布、面板标签移到轴外，以及科学标签使用 ASCII 安全文本。
 - V0.1.0：首次发布。
