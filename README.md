@@ -28,6 +28,11 @@ Both modes share the same 121-chart registry, six journal-style profiles (Nature
 
 ## Changelog
 
+- V0.2.0: PyPI release pipeline (.github/workflows/release.yml), Sphinx docs site (docs/), tag-triggered CI release workflow, README/CHANGELOG refresh.
+- V0.1.7: 6 synthetic-but-realistic domain fixtures + 30-case parametrized integration suite + scripts/validate_release.sh 6-gate health check; bug fixes for integer column names and scatter regression numerical safety.
+- V0.1.6: scifig.stats multi-group tests (Kruskal-Wallis / ANOVA / Tukey HSD / FDR / recommend_test); scifig.compose layout-recipe loader (12 recipes from layout-recipes-ready.json); 8 common short-name chart aliases; dose_response 4PL Jacobian overflow fix.
+- V0.1.5: scifig.polish canonical legend-contract finalizer (single source of truth for the skill's helpers.py finalizer); polar-safe spine handling; figure-relative legend anchor checks.
+- V0.1.4: 7 differentiated generator modules (distribution, time_series, matrix, scatter, clinical, genomics, ml) overriding generic_chart fallback; gallery style audit specification.
 - V0.1.3: Add pip-installable `scifig` package foundation with Python API, CLI, 121-chart registry, typed contracts, and package-core tests.
 - V0.1.2: Add editable SVG output with matching PNG regeneration, plus manual SVG revalidation for adjusted labels and legends.
 - V0.1.1: Fix gallery style consistency for centered titles, compact bottom legends, outside panel labels, and ASCII-safe scientific labels.
