@@ -11,6 +11,21 @@ End-to-end workflow for turning real experimental data into submission-ready sci
 
 Pipeline: preference gates -> Phase 1 `dataProfile` -> Phase 2 `chartPlan` -> Phase 3 `styledCode` -> Phase 4 `outputBundle`. Each phase owns one artifact, and blocking findings route back to the owning phase before completion.
 
+## Package Integration (v0.1.5+)
+
+Users who `pip install scifig` can import the **canonical legend-contract finalizer** directly instead of relying on the skill's embedded `helpers.py` source:
+
+```python
+from scifig.polish import enforce, sanitize_columns, apply_chart_polish
+
+df, col_map = sanitize_columns(df)
+# ... draw chart ...
+report = enforce(fig)   # promote per-axes legends to single bottom-center figure legend
+fig.savefig("output.svg")
+```
+
+`scifig.polish` is the single source of truth for the finalizer pipeline. The skill's `phases/code-gen/helpers.py` continues to provide the same functions inline (for environments without the package), but new code should prefer the package import. Function parity for the broader crowding-management and visual-density pipelines (`apply_visual_content_pass`, `audit_figure_layout_contract`, etc.) lands progressively over the v0.1.5 -> v0.2.0 milestone window.
+
 ## Key Design Principles
 
 1. **Journal-token driven**: Use explicit style profiles instead of ad-hoc plotting choices. Nature dimensions are grounded in the official Nature figure guide; Cell-like and Science-like presets maintain the same production-safe discipline.
