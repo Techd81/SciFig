@@ -162,3 +162,31 @@ def test_auto_chart_cli_and_tiff_export(tmp_path):
     assert cli_main(["plot", str(data_path), "--chart", "auto", "--style", "science", "-o", str(out)]) == 0
     assert out.exists()
     assert out.stat().st_size > 1024
+
+
+def test_v017_integer_column_names_are_coerced_to_strings():
+    """Integer-keyed columns must round-trip through scifig.plot without KeyError."""
+    import matplotlib
+    matplotlib.use("Agg")
+    df = pd.DataFrame({1: [1.0, 2.0, 3.0, 4.0], 2: [4.0, 5.0, 6.0, 7.0]})
+    fig = scifig.plot(df, chart="scatter")
+    assert fig is not None
+    import matplotlib.pyplot as plt
+    plt.close(fig)
+
+
+def test_v017_inf_values_in_scatter_regression_do_not_warn():
+    """Infinite values must be filtered before the OLS computation."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import warnings as _warnings
+    df = pd.DataFrame({
+        "x": [1.0, float("inf"), 3.0, 4.0, 5.0],
+        "y": [2.0, 5.0, 6.0, 8.0, 10.0],
+    })
+    with _warnings.catch_warnings():
+        _warnings.simplefilter("error", RuntimeWarning)
+        fig = scifig.plot(df, chart="scatter_regression")
+    assert fig is not None
+    import matplotlib.pyplot as plt
+    plt.close(fig)

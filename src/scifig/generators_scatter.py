@@ -112,6 +112,17 @@ def _pca_2d(matrix: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
 
 def _ols_fit(x: np.ndarray, y: np.ndarray) -> dict[str, float]:
     """OLS y = a + b*x. Returns slope, intercept, r-squared, two-sided p-value."""
+    # v0.1.7 numerical-safety: drop +/- inf and NaN BEFORE the std/SS
+    # computations so the mean/SS calculations stay finite and don't emit
+    # RuntimeWarnings.
+    x = np.asarray(x, dtype=float)
+    y = np.asarray(y, dtype=float)
+    finite = np.isfinite(x) & np.isfinite(y)
+    if finite.sum() < 3:
+        return {"slope": 0.0, "intercept": float(np.nanmean(y)) if finite.any() else 0.0,
+                "r2": 0.0, "p": 1.0, "se": float("nan")}
+    x = x[finite]
+    y = y[finite]
     n = len(x)
     if n < 3 or np.std(x) == 0:
         return {"slope": 0.0, "intercept": float(y.mean()) if n else 0.0,
@@ -120,6 +131,8 @@ def _ols_fit(x: np.ndarray, y: np.ndarray) -> dict[str, float]:
     y_mean = y.mean()
     sxx = ((x - x_mean) ** 2).sum()
     sxy = ((x - x_mean) * (y - y_mean)).sum()
+    if sxx <= 0:
+        return {"slope": 0.0, "intercept": float(y_mean), "r2": 0.0, "p": 1.0, "se": float("nan")}
     slope = sxy / sxx
     intercept = y_mean - slope * x_mean
     y_hat = intercept + slope * x
@@ -241,7 +254,9 @@ def gen_scatter_regression(df: pd.DataFrame, data_profile: Any, chart_plan: Any,
         ax.set_title("Scatter + OLS", loc="center", fontweight="bold", pad=5)
         return ax
 
-    clean = df[[x_col, y_col]].apply(pd.to_numeric, errors="coerce").dropna()
+    clean = df[[x_col, y_col]].apply(pd.to_numeric, errors="coerce")
+    # v0.1.7: drop inf along with NaN so downstream linspace/std are finite.
+    clean = clean.replace([np.inf, -np.inf], np.nan).dropna()
     if clean.empty:
         ax.text(0.5, 0.5, "No numeric pairs",
                 ha="center", va="center", transform=ax.transAxes)

@@ -126,6 +126,12 @@ def infer_domain_hints(df: pd.DataFrame, roles: Dict[str, str]) -> list[str]:
 
 def profile_data(data: DataInput) -> tuple[pd.DataFrame, DataProfile]:
     df, fmt = load_data(data)
+    # v0.1.7 fix: coerce non-string column names (e.g. integer indices when a
+    # CSV is loaded with header=None or a user passes a numeric-keyed dict)
+    # to strings up front so semantic-role lookups in downstream generators
+    # never miss because of dtype mismatch.
+    if any(not isinstance(c, str) for c in df.columns):
+        df.columns = [str(c) for c in df.columns]
     roles = map_semantic_roles(df)
     group_col = roles.get("group")
     n_groups = int(df[group_col].nunique()) if group_col in df.columns else 0
