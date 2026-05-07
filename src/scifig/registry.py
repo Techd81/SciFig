@@ -39,6 +39,17 @@ ALIASES = {
     "dot+box": "box_strip",
     "heatmap+cluster": "heatmap_cluster",
     "ridgeline": "ridge",
+    # v0.1.5 UX aliases — collapse common short names to the most general
+    # variant in CHART_KEYS so ``scifig.plot(df, chart='bar')`` does not
+    # require users to pre-disambiguate "grouped" vs "clustered" vs "diverging".
+    "bar": "grouped_bar",
+    "boxplot": "box_strip",
+    "violin": "violin_strip",
+    "scatter": "scatter_regression",
+    "heatmap": "heatmap_pure",
+    "histogram_density": "density",
+    "stacked_bar": "stacked_bar_comp",
+    "lollipop": "lollipop_horizontal",
 }
 
 CHART_GENERATORS: Dict[str, ChartGenerator] = {}

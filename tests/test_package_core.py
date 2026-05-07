@@ -47,6 +47,18 @@ def test_chart_registry_exposes_121_callables_and_aliases():
         assert callable(scifig.CHART_GENERATORS[key])
 
 
+def test_v015_short_name_aliases_resolve():
+    """v0.1.5 added common short names so users do not need to disambiguate
+    grouped/clustered/diverging variants up front."""
+    assert scifig.get_chart_info("bar")["key"] == "grouped_bar"
+    assert scifig.get_chart_info("boxplot")["key"] == "box_strip"
+    assert scifig.get_chart_info("violin")["key"] == "violin_strip"
+    assert scifig.get_chart_info("scatter")["key"] == "scatter_regression"
+    assert scifig.get_chart_info("heatmap")["key"] == "heatmap_pure"
+    assert scifig.get_chart_info("stacked_bar")["key"] == "stacked_bar_comp"
+    assert scifig.get_chart_info("lollipop")["key"] == "lollipop_horizontal"
+
+
 def test_journal_profiles_are_complete_and_distinct():
     names = available_profiles()
     assert names == ["cell", "jama", "lancet", "nature", "nejm", "science"]

@@ -225,13 +225,26 @@ def gen_dose_response(df: pd.DataFrame, data_profile: Any, chart_plan: Any,
         return d_ + (a_ - d_) / (1.0 + (10.0 ** (b_ * (lx - np.log10(c_)))))
 
     for _ in range(50):
-        denom = 1.0 + (x / c) ** b
-        jac_d = 1.0 / denom
-        jac_a = 1.0 - 1.0 / denom
-        jac_c_ = (d - a) * b * (x ** b) * (c ** (-b - 1)) / (denom ** 2)
-        jac_b_ = -(d - a) * np.log(x / c) * (x / c) ** b / (denom ** 2)
-        J = np.column_stack([jac_d, jac_a, jac_c_, jac_b_])
-        r = y - four_pl(log_x, a, b, c, d)
+        # Bound parameter b to keep ``x**b`` and ``c**(-b-1)`` numerically
+        # stable during Levenberg-style iteration; without this the Jacobian
+        # overflows for extreme dose ratios (cycle-22 numerical-stability bug).
+        b = float(np.clip(b, -10.0, 10.0))
+        with np.errstate(over="ignore", invalid="ignore"):
+            denom = 1.0 + (x / c) ** b
+            jac_d = 1.0 / denom
+            jac_a = 1.0 - 1.0 / denom
+            jac_c_ = (d - a) * b * (x ** b) * (c ** (-b - 1)) / (denom ** 2)
+            jac_b_ = -(d - a) * np.log(x / c) * (x / c) ** b / (denom ** 2)
+        # Drop rows where any Jacobian entry is non-finite — they would
+        # poison the lstsq solve. If too few rows remain, stop iterating.
+        finite_rows = np.isfinite(jac_d) & np.isfinite(jac_a) & np.isfinite(jac_c_) & np.isfinite(jac_b_)
+        if finite_rows.sum() < 4:
+            break
+        J = np.column_stack([
+            jac_d[finite_rows], jac_a[finite_rows],
+            jac_c_[finite_rows], jac_b_[finite_rows],
+        ])
+        r = (y - four_pl(log_x, a, b, c, d))[finite_rows]
         try:
             delta, _, _, _ = np.linalg.lstsq(J, r, rcond=None)
         except np.linalg.LinAlgError:
