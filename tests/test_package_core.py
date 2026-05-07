@@ -29,10 +29,11 @@ def _group_df():
 
 
 def test_package_public_api_and_version():
-    assert scifig.__version__ == "0.1.3"
+    assert scifig.__version__ == "0.1.5"
     assert callable(scifig.plot)
     assert scifig.Figure is not None
     assert hasattr(scifig, "styles")
+    assert hasattr(scifig, "polish")
     assert callable(scifig.list_charts)
 
 

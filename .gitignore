@@ -179,6 +179,7 @@ CLAUDE.md
 /SciFig/
 /tests/*
 !/tests/test_package_core.py
+!/tests/test_polish.py
 
 # CCW temp
 .ccw/
