@@ -4,7 +4,7 @@ from ._version import __version__
 from .api import plot
 from .figure import Figure
 from .registry import CHART_GENERATORS, get_chart_info, list_charts, register_chart
-from . import polish, styles
+from . import compose, polish, stats, styles
 
 # Differentiated generator modules — import to trigger @register_chart decorators.
 # Each module overrides its chart keys in CHART_GENERATORS, replacing the
@@ -21,10 +21,12 @@ __all__ = [
     "CHART_GENERATORS",
     "Figure",
     "__version__",
+    "compose",
     "get_chart_info",
     "list_charts",
     "plot",
     "polish",
     "register_chart",
+    "stats",
     "styles",
 ]

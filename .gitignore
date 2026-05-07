@@ -172,6 +172,7 @@ skills/
 
 # Internal project files (not for distribution)
 data/
+!src/scifig/data/
 doc/
 .workflow/
 CLAUDE.md
@@ -180,6 +181,8 @@ CLAUDE.md
 /tests/*
 !/tests/test_package_core.py
 !/tests/test_polish.py
+!/tests/test_stats.py
+!/tests/test_compose.py
 
 # CCW temp
 .ccw/

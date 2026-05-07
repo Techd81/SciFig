@@ -1,0 +1,112 @@
+{
+  "version": "0.1.2",
+  "source": "template-mining/04-grid-recipes.md",
+  "R0": {
+    "id": "R0",
+    "name": "single_panel",
+    "panel_count": 1,
+    "gridspec_args": {"engine": "subplots", "nrows": 1, "ncols": 1, "figsize_mm": [89, 62]},
+    "reserved_slots": {"legend": "bottom_center_optional", "colorbar": "right_optional", "inset": "inside_axes_safe"},
+    "helper_call": "build_grid(\"R0_single_panel\", figsize=figsize)",
+    "use_cases": ["hero_single", "single_focus"]
+  },
+  "R1": {
+    "id": "R1",
+    "name": "two_panel_horizontal",
+    "panel_count": 2,
+    "gridspec_args": {"engine": "subplots", "nrows": 1, "ncols": 2, "wspace": 0.30, "hspace": 0.0},
+    "reserved_slots": {"legend": "bottom_center", "colorbar": "right_outer", "inset": "per_panel"},
+    "helper_call": "build_grid(\"R1_two_panel_horizontal\", figsize=figsize)",
+    "use_cases": ["comparison_pair", "validation_pair"]
+  },
+  "R2": {
+    "id": "R2",
+    "name": "two_by_two_storyboard",
+    "panel_count": 4,
+    "gridspec_args": {"engine": "GridSpec", "nrows": 2, "ncols": 2, "wspace": 0.32, "hspace": 0.42},
+    "reserved_slots": {"legend": "bottom_center", "colorbar": "right_outer", "inset": "panel_local"},
+    "helper_call": "build_grid(\"R2_two_by_two_storyboard\", figsize=figsize)",
+    "use_cases": ["multipanel_grid", "clinical_outcome_board"]
+  },
+  "R3": {
+    "id": "R3",
+    "name": "two_by_three_grid",
+    "panel_count": 6,
+    "gridspec_args": {"engine": "GridSpec", "nrows": 2, "ncols": 3, "wspace": 0.28, "hspace": 0.36},
+    "reserved_slots": {"legend": "bottom_center", "colorbar": "right_outer_shared", "inset": "panel_local"},
+    "helper_call": "build_grid(\"R3_two_by_three_grid\", figsize=figsize)",
+    "use_cases": ["method_comparison", "multi_endpoint_story"]
+  },
+  "R4": {
+    "id": "R4",
+    "name": "three_panel_horizontal",
+    "panel_count": 3,
+    "gridspec_args": {"engine": "subplots", "nrows": 1, "ncols": 3, "wspace": 0.34, "hspace": 0.0},
+    "reserved_slots": {"legend": "bottom_center", "colorbar": "right_outer", "inset": "panel_local"},
+    "helper_call": "build_grid(\"R4_three_panel_horizontal\", figsize=figsize)",
+    "use_cases": ["triptych", "calibration_triplet"]
+  },
+  "R5": {
+    "id": "R5",
+    "name": "n_by_n_pairwise",
+    "panel_count": "n*n",
+    "gridspec_args": {"engine": "GridSpec", "nrows": "n", "ncols": "n", "wspace": 0.08, "hspace": 0.08},
+    "reserved_slots": {"legend": "bottom_center_optional", "colorbar": "right_outer_shared", "inset": "not_recommended"},
+    "helper_call": "build_grid(\"R5_n_by_n_pairwise\", n=n, figsize=figsize)",
+    "use_cases": ["n_by_n_pairwise", "correlation_matrix"]
+  },
+  "R6": {
+    "id": "R6",
+    "name": "four_panel_band",
+    "panel_count": 4,
+    "gridspec_args": {"engine": "subplots", "nrows": 1, "ncols": 4, "wspace": 0.24, "hspace": 0.0},
+    "reserved_slots": {"legend": "bottom_center", "colorbar": "right_outer", "inset": "panel_local_small"},
+    "helper_call": "build_grid(\"R6_four_panel_band\", figsize=figsize)",
+    "use_cases": ["lineup", "model_metric_band"]
+  },
+  "R7": {
+    "id": "R7",
+    "name": "dense_2x6_lineup",
+    "panel_count": 12,
+    "gridspec_args": {"engine": "GridSpec", "nrows": 2, "ncols": 6, "wspace": 0.20, "hspace": 0.30},
+    "reserved_slots": {"legend": "bottom_center_compact", "colorbar": "right_outer_shared", "inset": "not_recommended"},
+    "helper_call": "build_grid(\"R7_dense_2x6_lineup\", figsize=figsize)",
+    "use_cases": ["dense_lineup", "atlas_small_multiples"]
+  },
+  "R8": {
+    "id": "R8",
+    "name": "main_with_marginal",
+    "panel_count": 3,
+    "gridspec_args": {"engine": "GridSpec", "nrows": 2, "ncols": 2, "height_ratios": [1, 4], "width_ratios": [4, 1], "wspace": 0.05, "hspace": 0.05},
+    "reserved_slots": {"legend": "bottom_center", "colorbar": "right_outer_optional", "inset": "marginal_axes"},
+    "helper_call": "build_grid(\"R8_main_with_marginal\", figsize=figsize)",
+    "use_cases": ["marginal_joint", "scatter_with_distribution"]
+  },
+  "R9": {
+    "id": "R9",
+    "name": "inset_overlay",
+    "panel_count": 2,
+    "gridspec_args": {"engine": "subplots_plus_inset", "nrows": 1, "ncols": 1, "inset_bounds": [0.58, 0.58, 0.34, 0.34]},
+    "reserved_slots": {"legend": "bottom_center_optional", "colorbar": "right_outer_optional", "inset": "inside_axes_audited"},
+    "helper_call": "build_grid(\"R9_inset_overlay\", figsize=figsize)",
+    "use_cases": ["inset_distribution", "zoom_detail"]
+  },
+  "R10": {
+    "id": "R10",
+    "name": "asymmetric_top_wide",
+    "panel_count": 3,
+    "gridspec_args": {"engine": "GridSpec", "nrows": 2, "ncols": 2, "height_ratios": [1.2, 1], "width_ratios": [1, 1], "top_span": true, "wspace": 0.30, "hspace": 0.38},
+    "reserved_slots": {"legend": "bottom_center", "colorbar": "right_outer", "inset": "panel_local"},
+    "helper_call": "build_grid(\"R10_asymmetric_top_wide\", figsize=figsize)",
+    "use_cases": ["hero_plus_support", "global_local"]
+  },
+  "R11": {
+    "id": "R11",
+    "name": "triple_y_axis",
+    "panel_count": 1,
+    "gridspec_args": {"engine": "subplots", "nrows": 1, "ncols": 1, "twin_axes": 2, "right_margin": 0.78},
+    "reserved_slots": {"legend": "bottom_center", "colorbar": "none", "inset": "not_recommended"},
+    "helper_call": "build_grid(\"R11_triple_y_axis\", figsize=figsize)",
+    "use_cases": ["dual_axis", "multi_axis_time_series"]
+  }
+}
