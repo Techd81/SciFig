@@ -183,6 +183,9 @@ CLAUDE.md
 !/tests/test_polish.py
 !/tests/test_stats.py
 !/tests/test_compose.py
+!/tests/test_real_data_validation.py
+!/tests/fixtures/
+!/tests/fixtures/**
 
 # CCW temp
 .ccw/
