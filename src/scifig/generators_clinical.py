@@ -79,20 +79,36 @@ def gen_km(df: pd.DataFrame, data_profile: Any, chart_plan: Any,
             continue
         t_vals = clean["t"].to_numpy()
         e_vals = clean["e"].to_numpy(dtype=int)
-        n = len(t_vals)
+        n_total = len(t_vals)
+
+        # BUG-08 fix: aggregate by unique time so tied events/censors give the
+        # same survival regardless of row order. Previous per-row decrement
+        # produced S=0.0 for time=[1,1], event=[0,1]; correct value is 0.5.
+        unique_times, inv = np.unique(t_vals, return_inverse=True)
+        d = np.zeros(len(unique_times), dtype=int)  # event count per time
+        c = np.zeros(len(unique_times), dtype=int)  # censor count per time
+        for idx, ev in zip(inv, e_vals):
+            if ev == 1:
+                d[idx] += 1
+            else:
+                c[idx] += 1
+        # At each unique time, n_at_risk = total remaining BEFORE this time's events/censors
+        cumulative_remove = np.cumsum(d + c)
+        n_at_risk = n_total - np.concatenate([[0], cumulative_remove[:-1]])
+
         surv = [1.0]
         times = [0.0]
         cens_x: list[float] = []
         cens_y: list[float] = []
-        remaining = n
-        for j in range(n):
-            if e_vals[j] == 1:
-                surv.append(surv[-1] * (remaining - 1) / remaining)
-                times.append(t_vals[j])
-            else:
-                cens_x.append(t_vals[j])
-                cens_y.append(surv[-1])
-            remaining -= 1
+        s = 1.0
+        for k, t_k in enumerate(unique_times):
+            if d[k] > 0 and n_at_risk[k] > 0:
+                s = s * (n_at_risk[k] - d[k]) / n_at_risk[k]
+                times.append(float(t_k))
+                surv.append(s)
+            if c[k] > 0:
+                cens_x.append(float(t_k))
+                cens_y.append(s)
         color = colors[i % len(colors)]
         ax.step(times, surv, where="post", color=color, lw=1.1, label=name)
         if cens_x:

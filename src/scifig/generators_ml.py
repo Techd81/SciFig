@@ -65,22 +65,35 @@ def gen_roc(df: pd.DataFrame, data_profile: Any, chart_plan: Any,
         return ax
 
     scores = pd.to_numeric(df[score_col], errors="coerce").to_numpy()
-    labels = pd.to_numeric(df[label_col], errors="coerce").to_numpy(dtype=int)
-    valid = (~np.isnan(scores)) & np.isfinite(scores)
-    scores, labels = scores[valid], labels[valid]
-    order = np.argsort(-scores)
-    tps = labels[order].cumsum()
-    fps = (1 - labels[order]).cumsum()
-    total_pos = labels.sum()
-    total_neg = len(labels) - total_pos
+    labels = pd.to_numeric(df[label_col], errors="coerce").to_numpy(dtype=float)
+    # BUG-13 fix: filter both score and label to finite — prior code only filtered scores
+    valid = np.isfinite(scores) & np.isfinite(labels)
+    scores, labels = scores[valid], labels[valid].astype(int)
+    if len(scores) == 0:
+        ax.text(0.5, 0.5, "Need score + label values",
+                ha="center", va="center", transform=ax.transAxes)
+        ax.set_title("ROC", loc="center", fontweight="bold", pad=5)
+        return ax
+    total_pos = int(labels.sum())
+    total_neg = int(len(labels) - total_pos)
     if total_pos == 0 or total_neg == 0:
         ax.text(0.5, 0.5, "Need both positive and negative labels",
                 ha="center", va="center", transform=ax.transAxes)
         ax.set_title("ROC", loc="center", fontweight="bold", pad=5)
         return ax
 
-    tpr = np.concatenate([[0], tps / total_pos, [1]])
-    fpr = np.concatenate([[0], fps / total_neg, [1]])
+    # BUG-12 fix: aggregate by unique score threshold (descending) so curves are
+    # invariant to input row order on ties. Previous per-row cumsum produced
+    # different curves for label=[1,0] vs [0,1] on tied scores.
+    order = np.argsort(-scores, kind="mergesort")
+    sorted_scores = scores[order]
+    sorted_labels = labels[order]
+    # Identify last index for each distinct score (run-length on sorted scores).
+    distinct = np.r_[np.where(np.diff(sorted_scores) != 0)[0], len(sorted_scores) - 1]
+    tps_running = np.cumsum(sorted_labels)[distinct]
+    fps_running = (1 + distinct) - tps_running
+    tpr = np.concatenate([[0.0], tps_running / total_pos, [1.0]])
+    fpr = np.concatenate([[0.0], fps_running / total_neg, [1.0]])
     ax.plot(fpr, tpr, color=colors[5 % len(colors)], lw=1.1, label="ROC")
     ax.plot([0, 1], [0, 1], color="#888888", lw=0.6, ls="--")
     ax.set_xlabel("False positive rate")

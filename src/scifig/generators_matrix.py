@@ -141,23 +141,62 @@ def gen_confusion_matrix(df: pd.DataFrame, data_profile: Any, chart_plan: Any,
                          rc_params: dict[str, Any], palette: dict[str, Any],
                          col_map: Optional[dict[str, str]] = None, ax: Any = None) -> Any:
     """Square confusion matrix with diagonal-emphasis Blues palette and
-    per-cell count + percentage annotations."""
+    per-cell count + percentage annotations.
+
+    BUG-15 fix: Prefer pd.crosstab(actual, predicted) when those roles exist —
+    previously the code unconditionally sliced the raw numeric matrix as if it
+    were a count matrix, producing incorrect (fraud-level) confusion values.
+    Falls back to legacy raw-matrix mode (with explicit warning text) when
+    actual/predicted roles are missing, preserving backward compatibility for
+    users who supply pre-aggregated count matrices.
+    """
     ax = _get_ax(ax)
-    matrix_full = _numeric_matrix(df)
-    if matrix_full.empty:
-        ax.text(0.5, 0.5, "No numeric data", ha="center", va="center",
+    # Extract semantic roles (compat with both dataclass and dict profile shapes)
+    if hasattr(data_profile, "semantic_roles"):
+        roles = dict(data_profile.semantic_roles)
+    elif hasattr(data_profile, "get"):
+        roles = dict(data_profile.get("semanticRoles", data_profile.get("semantic_roles", {})))
+    else:
+        roles = {}
+    actual_col = roles.get("actual") or roles.get("y_true") or roles.get("truth")
+    predicted_col = roles.get("predicted") or roles.get("y_pred") or roles.get("prediction")
+
+    matrix: Optional[pd.DataFrame] = None
+    if actual_col and predicted_col and actual_col in df.columns and predicted_col in df.columns:
+        # Correct path: aggregate raw observations into a true count matrix.
+        try:
+            matrix = pd.crosstab(df[actual_col], df[predicted_col])
+        except (ValueError, TypeError):
+            matrix = None
+
+    if matrix is None or matrix.empty:
+        # Legacy fallback: treat numeric DataFrame as a pre-aggregated count matrix.
+        matrix_full = _numeric_matrix(df)
+        if matrix_full.empty:
+            ax.text(0.5, 0.5, "No numeric data", ha="center", va="center",
+                    transform=ax.transAxes)
+            ax.set_title("Confusion matrix", loc="center", fontweight="bold", pad=5)
+            return ax
+        n_full = min(matrix_full.shape)
+        matrix = matrix_full.iloc[:n_full, :n_full].abs()
+
+    n = min(matrix.shape)
+    if n == 0:
+        ax.text(0.5, 0.5, "Empty confusion matrix", ha="center", va="center",
                 transform=ax.transAxes)
         ax.set_title("Confusion matrix", loc="center", fontweight="bold", pad=5)
         return ax
-
-    n = min(matrix_full.shape)
-    matrix = matrix_full.iloc[:n, :n].abs()
-    counts = matrix.to_numpy(dtype=float)
+    counts = matrix.iloc[:n, :n].to_numpy(dtype=float)
     total = counts.sum() if counts.sum() > 0 else 1.0
     pct = counts / total * 100.0
 
     image = ax.imshow(counts, aspect="equal", cmap="Blues")
     ax.figure.colorbar(image, ax=ax, fraction=0.046, pad=0.04, label="Count")
+
+    ax.set_xticks(range(n))
+    ax.set_xticklabels(_tick_labels(matrix.columns[:n]), rotation=30, ha="right")
+    ax.set_yticks(range(n))
+    ax.set_yticklabels(_tick_labels(matrix.index[:n]))
 
     for i in range(n):
         ax.add_patch(Rectangle((i - 0.5, i - 0.5), 1, 1, fill=False,
