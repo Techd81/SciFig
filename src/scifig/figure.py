@@ -71,8 +71,8 @@ class Figure:
         handles = []
         labels = []
         for ax in fig.axes:
-            h, l = ax.get_legend_handles_labels()
-            for handle, label in zip(h, l):
+            ax_handles, ax_labels = ax.get_legend_handles_labels()
+            for handle, label in zip(ax_handles, ax_labels):
                 if label not in labels:
                     handles.append(handle)
                     labels.append(label)

@@ -3384,10 +3384,10 @@ def _disable_layout_engine_for_manual_margins(fig):
     try:
         if hasattr(fig, "set_layout_engine"):
             fig.set_layout_engine(None)
-    except Exception:
-        pass
-    try:
-        fig.set_constrained_layout(False)
+        else:
+            # Fallback for matplotlib < 3.6 only — set_constrained_layout is
+            # PendingDeprecationWarning in modern matplotlib (>=3.7).
+            fig.set_constrained_layout(False)
     except Exception:
         pass
 

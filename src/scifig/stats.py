@@ -17,11 +17,15 @@ Public API:
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import Any, Iterable, Optional
 
 import numpy as np
 import pandas as pd  # type: ignore[import-untyped]
+
+
+_LOGGER = logging.getLogger(__name__)
 
 
 __all__ = [
@@ -92,7 +96,7 @@ def add_group_stat_annotation(
     try:
         from scipy import stats  # type: ignore[import-untyped]
         p_value = float(stats.mannwhitneyu(groups[0], groups[1], alternative="two-sided").pvalue)
-    except Exception:
+    except (ImportError, ValueError, RuntimeError):
         return ["statistical_test_unavailable"]
     y_max = max(float(g.max()) for g in groups if len(g))
     y_min = min(float(g.min()) for g in groups if len(g))
@@ -139,7 +143,7 @@ def kruskal_wallis(*groups: Iterable[float]) -> TestResult:
         notes.append("group_with_fewer_than_two_observations")
     try:
         from scipy import stats  # type: ignore[import-untyped]
-    except Exception:
+    except ImportError:
         return TestResult(
             statistic=float("nan"),
             pvalue=float("nan"),
@@ -180,7 +184,7 @@ def one_way_anova(*groups: Iterable[float]) -> TestResult:
         notes.append("group_with_fewer_than_two_observations")
     try:
         from scipy import stats  # type: ignore[import-untyped]
-    except Exception:
+    except ImportError:
         return TestResult(
             statistic=float("nan"),
             pvalue=float("nan"),
@@ -223,13 +227,13 @@ def tukey_hsd(
         return []
     try:
         from scipy import stats  # type: ignore[import-untyped]
-    except Exception:
+    except ImportError:
         return []
     labels = list(groups.keys())
     arrays = [groups[k] for k in labels]
     try:
         result = stats.tukey_hsd(*arrays)
-    except Exception:
+    except (ValueError, RuntimeError):
         return []
     out: list[TukeyResult] = []
     pvalues = result.pvalue  # 2D ndarray (n_groups x n_groups)
@@ -359,8 +363,8 @@ def recommend_test(
                     "rationale": "multi_group_normal_equal_variance",
                     "post_hoc": "tukey_hsd",
                 }
-    except Exception:
-        pass
+    except (ImportError, ValueError, RuntimeError) as exc:
+        _LOGGER.warning("recommend_test ANOVA assumption check failed, falling back to Kruskal-Wallis: %s", exc)
     return {
         "test": "kruskal_wallis",
         "n_groups": n_groups,

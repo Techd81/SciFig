@@ -39,7 +39,6 @@ from __future__ import annotations
 import re
 from typing import Any, Optional
 
-import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 
 __all__ = [
@@ -130,7 +129,7 @@ def apply_chart_polish(ax: Any, chart_type: str) -> None:
     """
     spines = getattr(ax, "spines", None)
     is_polar = getattr(ax, "name", "") == "polar" or (
-        hasattr(spines, "__contains__") and "polar" in spines and "top" not in spines
+        spines is not None and "polar" in spines and "top" not in spines
     )
     if not is_polar and spines is not None:
         if "top" in spines:
@@ -418,7 +417,7 @@ def enforce_figure_legend_contract(
         failures.extend(_check_legend_anchor_forbidden(legend))
 
     has_figure_legend = legend is not None
-    legend_frame_applied = bool(has_figure_legend and legend.get_frame() is not None)
+    legend_frame_applied = bool(legend is not None and legend.get_frame() is not None)
 
     # Verify no per-axes legends remain (should always be 0 since we just removed them).
     axis_legend_remaining = sum(1 for ax in axes_map.values() if ax.get_legend() is not None)

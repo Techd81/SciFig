@@ -9,7 +9,6 @@ dose_response — Scatter + 4PL sigmoidal dose-response fit
 from __future__ import annotations
 
 from typing import Any, Optional
-from math import log
 
 import matplotlib.pyplot as plt
 import numpy as np
