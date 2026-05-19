@@ -2,7 +2,7 @@
 
 Expanded chart taxonomy for `scifig-generate`. Use this as the lookup table during Phase 2.
 
-**Status**: ✅ = implemented (121); every registered chart has a dedicated `gen_` implementation.
+**Status**: the registry exposes 121 callable chart keys. Dedicated generator coverage is incremental; generic package fallback is allowed only as a temporary compatibility layer and must not be counted as template-level implementation.
 
 ## Core Quantitative Charts
 
@@ -218,7 +218,7 @@ Expanded chart taxonomy for `scifig-generate`. Use this as the lookup table duri
 
 ## Alias Fallbacks
 
-All registered chart keys are implemented. Keep fallbacks only for non-registry aliases or user wording variants:
+Keep fallbacks only for non-registry aliases, user wording variants, or explicitly tracked compatibility gaps. Promote high-frequency template families into dedicated generators before claiming template-level output:
 
 | Alias | Use |
 |-------|-----|

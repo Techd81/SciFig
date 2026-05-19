@@ -4,11 +4,12 @@
 > This optional maintenance phase contains 8 execution steps.
 > If only this sentinel remains, recover with `Read("phases/05-template-distill.md")`.
 
-Distill reusable visual code and design grammar from `D:/SciFig/template/articles` into the executable `scifig-generate` skill.
+Distill reusable visual code and design grammar from `D:/SciFig/template/**/*.md` into the executable `scifig-generate` skill. The corpus may be indexed in batch, but learning is case-by-case: one complete Markdown file, one replica, one comparison, one distilled promotion.
 
 ## Objective
 
-- Inventory changed or underused article examples.
+- Inventory changed or underused article examples without treating inventory as learning.
+- Study one selected Markdown article deeply before promotion.
 - Classify each finding as a motif, layout recipe, helper primitive, generator, or policy.
 - Promote reusable code into the canonical runtime files instead of growing prompt prose.
 - Keep registry, chart catalog, Phase 2 planning, Phase 3 code generation, and tests aligned.
@@ -29,7 +30,22 @@ Only optimize one or two reusable gaps per cycle. Prefer executable promotions o
 
 ### Step 5.2: Article Inventory
 
-Scan `template/articles/*.md` for Python code fences, Matplotlib APIs, layout APIs, and named visual tricks. Record article filename, code block count, detected chart family, and candidate APIs such as `GridSpec`, `SubGridSpec`, `inset_axes`, `twinx`, `polar`, `contourf`, `gaussian_kde`, `PathPatch`, `FancyBboxPatch`, and custom colormaps.
+Scan `template/**/*.md` for Python code fences, Matplotlib APIs, layout APIs, and named visual tricks. Record article filename, source path, code block count, detected chart family, and candidate APIs such as `GridSpec`, `SubGridSpec`, `inset_axes`, `twinx`, `polar`, `contourf`, `gaussian_kde`, `PathPatch`, `FancyBboxPatch`, and custom colormaps.
+
+This scan is only an index. Before any promotion, select one case from the inventory and follow `template-mining/CASE_LEARNING_PROTOCOL.md`. Do not promote a pattern from aggregate counts alone.
+
+### Step 5.2a: One-Case Learning Gate
+
+For the selected Markdown case:
+
+1. Read the full Markdown file, not only `case-index.json`.
+2. Record image evidence: Markdown image links, alt text, line numbers, available local/remote images, and any fetch limitation.
+3. Record code evidence: every plotting code fence, rcParams, palettes, layout APIs, zorder layers, legend placement, annotation idioms, and export calls.
+4. Create a local replica under ignored `.workflow/case_studies/<case_id>/`; template images and replica outputs are evidence only and are not part of the submitted skill.
+5. Write a gap comparison that states what matched, what could not match, and what the transferable essence is.
+6. Promote only one or two reusable elements from that case into `.claude/skills/scifig-generate`.
+
+The cycle is blocked if no replica or gap comparison exists for the selected case.
 
 ### Step 5.3: Promotion Classification
 
@@ -99,6 +115,8 @@ The generated-script probe is a validation gate: fail the cycle if the probe scr
 Summarize:
 
 - article files mined
+- selected case, source Markdown path, replica path, and comparison path
+- learned essence promoted from the selected case
 - promoted motifs/helpers/generators
 - smoke domains and figure counts
 - files changed
@@ -109,7 +127,7 @@ Autonomous cycles commit tracked skill/package changes after validation. Do not 
 
 ## Output
 
-- **Files**: promoted runtime/helper/generator/spec/test changes
+- **Files**: promoted runtime/helper/generator/spec/test changes under `.claude/skills/scifig-generate`
 - **Variable**: `templateDistillationReport`
 - **TodoWrite**: Mark Phase 5 completed
 

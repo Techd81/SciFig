@@ -175,6 +175,15 @@ def recommend_chart_bundle(dataProfile, workflowPreferences):
         or any(token in cols for token in ("auc", "accuracy", "f1", "r2", "rmse", "mae"))
     )
     profile_tokens = set(cols) | {str(k).lower() for k in roles} | {str(v).lower() for v in roles.values()} | patterns
+    has_path_model_signal = (
+        bool(patterns & {"pls_pm_path_model", "sem_path_model", "path_model_total_effects", "pls_pm", "sem"})
+        or (
+            "mediation_path" in profile_tokens
+            and bool(profile_tokens & {"source", "from"})
+            and bool(profile_tokens & {"target", "to"})
+            and bool(profile_tokens & {"coefficient", "coef", "path_coef", "effect", "edge_weight", "total_effect"})
+        )
+    )
     architecture_tokens = {
         "model_architecture", "neural_architecture", "architecture_diagram",
         "pipeline_topology", "dag_pipeline", "layer", "module", "component",
@@ -186,7 +195,7 @@ def recommend_chart_bundle(dataProfile, workflowPreferences):
     has_architecture_hint = bool(profile_tokens & (architecture_tokens - {"source", "target", "from", "to"}))
     has_model_architecture = (
         bool(patterns & {"model_architecture", "neural_architecture", "architecture_diagram", "pipeline_topology", "dag_pipeline"})
-        or (has_source_target_schema and (domain == "computer_ai_ml" or has_architecture_hint))
+        or (has_source_target_schema and not has_path_model_signal and (domain == "computer_ai_ml" or has_architecture_hint))
         or (
             bool(profile_tokens & {"layer", "module", "component", "block", "node"})
             and (
@@ -317,6 +326,8 @@ def recommend_chart_bundle(dataProfile, workflowPreferences):
         return "training_curve", secondary
     if has_feature_selection_curve:
         return "line", ["grouped_bar", "lollipop_horizontal"]
+    if has_path_model_signal:
+        return "mediation_path", ["diverging_bar"]
     if has_aggregate_classifier_metrics:
         return "grouped_bar", ["line", "lollipop_horizontal"]
     if has_rf_classifier_report and has_classifier_validation_board:
@@ -924,6 +935,133 @@ def infer_template_visual_motifs(charts, dataProfile):
     patterns = set(dataProfile.get("specialPatterns", []))
     tokens = " ".join(columns + [str(v).lower() for v in roles.values()])
     chart_keys = {str(chart or "").replace("+", "_").lower() for chart in charts if chart}
+    has_density_parity_signal = (
+        bool(patterns & {"density_parity_matrix", "kde_parity_matrix", "density_parity_plot", "kde_parity_plot"})
+        or (
+            "scatter_regression" in chart_keys
+            and ("actual" in roles or "observed" in roles or "measured" in roles)
+            and ("predicted" in roles or "prediction" in roles or "fitted" in roles)
+            and any(role in roles for role in ("panel", "facet", "task", "target", "property"))
+            and any(token in tokens for token in ("density", "kde", "flux", "separation"))
+        )
+    )
+    has_time_series_pi_signal = (
+        bool(patterns & {"time_series_pi", "time_series_prediction_interval", "prediction_interval", "train_test_prediction_interval"})
+        or (
+            {"scatter_regression", "line", "line_ci"} & chart_keys
+            and ("actual" in roles or "observed" in roles or "measured" in roles or "true" in roles)
+            and ("predicted" in roles or "prediction" in roles or "fitted" in roles)
+            and any(role in roles for role in ("time", "x", "sample", "sample_index", "index"))
+            and (
+                ("pi_low" in roles and "pi_high" in roles)
+                or ("lower" in roles and "upper" in roles)
+                or ("y_lower" in roles and "y_upper" in roles)
+                or any(token in tokens for token in ("prediction_interval", "interval", "training", "testing"))
+            )
+        )
+    )
+    has_shap_dependence_background_signal = (
+        bool(patterns & {"shap_dependence_background_grid", "shap_background_grid", "shap_dependence_grid", "shap_dependence"})
+        or (
+            ("scatter_regression" in chart_keys or "shap_composite" in chart_keys)
+            and any(role in roles for role in ("feature_id", "feature", "feature_name", "term"))
+            and any(role in roles for role in ("feature_value", "feature_val", "feature_numeric", "x"))
+            and any(role in roles for role in ("shap_value", "shap", "shap_impact", "y"))
+            and any(token in tokens for token in ("shap", "dependence", "background", "positive", "negative"))
+        )
+    )
+    has_shap_interaction_grid_signal = (
+        bool(patterns & {"shap_interaction_dependence_grid", "shap_interaction_grid", "interaction_effect"})
+        or (
+            ("scatter_regression" in chart_keys or "shap_composite" in chart_keys)
+            and any(role in roles for role in ("feature_id", "feature", "feature_name", "term"))
+            and any(role in roles for role in ("feature_value", "feature_val", "feature_numeric", "x"))
+            and any(role in roles for role in ("shap_value", "shap", "shap_impact", "y"))
+            and any(role in roles for role in ("interaction_value", "interaction", "feature_color", "color", "hue"))
+            and any(token in tokens for token in ("shap", "dependence", "interaction", "secondary", "coolwarm"))
+        )
+    )
+    has_shap_bar_pie_summary_signal = (
+        bool(patterns & {"shap_bar_pie_summary_board", "standalone_category_pie", "shap_summary_beeswarm"})
+        or (
+            ("dotplot" in chart_keys or "shap_composite" in chart_keys)
+            and any(role in roles for role in ("feature_id", "feature", "feature_name", "term"))
+            and any(role in roles for role in ("shap_value", "shap", "shap_impact", "value"))
+            and any(role in roles for role in ("feature_value", "feature_val", "feature_numeric", "color", "hue"))
+            and any(role in roles for role in ("category", "feature_group", "class", "descriptor_type"))
+            and any(token in tokens for token in ("pie", "summary", "descriptor", "category", "group"))
+        )
+    )
+    has_dual_axis_hist_cumfreq_signal = (
+        bool(patterns & {"dual_axis_hist_cumfreq_grid", "hist_cumfreq_grid", "cumulative_frequency_grid"})
+        or (
+            "dual_axis" in chart_keys
+            and any(token in tokens for token in ("cumulative", "cumfreq", "frequency", "histogram", "hist", "hpc", "cement", "fly ash", "age", "strength"))
+            and not any(role in roles for role in ("x", "bar", "left_y", "line", "right_y"))
+        )
+    )
+    has_nature_comms_dual_axis_signal = (
+        bool(patterns & {"nature_comms_dual_axis_bar_line", "count_proportion_dual_axis", "dual_axis_color_linked"})
+        or (
+            "dual_axis" in chart_keys
+            and any(role in roles for role in ("x", "bar", "left_y", "line", "right_y"))
+            and any(token in tokens for token in ("count", "counts", "number", "proportion", "ratio", "percentage", "genome", "lysogen"))
+        )
+    )
+    has_lollipop_shap_beeswarm_signal = (
+        bool(patterns & {"lollipop_shap_beeswarm_board", "xgboost_lollipop_shap", "importance_lollipop_shap"})
+        or (
+            "lollipop" in chart_keys
+            and ("shap_composite" in patterns or "shap_value" in roles or any(token in tokens for token in ("shap", "beeswarm")))
+            and ("importance" in roles or "feature_importance" in roles or any(token in tokens for token in ("importance", "gain", "xgboost")))
+        )
+    )
+    has_bipolar_lollipop_ale_signal = (
+        bool(patterns & {"bipolar_lollipop_ale_board", "ale_bipolar_lollipop", "pfi_ale_lollipop"})
+        or (
+            ("lollipop" in chart_keys or "lollipop_horizontal" in chart_keys)
+            and ("importance" in roles or "feature_importance" in roles or "pfi" in roles)
+            and ("ale" in roles or "ale_effect" in roles or "main_effect" in roles or "effect" in roles)
+        )
+    )
+    has_mirror_radial_bar_signal = (
+        bool(patterns & {"mirror_radial_bar_board", "mirror_radial", "mirror_rose", "radial_bar_rose"})
+        or (
+            ("radar" in chart_keys or "polar" in chart_keys)
+            and ("model" in roles or "group" in roles or "label" in roles)
+            and ("original" in roles or "original_features" in roles or "baseline" in roles)
+            and ("simplified" in roles or "simplified_features" in roles or "reduced" in roles)
+            and any(token in tokens for token in ("mirror", "radial", "rose", "pressure", "polar"))
+        )
+    )
+    has_hump_threshold_regression_signal = (
+        bool(patterns & {"hump_threshold_regression", "threshold_hump_regression", "segmented_threshold_regression"})
+        or (
+            "scatter_regression" in chart_keys
+            and ("x" in roles or "feature_value" in roles or "soc" in roles)
+            and ("y" in roles or "value" in roles or "cue" in roles)
+            and any(token in tokens for token in ("hump", "threshold", "breakpoint", "changepoint", "驼峰", "阈值", "soc", "cue"))
+        )
+    )
+    has_bayesian_ridge_heatmap_signal = (
+        bool(patterns & {"bayesian_ridge_heatmap_board", "ridge_heatmap_composite", "bayesian_ridgeline_heatmap"})
+        or (
+            ("ridge" in chart_keys or "ridgeline" in chart_keys or "joyplot" in chart_keys)
+            and ("condition" in roles or "panel" in roles or "soc_group" in roles)
+            and ("factor" in roles or "feature" in roles or "group" in roles)
+            and ("correlation" in roles or "corr" in roles or "r" in roles)
+            and any(token in tokens for token in ("bayesian", "posterior", "ridge", "ridgeline", "heatmap", "soc"))
+        )
+    )
+    has_path_model_signal = (
+        bool(patterns & {"pls_pm_path_model", "sem_path_model", "path_model_total_effects", "pls_pm", "sem"})
+        or (
+            "mediation_path" in chart_keys
+            and bool(({"source", "from"} & set(roles)) or {"source", "from"} & set(columns))
+            and bool(({"target", "to"} & set(roles)) or {"target", "to"} & set(columns))
+            and bool(({"coefficient", "coef", "path_coef", "effect", "edge_weight", "total_effect"} & set(roles)) or {"coefficient", "coef", "path_coef", "effect", "edge_weight", "total_effect"} & set(columns))
+        )
+    )
     motifs = []
     provenance = []
 
@@ -935,9 +1073,57 @@ def infer_template_visual_motifs(charts, dataProfile):
 
     if "prediction_diagnostic" in patterns or ("actual" in roles and "predicted" in roles):
         add("prediction_diagnostic_matrix", "actual_and_predicted_columns")
-        add("joint_marginal_grid", "numeric_actual_predicted_pair")
+        if not has_density_parity_signal and not has_time_series_pi_signal:
+            add("joint_marginal_grid", "numeric_actual_predicted_pair")
         add("density_encoded_scatter", "numeric_xy_pair")
         add("metric_table_in_panel", "metrics_computed_from_actual_predicted")
+    if has_density_parity_signal:
+        add("density_parity_matrix", "panelwise_actual_predicted_density_kde")
+        add("density_encoded_scatter", "numeric_xy_pair")
+        add("metric_table_in_panel", "metrics_computed_from_actual_predicted")
+    if has_time_series_pi_signal:
+        add("time_series_prediction_interval", "time_actual_predicted_prediction_interval_columns")
+        add("interval_uncertainty_band", "provided_prediction_interval_columns")
+        add("train_test_diagnostic", "training_testing_split_or_sequence_boundary")
+    if has_shap_interaction_grid_signal:
+        add("shap_interaction_dependence_grid", "feature_value_shap_value_interaction_columns")
+        add("interaction_color_mapped_scatter", "secondary_feature_color_encoding")
+        add("shap_dependence_grid", "multiple_feature_dependence_panels")
+    if has_shap_bar_pie_summary_signal:
+        add("shap_bar_pie_summary_board", "feature_shap_value_feature_value_category_columns")
+        add("standalone_category_pie", "feature_category_share_panel")
+        add("shap_summary_beeswarm", "feature_value_colored_shap_summary_points")
+    if has_lollipop_shap_beeswarm_signal:
+        add("lollipop_shap_beeswarm_board", "feature_importance_plus_shap_value_columns")
+        add("shared_feature_axis", "importance_and_shap_panels_share_feature_order")
+        add("shap_summary_beeswarm", "feature_value_colored_shap_summary_points")
+    if has_bipolar_lollipop_ale_signal:
+        add("bipolar_lollipop_ale_board", "feature_importance_plus_signed_ale_columns")
+        add("shared_feature_axis", "importance_and_ale_panels_share_feature_order")
+        add("signed_effect_axis", "ale_positive_negative_direction_encoding")
+    if has_mirror_radial_bar_signal:
+        add("mirror_radial_bar_board", "model_condition_original_simplified_columns")
+        add("mirror_radial_bar", "top_bottom_polar_hemisphere_condition_split")
+        add("external_scale_bar", "external_l_shape_scale_axis_for_polar_bars")
+    if has_hump_threshold_regression_signal:
+        add("hump_threshold_regression", "numeric_x_y_threshold_or_hump_cue")
+        add("regression_band_fillbtw", "bootstrap_or_model_confidence_band")
+        add("threshold_split_line", "vertical_threshold_anchor_and_segmented_fits")
+    if has_bayesian_ridge_heatmap_signal:
+        add("bayesian_ridge_heatmap_board", "condition_factor_posterior_draws_plus_correlation")
+        add("ridge_heatmap_composite", "paired_ridge_and_narrow_heatmap_columns")
+        add("inset_heatmap_colorbar", "heatmap_embedded_horizontal_colorbar")
+    if has_dual_axis_hist_cumfreq_signal:
+        add("dual_axis_hist_cumfreq_grid", "wide_numeric_columns_for_distribution_matrix")
+        add("cumulative_frequency_curve", "per_variable_cumulative_frequency_twin_axis")
+        add("multipanel_distribution_matrix", "three_by_three_independent_variable_distribution_grid")
+    if has_nature_comms_dual_axis_signal:
+        add("nature_comms_dual_axis_bar_line", "categorical_count_plus_proportion_columns")
+        add("dual_axis_color_linked", "right_axis_tinted_to_foreground_line")
+    if has_shap_dependence_background_signal and not has_shap_interaction_grid_signal:
+        add("shap_dependence_background_grid", "feature_value_shap_value_feature_panel_columns")
+        add("signed_effect_background", "positive_negative_shap_zone_encoding")
+        add("shap_dependence_grid", "multiple_feature_dependence_panels")
     if (
         "classifier_validation_board" in chart_keys
         or "rf_classifier_report_board" in chart_keys
@@ -968,13 +1154,18 @@ def infer_template_visual_motifs(charts, dataProfile):
         or "neural_architecture" in patterns
         or "pipeline_topology" in patterns
         or any(token in tokens for token in ("layer", "module", "component", "transformer", "attention", "encoder", "decoder"))
-        or (("source" in roles or "from" in roles) and ("target" in roles or "to" in roles))
+        or (
+            not has_path_model_signal
+            and (("source" in roles or "from" in roles) and ("target" in roles or "to" in roles))
+        )
     ):
         add("neural_architecture_topology", "layer_module_or_source_target_topology_columns")
         add("metric_table_in_panel", "module_count_edge_count_or_parameter_summary")
         if "model_architecture_board" in chart_keys or any(token in tokens for token in ("latency", "flops", "memory", "throughput", "cost", "edge_weight", "params", "parameters")):
             add("architecture_metric_dashboard", "edge_or_module_metric_columns")
             add("architecture_metric_storyboard", "architecture_plus_metric_support_axes")
+    if has_path_model_signal:
+        add("pls_pm_path_model", "pls_pm_or_sem_source_target_coefficient_edges")
     if "model_error_diagnostic" in patterns or any(token in tokens for token in ("rmse", "mae", "percent_error", "percentage_error", "error_pct")):
         add("dual_axis_error_sidecar", "error_metric_column_or_computable_residuals")
     if "ml_explainability" in patterns or "feature_importance" in patterns or "shap_value" in roles or "importance" in roles:
@@ -999,7 +1190,7 @@ def infer_template_visual_motifs(charts, dataProfile):
         "requiresMarginalAxes": "joint_marginal_grid" in motifs,
         "requiresDensityColor": "density_encoded_scatter" in motifs,
         "requiresColorbarSlot": "correlation_evidence_matrix" in motifs,
-        "requiresMultiAxis": "dual_axis_error_sidecar" in motifs,
+        "requiresMultiAxis": "dual_axis_error_sidecar" in motifs or "dual_axis_hist_cumfreq_grid" in motifs,
     }
 
 
@@ -1182,6 +1373,59 @@ def resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreference
     feature_selection_tokens = {"n_features", "top_k", "feature_count", "ablation", "feature_selection", "incremental_feature_selection"}
     training_curve_tokens = {"epoch", "learning_curve", "training_curve", "training_history", "train_loss", "training_loss", "val_loss", "validation_loss", "val_accuracy"}
     architecture_tokens = {"model_architecture", "model_architecture_board", "neural_architecture", "architecture_diagram", "pipeline_topology", "dag_pipeline", "layer", "module", "component", "block", "node", "source", "target", "params", "parameters", "units", "channels", "heads", "attention", "transformer", "encoder", "decoder"}
+    path_model_tokens = {"pls_pm_path_model", "sem_path_model", "path_model_total_effects", "pls_pm", "sem"}
+    has_path_model_signal = (
+        bool(profile_tokens & path_model_tokens)
+        or (
+            "mediation_path" in normalized
+            and bool(profile_tokens & {"source", "from"})
+            and bool(profile_tokens & {"target", "to"})
+            and bool(profile_tokens & {"coefficient", "coef", "path_coef", "effect", "edge_weight", "total_effect"})
+        )
+    )
+    density_parity_tokens = {"density_parity_matrix", "kde_parity_matrix", "density_parity_plot", "kde_parity_plot"}
+    has_density_parity_signal = (
+        bool(profile_tokens & density_parity_tokens)
+        or (
+            "scatter_regression" in normalized
+            and bool(profile_tokens & {"actual", "observed", "measured"})
+            and bool(profile_tokens & {"predicted", "prediction", "fitted"})
+            and bool(profile_tokens & {"panel", "facet", "task", "target", "property"})
+            and bool(profile_tokens & {"density", "kde", "flux", "separation"})
+        )
+    )
+    time_series_pi_tokens = {"time_series_pi", "time_series_prediction_interval", "prediction_interval", "train_test_prediction_interval"}
+    has_time_series_pi_signal = (
+        bool(profile_tokens & time_series_pi_tokens)
+        or (
+            bool(normalized & {"scatter_regression", "line", "line_ci"})
+            and bool(profile_tokens & {"actual", "observed", "measured", "true"})
+            and bool(profile_tokens & {"predicted", "prediction", "fitted"})
+            and bool(profile_tokens & {"time", "x", "sample", "sample_index", "index"})
+            and bool(profile_tokens & {"pi_low", "pi_high", "lower", "upper", "y_lower", "y_upper", "interval", "training", "testing"})
+        )
+    )
+    shap_dependence_background_tokens = {"shap_dependence_background_grid", "shap_background_grid", "shap_dependence_grid", "shap_dependence"}
+    has_shap_dependence_background_signal = (
+        bool(profile_tokens & shap_dependence_background_tokens)
+        or (
+            bool(normalized & {"scatter_regression", "shap_composite"})
+            and bool(profile_tokens & {"feature_id", "feature", "feature_name", "term"})
+            and bool(profile_tokens & {"feature_value", "feature_val", "feature_numeric", "x"})
+            and bool(profile_tokens & {"shap_value", "shap", "shap_impact", "y"})
+        )
+    )
+    shap_interaction_grid_tokens = {"shap_interaction_dependence_grid", "shap_interaction_grid", "interaction_effect"}
+    has_shap_interaction_grid_signal = (
+        bool(profile_tokens & shap_interaction_grid_tokens)
+        or (
+            bool(normalized & {"scatter_regression", "shap_composite"})
+            and bool(profile_tokens & {"feature_id", "feature", "feature_name", "term"})
+            and bool(profile_tokens & {"feature_value", "feature_val", "feature_numeric", "x"})
+            and bool(profile_tokens & {"shap_value", "shap", "shap_impact", "y"})
+            and bool(profile_tokens & {"interaction_value", "interaction", "feature_color", "color", "hue"})
+        )
+    )
     has_ml_signal = domain_hint == "computer_ai_ml" or bool(profile_tokens & ml_tokens)
     has_feature_selection_signal = bool(profile_tokens & feature_selection_tokens)
     has_training_curve_signal = bool(profile_tokens & training_curve_tokens)
@@ -1207,6 +1451,7 @@ def resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreference
         "heatmap_symmetric": "heatmap_pairwise",
         "correlation": "heatmap_pairwise",
         "bubble_matrix": "heatmap_pairwise",
+        "mediation_path": "pls_pm_path_model",
         "radar": "radar",
         "biodiversity_radar": "radar",
         "forest": "forest",
@@ -1225,6 +1470,7 @@ def resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreference
     technique_by_family = {
         "marginal_joint": "template-mining/07-techniques/marginal-joint.md",
         "density_scatter": "template-mining/07-techniques/marginal-joint.md",
+        "density_parity_matrix": "template-mining/07-techniques/density-parity-matrix.md",
         "ml_model_diagnostics": "template-mining/07-techniques/ml-model-diagnostics.md",
         "shap_composite": "template-mining/07-techniques/shap-composite.md",
         "heatmap_pairwise": "template-mining/07-techniques/heatmap-pairwise.md",
@@ -1233,6 +1479,7 @@ def resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreference
         "time_series_pi": "template-mining/07-techniques/time-series-pi.md",
         "gradient_box": "template-mining/07-techniques/gradient-box.md",
         "inset_distribution": "template-mining/07-techniques/inset-distribution.md",
+        "pls_pm_path_model": "template-mining/07-techniques/pls-pm-path-model.md",
     }
     anchor_by_family = {
         "ml_model_diagnostics": [
@@ -1251,6 +1498,16 @@ def resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreference
     families = list(selected_bundle.get("templateFamilies") or [])
     for chart in sorted(normalized):
         family = family_map.get(chart)
+        if chart == "scatter_regression" and has_density_parity_signal:
+            family = "density_parity_matrix"
+        if chart == "scatter_regression" and has_time_series_pi_signal:
+            family = "time_series_pi"
+        if chart == "scatter_regression" and has_shap_dependence_background_signal:
+            family = "shap_composite"
+        if chart == "scatter_regression" and has_shap_interaction_grid_signal:
+            family = "shap_composite"
+        if family == "pls_pm_path_model" and not has_path_model_signal:
+            continue
         if family == "ml_model_diagnostics" and chart in {"line", "grouped_bar"} and not (selected_bundle or has_ml_signal or has_feature_selection_signal or has_training_curve_signal or has_architecture_signal):
             continue
         if family and family not in families:
@@ -1283,7 +1540,11 @@ def resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreference
     inferred_bundle_key = selected_bundle.get("bundleKey")
     if not inferred_bundle_key:
         chart_set = set(normalized)
-        if "ml_model_diagnostics" in families and "model_architecture_board" in chart_set:
+        if "density_parity_matrix" in families:
+            inferred_bundle_key = "density_parity_matrix"
+        elif "pls_pm_path_model" in families:
+            inferred_bundle_key = "pls_pm_path_model"
+        elif "ml_model_diagnostics" in families and "model_architecture_board" in chart_set:
             inferred_bundle_key = "neural_architecture_metric_storyboard"
         elif "ml_model_diagnostics" in families and "rf_classifier_report_board" in chart_set:
             inferred_bundle_key = "rf_classifier_validation_report"
@@ -1327,6 +1588,8 @@ def resolve_template_case_plan(primaryChart, secondaryCharts, workflowPreference
             "when_probability_label_or_threshold_columns_exist_clone_classifier_validation_board",
             "when_architecture_metric_columns_exist_clone_architecture_metric_storyboard",
             "when_layer_module_or_source_target_columns_exist_clone_neural_architecture_topology",
+            "when_pls_pm_or_sem_source_target_coefficient_edges_exist_clone_pls_pm_path_model",
+            "when_panelwise_density_or_kde_parity_columns_exist_clone_density_parity_matrix",
         ],
     }
 

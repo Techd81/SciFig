@@ -81,7 +81,7 @@ def add_group_stat_annotation(
     mode: str,
 ) -> list[str]:
     """Annotate a two-group comparison with a Mann-Whitney p-value bracket."""
-    if mode == "none" or not group_col or not value_col:
+    if mode in {"none", "descriptive", "descriptive_only"} or not group_col or not value_col:
         return []
     if group_col not in df.columns or value_col not in df.columns:
         return []
@@ -269,9 +269,13 @@ def fdr_bh(pvalues: Iterable[float], *, alpha: float = 0.05) -> dict[str, Any]:
     - ``alpha``    : float       - the alpha threshold used
     - ``n``        : int         - number of input p-values
     """
+    if not np.isfinite(alpha) or not 0 < alpha <= 1:
+        raise ValueError("alpha must be finite and in the interval (0, 1].")
     p = np.asarray(list(pvalues), dtype=float)
     if p.size == 0:
         return {"adjusted": [], "reject": [], "alpha": alpha, "n": 0}
+    if not np.all(np.isfinite(p)) or np.any((p < 0) | (p > 1)):
+        raise ValueError("p-values must be finite numbers in the interval [0, 1].")
     n = p.size
     # Order p-values ascending; remember original positions so we can unsort.
     order = np.argsort(p, kind="mergesort")

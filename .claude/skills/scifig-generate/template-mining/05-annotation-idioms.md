@@ -1,30 +1,32 @@
 # In-axes Annotation Idioms
 
-The annotation patterns used **inside** plot axes across the 77 cases. These are the "顶刊感" multipliers that turn a base chart into an evidence layer. Phase 3 should apply at least 2-3 of these per chart family.
+The annotation patterns used **inside** plot axes across the 94-case template corpus. These are the "顶刊感" multipliers that turn a base chart into an evidence layer. Phase 3 should apply at least 2-3 of these per chart family.
 
-## Frequency table (regex-verified, n=77)
+## Frequency table (regex-verified, n=94)
 
 | Idiom | Cases | Phase 3 priority |
 |---|---|---|
 | `alpha_layered_scatter` (alpha + zorder ≥ 2 layers) | 24 | universal — always |
 | `group_divider_axvline` (dashed gray group splits) | 14 | bar/dual-axis with category groups |
-| `density_color_scatter` (KDE-derived c=) | 14 | scatter with > 12 points |
+| `feature_group_bracket` (dashed bracket spanning ranked features) | 1 | SHAP/importance bars with physical feature groups |
+| `density_color_scatter` (KDE-derived c=) | 16 | scatter with > 12 points |
 | `raincloud_combo` (jitter + box + half-violin) | 13 | distribution comparison |
-| `metric_text_box` (R²/RMSE in transAxes box) | 9 | predicted-vs-actual scatter |
+| `metric_text_box` (R²/RMSE in transAxes box) | 12 | predicted-vs-actual scatter |
+| `inset_metric_table` (RMSE/MAE/time table in inset axes) | 1 | parity scatter inside ML evidence boards |
 | `axes_inset_overlay` | 8 | hero panel needs zoom/distribution |
 | `dotted_zero_axhline` (zero ref for ALE/diff) | 8 | ALE / SHAP / differential |
-| `pvalue_stars_overlay` | 7 | comparison with supplied p-values |
-| `colored_marker_edge` (`edgecolor='white'`) | 7 | scatter with color encoding |
-| `twin_axes_color_spines` | 6 | dual-axis combo |
-| `error_band_fill_between` (alpha 0.15–0.4) | 5 | regression / time-series PI |
-| `marginal_axes_grid` (top/right marginals) | 5 | density scatter + diagnostic |
+| `pvalue_stars_overlay` | 9 | comparison with supplied p-values |
+| `colored_marker_edge` (`edgecolor='white'`) | 8 | scatter with color encoding |
+| `twin_axes_color_spines` | 7 | dual-axis combo |
+| `error_band_fill_between` (alpha 0.15–0.4) | 6 | regression / time-series PI |
+| `marginal_axes_grid` (top/right marginals) | 6 | density scatter + diagnostic |
 | `category_split_dashed` | 4 | grouped bars |
 | `dual_y_bar_line` (bar on left axis, line on right) | 4 | dual-axis combo |
 | `imshow_gradient_box` (gradient fill via imshow) | 4 | gradient box plot |
 | `ridgeline_offset_kde` | 2 | distribution stack |
-| `upper_triangle_split` | 2 | n×n pairwise matrix |
-| `perfect_fit_diagonal` (`y=x` dashed ref) | 2 (regex narrow; visual ≥ 20) | predicted-vs-actual |
-| `polygon_polar_grid` (replace circular polar grid) | 2 | hero radar |
+| `upper_triangle_split` | 4 | n×n pairwise matrix |
+| `perfect_fit_diagonal` (`y=x` dashed ref) | 3 (regex narrow; visual ≥ 20) | predicted-vs-actual |
+| `polygon_polar_grid` (replace circular polar grid) | 3 | hero radar |
 
 > The `perfect_fit_diagonal` regex narrowly matches one form; visual inspection of the corpus shows ~20 cases use this pattern with various syntaxes (`np.linspace(min, max)`, `[0, lim]`, `xlim`, etc.). When implementing, always include the diagonal for predicted-vs-actual scatter.
 
@@ -50,6 +52,28 @@ ax.text(0.05, 0.95, metric_lines,
 - Bottom-right `(0.95, 0.05)` when both top corners are busy
 
 **Multi-line discipline:** at most 4 lines; use `\n`. Math via `$...$`. Never put the legend inside this box.
+
+**Sparse Nature variant:** Case-008 GAM diagnostic uses bold italic `R^2`
+directly in `transAxes` without a bbox. Use this only when the surrounding panel
+is sparse enough that the text does not need a white safety box.
+
+**Distance-decay grouped formula variant:** Case-067 writes one colored formula
+line per group, for example `WDP: y = ..., R^2 = ..., p < ...`, directly in
+`transAxes` without a bbox. Use this only for grouped ecological
+distance-decay/regression panels where the formula color matches the fit line
+and text is placed away from the densest low-alpha scatter cloud.
+
+**External red metric-panel variant:** Case-058 uses
+`patches.Rectangle((1.02, 0.35), 0.25, 0.55, transform=ax.transAxes,
+clip_on=False)` plus R2/RMSE text outside the data rectangle. Use only when the
+main axes is a dense sample-index Actual/Predicted overlay and right margin is
+explicitly reserved by layout. Keep `clip_on=False`, place the panel beyond
+x=1.0, and never let the finalizer pull it back into the data cloud.
+
+**Inset table variant:** Case-065 uses `ax.inset_axes([0.5, 0.05, 0.45, 0.15])`
+inside a parity scatter to attach RMSE, MAE, and runtime directly to the model
+fit evidence. Keep the inset axes off, use a table header with a contrasting
+background, and reserve the lower-right data region before placing the table.
 
 Anchor: `Python科研绘图：一行代码实现 R² + 95% 置信区间的高级散点图`, `复现 Nature_Python 绘制广义相加模型(GAM)`.
 
@@ -94,6 +118,34 @@ for x_center, label in [(1.5, 'Family A'), (5.5, 'Family B'), (9.0, 'Family C')]
 ```
 
 Anchor: `如何用Python绘制教科书级的双Y轴组合图`, `期刊复现：双Y轴分组柱状与折线组合图`.
+
+---
+
+## I3b — Feature group brackets (`feature_group_bracket`)
+
+Dashed bracket lines that span several adjacent ranked feature rows, used when a
+SHAP or importance lane needs physical groups such as structure descriptors,
+adsorbent descriptors, reaction conditions, or porous properties.
+
+```python
+def add_feature_group_bracket(ax, y0, y1, label, *, x=-0.04, width=0.025):
+    trans = ax.get_yaxis_transform()
+    ax.plot([x, x - width, x - width, x], [y0, y0, y1, y1],
+            transform=trans, color='0.35', lw=0.9, ls='--',
+            clip_on=False, zorder=6)
+    ax.text(x - width * 1.4, (y0 + y1) / 2, label, transform=trans,
+            ha='right', va='center', fontsize=8, color='0.25',
+            clip_on=False, zorder=7)
+```
+
+Discipline:
+
+- Bracket ranges must come from supplied `feature_group` metadata or an explicit
+  merge rule; do not infer categories from feature names alone.
+- Keep brackets outside the bar marks and reserve left margin so labels do not
+  collide with y tick labels.
+- For SHAP composites, bracket rows must follow the same feature order used by
+  the beeswarm lane.
 
 ---
 

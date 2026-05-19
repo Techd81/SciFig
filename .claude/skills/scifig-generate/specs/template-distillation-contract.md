@@ -1,6 +1,6 @@
 # Template Distillation Contract
 
-This contract governs how `template/articles` examples become executable `scifig-generate` behavior.
+This contract governs how `template/**/*.md` examples become executable `scifig-generate` behavior.
 
 ## Promotion Rules
 
@@ -20,6 +20,8 @@ This contract governs how `template/articles` examples become executable `scifig
 14. **Template-mining helpers reachability is mandatory.** The runtime assembly in `phases/03-code-gen-style.md` Step 3.6 must embed `phases/code-gen/template_mining_helpers.py` source into the generated script BEFORE `helpers.py` and BEFORE generator function bodies. The `codeReview.embeddedTemplateMiningHelpersPresent` gate must remain `True` for every generated script. Adding a new chart family without updating that embedding is a contract violation.
 15. **Generator → template-mining helper binding is mandatory.** Each chart family with a `template-mining/07-techniques/<family>.md` deep-dive must have its `gen_<family>` generator call the corresponding canonical template_mining_helpers API. The static binding map (Section "Generator Binding Contract" below) must be honored; any new generator added to `registry.py` for a family with a deep-dive doc must wire the canonical helper before the cycle report is accepted.
 16. **Palette routing must be chart-family aware.** `build_palette_plan` in `phases/02-recommend-stats.md` must contain explicit branches for chart families anchored to specific palettes (radar→`nature_radar_dual`/`morandi_sci_4`, forest→`npg_4`, heatmap_pairwise→`red_blue_correlation`, shap_composite→`cool_summer_4`, etc.). Adding a new chart family with a palette-bank anchor without adding the matching `build_palette_plan` branch is a contract violation.
+17. **Case-by-case learning is mandatory.** Batch extraction, frequency tables, and generated manifests are only discovery aids. A pattern can be promoted only after one complete Markdown case has a study record: full Markdown read, image/code evidence ledger, local replica, gap comparison, and explicit transferable essence.
+18. **Scope is skill-local.** Committable distillation changes belong under `.claude/skills/scifig-generate`. The local `template/` corpus, `.workflow/` case studies, root `examples/`, root `scripts/`, and root `docs/` are evidence or scratch space and must not be required as submitted skill payload unless the user explicitly widens scope.
 
 ## Generator Binding Contract
 
@@ -35,7 +37,7 @@ Polygon dashed grid replaces matplotlib's default circular polar grid (Nature Vo
 
 | Chart family          | Registered generator           | Required template_mining_helpers calls                           | Deep-dive reference        |
 |-----------------------|--------------------------------|------------------------------------------------------------------|-----------------------------|
-| `radar`               | `gen_radar`                    | `add_polygon_polar_grid`                                          | `07-techniques/radar.md`   |
+| `radar`               | `gen_radar`                    | `add_polygon_polar_grid`; optional case-001 helpers `add_hollow_polar_center`, `add_polar_spoke_tick_labels`, `scatter_glass_markers`; `draw_mirror_radial_bar_board` (Case-023 mirror radial rose) | `07-techniques/radar.md`   |
 | `biodiversity_radar`  | `gen_biodiversity_radar`       | `add_polygon_polar_grid`                                          | `07-techniques/radar.md`   |
 
 ### Forest / CI family
@@ -43,7 +45,7 @@ One-call forest discipline: dashed reference line + asymmetric CI whiskers + per
 
 | Chart family          | Registered generator           | Required template_mining_helpers calls                           | Deep-dive reference                 |
 |-----------------------|--------------------------------|------------------------------------------------------------------|-------------------------------------|
-| `forest`              | `gen_forest`                   | `add_forest_panel`                                                | `02-zorder-recipes.md § forest`     |
+| `forest`              | `gen_forest`                   | `add_forest_panel` + `resolve_forest_model_style_map` (faceted HR board) | `02-zorder-recipes.md § forest`, `07-techniques/forest-hr-facet.md` |
 | `caterpillar_plot`    | `gen_caterpillar_plot`         | `add_forest_panel` (linear scale, reference_line=0)               | `02-zorder-recipes.md § forest`     |
 | `risk_ratio_plot`     | `gen_risk_ratio_plot`          | `add_forest_panel` (log scale, reference_line=1)                  | `02-zorder-recipes.md § forest`     |
 | `ci_plot`             | `gen_ci_plot`                  | `add_forest_panel` (linear scale, reference_line=0)               | `02-zorder-recipes.md § forest`     |
@@ -78,8 +80,20 @@ Dashed/solid y=0 (or x=0) anchor for residual / fold-change / waterfall / diverg
 | `diverging_bar`       | `gen_diverging_bar`            | `add_zero_reference` (axis='x')                                   | `05-annotation-idioms.md § I4`       |
 | `likert_divergent`    | `gen_likert_divergent`         | `add_zero_reference` (axis='x')                                   | `05-annotation-idioms.md § I4`       |
 | `decision_curve`      | `gen_decision_curve`           | `add_zero_reference` (axis='y', "Treat none" reference)           | `05-annotation-idioms.md § I4`       |
-| `lollipop_horizontal` | `gen_lollipop_horizontal`      | `add_zero_reference` (axis='x', SHAP signed-value divider)        | `07-techniques/shap-composite.md`    |
-| `dotplot`             | `gen_dotplot`                  | `add_zero_reference` (axis='x', SHAP composite divider)           | `07-techniques/shap-composite.md`    |
+| `lollipop_horizontal` | `gen_lollipop_horizontal`      | `add_zero_reference` (axis='x', SHAP signed-value divider) + `draw_bipolar_lollipop_ale_board` (Case-022 PFI + signed ALE pair) | `07-techniques/lollipop-bipolar.md`  |
+| `dotplot`             | `gen_dotplot`                  | `add_zero_reference` (axis='x', SHAP composite divider) + `draw_shap_bar_beeswarm_inset_pie` (Case-010 SHAP board) + `draw_shap_bar_pie_summary_board` (Case-019 standalone-pie SHAP board) + `draw_lollipop_shap_beeswarm_board` (Case-021 XGBoost lollipop + SHAP board) | `07-techniques/shap-composite.md`    |
+
+### Distribution / Ridgeline family
+| Chart family          | Registered generator           | Required template_mining_helpers calls                           | Deep-dive reference                  |
+|-----------------------|--------------------------------|------------------------------------------------------------------|--------------------------------------|
+| `ridge`               | `gen_ridge`                    | `draw_bayesian_ridge_heatmap_board` (Case-025 Bayesian ridge + heat strip composite) | `07-techniques/ridgeline-heatmap.md` |
+
+### Path / SEM family
+Directed topology with signed path coefficients, significance labels, and a total-effect inset.
+
+| Chart family          | Registered generator           | Required template_mining_helpers calls                           | Deep-dive reference                  |
+|-----------------------|--------------------------------|------------------------------------------------------------------|--------------------------------------|
+| `mediation_path`      | `gen_mediation_path`           | `draw_pls_pm_path_model` (PLS-PM/SEM edge table branch)           | `07-techniques/pls-pm-path-model.md` |
 
 ### Scatter regression floor family
 L0 floor: light dashed grid + despine, applied BEFORE drawing scatter so the grid sits at zorder=0.
@@ -87,7 +101,7 @@ L0 floor: light dashed grid + despine, applied BEFORE drawing scatter so the gri
 
 | Chart family          | Registered generator           | Required template_mining_helpers calls                           | Deep-dive reference                                |
 |-----------------------|--------------------------------|------------------------------------------------------------------|----------------------------------------------------|
-| `scatter_regression`  | `gen_scatter_regression`       | `apply_scatter_regression_floor` + `add_perfect_fit_diagonal` (when prediction) | `02-zorder-recipes.md § scatter-regression`         |
+| `scatter_regression`  | `gen_scatter_regression`       | `apply_scatter_regression_floor` + `add_perfect_fit_diagonal` (when prediction) + `resolve_method_style_map` (CEJ adsorption board) + `resolve_parity_split_style_map` (parity CI matrix) + `resolve_gam_residual_style_map` (GAM residual board) + `draw_inset_raincloud` (main+inset residual raincloud) + `draw_density_parity_matrix` (Case-015 2D-KDE parity matrix) + `draw_time_series_prediction_interval` (Case-016 train/test PI series) + `draw_shap_dependence_background_grid` (Case-017 SHAP signed-zone grid) + `draw_shap_interaction_dependence_grid` (Case-018 SHAP interaction color grid) + `draw_hump_threshold_regression` (Case-024 threshold hump) | `02-zorder-recipes.md § scatter-regression`, `07-techniques/inset-distribution.md`, `07-techniques/density-parity-matrix.md`, `07-techniques/time-series-pi.md`, `07-techniques/shap-composite.md`, `07-techniques/threshold-regression.md` |
 | `dose_response`       | `gen_dose_response`            | `apply_scatter_regression_floor`                                  | `02-zorder-recipes.md § scatter-regression`         |
 | `scale_location`      | `gen_scale_location`           | `apply_scatter_regression_floor`                                  | `02-zorder-recipes.md § scatter-regression`         |
 
@@ -96,7 +110,7 @@ L0 floor: light dashed grid + despine, applied BEFORE drawing scatter so the gri
 | Chart family          | Registered generator           | Required template_mining_helpers calls                           | Deep-dive reference                                |
 |-----------------------|--------------------------------|------------------------------------------------------------------|----------------------------------------------------|
 | `marginal_joint`      | (via `gen_scatter_regression`) | `density_color_scatter` + `add_perfect_fit_diagonal` + marginal axes setup | `07-techniques/marginal-joint.md`                  |
-| `dual_axis`           | (axis pair generator)          | `apply_zorder_recipe('dual_axis', ...)` + corpus-anchored color spines      | `07-techniques/dual-axis.md`                       |
+| `dual_axis`           | `gen_dual_axis`                | `draw_textbook_dual_axis_bar_line` (Case-012 bar+spline + Case-026 count/proportion color-linked variant) + `draw_dual_axis_hist_cumfreq_grid` (Case-020 3x3 hist+cumulative grid) | `07-techniques/dual-axis.md`                       |
 | `shap_composite`      | (via composite board)          | `add_zero_reference` + `add_group_dividers` + bipolar palette               | `07-techniques/shap-composite.md`                  |
 
 ### Static-scan probe (autonomous cycle requirement)
@@ -117,10 +131,12 @@ SOURCE_FILES = [
 ]
 BINDINGS = {
     # Polar / Radar family
-    "gen_radar":              ["add_polygon_polar_grid"],
+    "gen_radar":              ["add_polygon_polar_grid", "add_hollow_polar_center",
+                               "add_polar_spoke_tick_labels", "scatter_glass_markers",
+                               "draw_mirror_radial_bar_board"],
     "gen_biodiversity_radar": ["add_polygon_polar_grid"],
     # Forest / CI family
-    "gen_forest":             ["add_forest_panel"],
+    "gen_forest":             ["add_forest_panel", "resolve_forest_model_style_map"],
     "gen_caterpillar_plot":   ["add_forest_panel"],
     "gen_risk_ratio_plot":    ["add_forest_panel"],
     "gen_ci_plot":            ["add_forest_panel"],
@@ -140,10 +156,27 @@ BINDINGS = {
     "gen_diverging_bar":      ["add_zero_reference"],
     "gen_likert_divergent":   ["add_zero_reference"],
     "gen_decision_curve":     ["add_zero_reference"],
-    "gen_lollipop_horizontal": ["add_zero_reference"],
-    "gen_dotplot":            ["add_zero_reference"],
+    "gen_lollipop_horizontal": ["add_zero_reference",
+                                "draw_bipolar_lollipop_ale_board"],
+    "gen_dotplot":            ["add_zero_reference", "draw_shap_bar_beeswarm_inset_pie",
+                               "draw_shap_bar_pie_summary_board",
+                               "draw_lollipop_shap_beeswarm_board",
+                               "draw_bubble_correlation_matrix"],
+    "gen_ridge":              ["draw_bayesian_ridge_heatmap_board"],
+    # Dual-axis family
+    "gen_dual_axis":          ["draw_textbook_dual_axis_bar_line",
+                               "draw_dual_axis_hist_cumfreq_grid"],
+    # Path / SEM family
+    "gen_mediation_path":     ["draw_pls_pm_path_model"],
     # Scatter regression floor family
-    "gen_scatter_regression": ["apply_scatter_regression_floor", "add_zero_reference"],
+    "gen_scatter_regression": ["apply_scatter_regression_floor", "add_zero_reference",
+                               "resolve_method_style_map", "resolve_parity_split_style_map",
+                               "resolve_gam_residual_style_map", "draw_inset_raincloud",
+                               "draw_density_parity_matrix",
+                               "draw_time_series_prediction_interval",
+                               "draw_shap_dependence_background_grid",
+                               "draw_shap_interaction_dependence_grid",
+                               "draw_hump_threshold_regression"],
     "gen_dose_response":      ["apply_scatter_regression_floor"],
     "gen_scale_location":     ["apply_scatter_regression_floor"],
 }

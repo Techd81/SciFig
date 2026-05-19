@@ -1,6 +1,6 @@
 # 实战色谱库 (Palette Bank)
 
-Palettes harvested from the 77 reference cases. **Every palette here is anchored to specific case files** — Phase 3 binds palette names to actual hex codes via this file rather than inventing colors.
+Palettes harvested from the 94-case template corpus. **Every palette here is anchored to specific case files** — Phase 3 binds palette names to actual hex codes via this file rather than inventing colors.
 
 ## How to use
 
@@ -58,6 +58,31 @@ Source: `绝美！Nature 这张雷达图_1777449664`. **Two-condition contrast**
 
 Source aggregate: `期刊复现：多面板回归预测散点图`, `期刊配图复现 _ Python绘制机器学习"预测-实验"对比图`. Use for: 2-4 model comparison bars/lines, multi-condition box plots, NMDS group colors.
 
+### `nature_gam_residual_3` (Nature GAM relationship/residual)
+
+```python
+[
+    "#B0B0B0",   # Non / background
+    "#5FA896",   # Adj / adjacent expected links
+    "#FBC15E",   # In / hidden positive residual links
+]
+```
+
+Source: `复现 Nature _ Python 绘制广义相加模型 (GAM) 拟合与残差诊断组合图`. Use for: log-log relationship + residual anomaly panels where the same classes must stay connected across both axes.
+
+### `mgea_true_pred_green_orange` (MGEA true/predicted inset-raincloud)
+
+```python
+[
+    "#FFA500",   # true / observed square line
+    "#008000",   # predicted circle line + residual raincloud
+]
+```
+
+Source: `复现顶刊 _ Python绘制“主图+嵌入雨云图”组合，完美展示模型泛化能力`.
+Use for: 1x2 material/system prediction trajectory boards where residual
+stability is encoded as an inset raincloud.
+
 ### `cej_vibrant_3` (CEJ density panels)
 
 ```python
@@ -70,6 +95,18 @@ Source aggregate: `期刊复现：多面板回归预测散点图`, `期刊配图
 
 Source: `Python复现顶刊CEJ_拒绝手绘`. Use for: 3-condition density scatter when contrast is the priority.
 
+Case-002 method semantics:
+
+| Method role | Color | Marker | Layer |
+|---|---|---|---|
+| OR/support model | `#00CED1` | filled triangle + line | middle |
+| IL/focal model | `#FF0000` | filled circle + line | upper-middle |
+| Experiment/observed | `#1E90FF` | hollow circle | top |
+| GCMC/simulation | `#111111` | hollow circle | top |
+
+Use `resolve_method_style_map(..., variant="cej_adsorption")` instead of
+hand-coding this mapping inside generators.
+
 ### `cell_high_contrast_6` (Cell scatter+bar, ScRNA UMAP)
 
 ```python
@@ -79,7 +116,11 @@ Source: `Python复现顶刊CEJ_拒绝手绘`. Use for: 3-condition density scatt
 ]
 ```
 
-Source: `高级感！Python复刻Cell顶刊散点柱状图`. Use for: 5-6 categorical groups when journal expects bold contrast.
+Source: `高级感！Python复刻Cell顶刊散点柱状图`. Use for Cell-style
+marker bar-scatter and scRNA/marker categories when journal expects bold
+contrast.  Pair the saturated fills with black bar/point edges; the palette is
+not enough without the non-uniform x-gap and top dorsal/ventral grouping rules
+from `07-techniques/cell-marker-bar-scatter.md`.
 
 ### `materials_porosity_terracotta` (Materials Today double-axis)
 
@@ -118,6 +159,36 @@ Sources: `拒绝默认配色：Python 绘制多模型性能对比图`, several S
 ```
 
 Source: `Python科研绘图复现_绘制多面板分组森林图`. Use for: 4-cohort HR forest, 4-method box plots.
+Case-003 Model semantics: Model 1 -> `#8DA0CB`, Model 2 -> `#FC8D62`,
+Model 3 -> `#66C2A5`; use `resolve_forest_model_style_map(...,
+variant="nature_hr_adjustment")` so adjustment tiers stay stable across facets.
+
+### `spt_parity_2` (Parity train/test CI matrix)
+
+```python
+[
+    "#313695",   # Training dark blue
+    "#A50026",   # Testing dark red
+]
+```
+
+Source: `Python科研绘图：一行代码实现 R² + 95% 置信区间的高级散点图`.
+Use `resolve_parity_split_style_map(..., variant="spt_train_test")` so
+Training/Testing hollow markers, regression lines, and CI bands share the same
+split color.
+
+Nested marginal-joint model matrix variant:
+
+```python
+[
+    "#d62728",   # train
+    "#1f77b4",   # test
+]
+```
+
+Source: `Python绘图实战：基于GridSpec构建多面板回归预测与边缘分布组合图`.
+Use `resolve_parity_split_style_map(..., variant="nested_marginal_joint")` so
+train/test colors stay synchronized across main scatter and marginal KDE axes.
 
 ### `tableau10_classic` (matplotlib default — fall-back only)
 
@@ -129,15 +200,15 @@ Source: `Python科研绘图复现_绘制多面板分组森林图`. Use for: 4-co
 ]
 ```
 
-Most-frequent hex `#1F77B4` (10/77 cases). Use only when 6+ groups required and no other palette fits; otherwise prefer the named muted variants above.
+Most-frequent hex `#1F77B4` (11/94 cases). Use only when 6+ groups required and no other palette fits; otherwise prefer the named muted variants above.
 
 ---
 
 ## 2. Sequential palettes (continuous magnitude)
 
-### `viridis` (8/77 cases — most-used cmap)
+### `viridis` (9/94 cases — most-used cmap)
 
-For density-colored scatter, SHAP feature value low→high, importance gradient. **Always with `edgecolor='white'` on markers** when overlaying — this is the white-edge trick (7/77).
+For density-colored scatter, SHAP feature value low→high, importance gradient. **Always with `edgecolor='white'` on markers** when overlaying — this is the white-edge trick (8/94).
 
 ```python
 import matplotlib as mpl
@@ -147,7 +218,7 @@ ax.scatter(x, y, c=feature_value, cmap=cmap, edgecolor="white", linewidth=0.4, s
 
 ### `GnBu_r` (CEJ density+marginal halo)
 
-Inverted GnBu — bright dense regions on top of dark sparse background. Use with **density-sort** so high-density points draw last.
+Inverted GnBu — bright dense regions on top of dark sparse background. Use with **density-sort** so high-density points draw last. Pair with Teal `#69b3a2` for top/right marginal histograms in CEJ-style attached sidecars.
 
 ```python
 x_s, y_s, z_s = sort_by_density(x, y)
@@ -174,7 +245,7 @@ For training metrics, error magnitude, expression intensity.
 
 ## 3. Diverging palettes (bipolar signal)
 
-### `RdBu_r` (4/77 cases — second-most cmap after viridis)
+### `RdBu_r` (4/94 cases — second-most cmap after viridis)
 
 For correlation matrix, SHAP value sign, ALE main effect. Always center at 0 and pass `vmin=-V, vmax=V` so white = neutral.
 
@@ -185,7 +256,7 @@ norm = mpl.colors.TwoSlopeNorm(vmin=-V, vcenter=0, vmax=V)
 sns.heatmap(corr, cmap=cmap, norm=norm, annot=True, fmt=".2f")
 ```
 
-### `coolwarm` (3/77 cases)
+### `coolwarm` (3/94 cases)
 
 Alternative to RdBu_r. Slightly warmer reds. Use for engineering correlations.
 
@@ -216,11 +287,26 @@ neutral   = "#F7F7F7"
 
 Source: `如何用 Python 完美复刻一张"红蓝气泡"相关性分析图`, `期刊复现：基于上三角局部填充饼图的相关性矩阵`. Use for: bubble correlation matrix with red=positive, blue=negative, size=|r|.
 
+### `materials_teal_salmon_correlation` (Materials Today bubble correlation)
+
+```python
+[
+    "#8ECFC9",   # negative correlation / cyan-teal
+    "#FFFFFF",   # zero center
+    "#FA7F6F",   # positive correlation / salmon
+]
+```
+
+Source: `如何用 Python 完美复刻一张“红蓝气泡”相关性分析图`.
+Use for: full symmetric bubble-correlation matrices where signed `r` is color
+and `abs(r)` is bubble area. Always pair with
+`TwoSlopeNorm(vmin=-1, vcenter=0, vmax=1)`.
+
 ---
 
 ## 4. Semantic role bindings
 
-These bindings are **the same across all 77 cases** — never invert them across panels in a single figure.
+These bindings are stable across the template corpus — never invert them across panels in a single figure.
 
 ```python
 palette_role_map = {
@@ -270,7 +356,7 @@ palette_role_map = {
 
 ## 5. White-edge marker trick
 
-7/77 cases use `edgecolor='white', linewidth=0.4` on scatter to crisp up density-colored points. This is the cheapest readability multiplier in the corpus — apply by default whenever scatter is overlaid on a colored background or has `cmap=`.
+8/94 cases use `edgecolor='white', linewidth=0.4` on scatter to crisp up density-colored points. This is the cheapest readability multiplier in the corpus — apply by default whenever scatter is overlaid on a colored background or has `cmap=`.
 
 ```python
 ax.scatter(x, y, c=values, cmap="viridis", s=20,
@@ -281,11 +367,11 @@ ax.scatter(x, y, c=values, cmap="viridis", s=20,
 
 | Anti-pattern | Frequency in corpus | Replace with |
 |---|---|---|
-| Default `tab10` rainbow for >5 groups | 0/77 (corpus actively avoids) | `morandi_sci_4` + marker shape |
-| `jet` colormap | 1/77 (mistake case) | `viridis` or `RdBu_r` |
-| Pure red `#FF0000` for >1 group | 0/77 | `#C8553D` or `#D73027` |
-| Saturated rainbow palette | 0/77 | `cool_summer_4` or `npg_4` |
-| Different color for same role across panels | 0/77 | bind via `palette_role_map` once |
+| Default `tab10` rainbow for >5 groups | not used as a deliberate template palette | `morandi_sci_4` + marker shape |
+| `jet` colormap | 1/94 (mistake case) | `viridis` or `RdBu_r` |
+| Pure red `#FF0000` for >1 group | disfavored | `#C8553D` or `#D73027` |
+| Saturated rainbow palette | disfavored | `cool_summer_4` or `npg_4` |
+| Different color for same role across panels | disfavored | bind via `palette_role_map` once |
 
 ## 7. Helpers contract
 
@@ -312,11 +398,11 @@ def role_color(role: str, palette: list[str] | None = None) -> str:
 
 ## 8. Source anchors (validated against case-index.json)
 
-Hex codes in this file all appear in **at least one** of the 77 cases. The most-used hex codes corpus-wide (≥2 cases):
+Hex codes in this file all appear in **at least one** of the 94 cases. The most-used hex codes corpus-wide (≥2 cases):
 
 | Hex | Cases | Used as |
 |---|---|---|
-| `#1F77B4` | 10 | tableau default; multi-model bars |
+| `#1F77B4` | 11 | tableau default; multi-model bars |
 | `#D62728` | 6 | tableau default; warning/optimal accent |
 | `#313695`, `#A50026` | 2 each | RdBu/seismic palette anchors |
 | `#4C72B0`, `#4B74B2`, `#4A90E2` | 2 each | seaborn-style cool blue |

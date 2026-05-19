@@ -6,6 +6,8 @@ SciFig Documentation
 API, multi-panel composition, statistical guardrails, and SVG/PDF/PNG
 export with reproducibility metadata.
 
+**公益token群175877552 希望人人tokne自由**
+
 .. toctree::
    :maxdepth: 2
    :caption: Contents

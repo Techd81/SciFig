@@ -1,6 +1,6 @@
 # 顶刊审美内核 (rcParams Kernel)
 
-The single biggest "顶刊感" multiplier. **64/77** of the reference cases declare a near-identical `rcParams` block before any plotting. This file is the canonical version of that block plus its variants.
+The single biggest "顶刊感" multiplier. The current 94-case corpus shows that rcParams-like declarations are common but not universal: `font.family` appears in 79/94 cases, `axes.linewidth` in 70/94, and `xtick.direction` in 68/94. This file is the canonical print-scale version of that block plus its variants.
 
 ## The Kernel (canonical)
 
@@ -20,8 +20,8 @@ plt.rcParams.update({
     'axes.linewidth':   1.2,             # 1.2 for n×n compact, 1.5 for hero panels
 
     # --- Ticks ---
-    'xtick.direction':  'in',            # universal — 77/77
-    'ytick.direction':  'in',            # universal — 77/77
+    'xtick.direction':  'in',            # common — 68/94
+    'ytick.direction':  'in',            # common — 67/94
     'xtick.major.width': 0.6,
     'ytick.major.width': 0.6,
 
@@ -125,7 +125,7 @@ Behavioural rules:
 
 ## Anti-patterns from non-顶刊 figures
 
-These patterns appear in tutorial/blog code but are **absent** from all 77 reference cases. Phase 3 code review should flag them.
+These patterns appear in tutorial/blog code but are absent or strongly disfavored in the current template corpus. Phase 3 code review should flag them.
 
 | Anti-pattern | Why bad | Replace with |
 |--------------|---------|--------------|
@@ -138,10 +138,10 @@ These patterns appear in tutorial/blog code but are **absent** from all 77 refer
 
 ## Source Anchors
 
-The variants and rule frequencies are derived from frequency analysis of the 77 cases under `template/articles/`. Specific anchor cases:
+The variants and rule frequencies are derived from frequency analysis of the 94 cases under `template/`. Specific anchor cases:
 
 - Variant A (hero): `绝美！Nature 这张雷达图`, `复现 Nature _ Python 绘制广义相加模型`, `Python科研绘图复现_绘制多面板分组森林图`.
 - Variant B (compact): `期刊复现：Nature同款皮尔逊热力图`, `期刊配图复现 _ Python绘制多面板SHAP蜂群图`, `顶刊审美 _ 用 Python 绘制带"垂直渐变特效"的组合箱线图`.
 - Variant C (polar): `期刊复现 _ Python绘制"镜像玫瑰"组合图`, `绝美！Nature 这张雷达图`.
 
-Frequency counts are from `grep` over the corpus on 2026-04-30. Re-run `_extraction/build_case_index.py` to refresh.
+Frequency counts are from `_extraction/stats.json`. Re-run `_extraction/extract.py` and `_extraction/enrich.py` to refresh.

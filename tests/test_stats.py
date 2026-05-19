@@ -36,6 +36,20 @@ def test_stats_module_public_api_surface():
     assert expected.issubset(set(scifig_stats.__all__))
 
 
+def test_descriptive_mode_does_not_add_inferential_annotation():
+    import matplotlib.pyplot as plt
+
+    fig, ax = plt.subplots()
+    df = pd.DataFrame({"group": ["A", "A", "B", "B"], "value": [1.0, 1.1, 2.0, 2.1]})
+    warnings = scifig_stats.add_group_stat_annotation(ax, df, "group", "value", "descriptive")
+    try:
+        assert warnings == []
+        assert len(ax.lines) == 0
+        assert len(ax.texts) == 0
+    finally:
+        plt.close(fig)
+
+
 # -- Kruskal-Wallis ------------------------------------------------------------
 
 def test_kruskal_wallis_three_groups_returns_significant_p_for_disjoint_data():
@@ -148,6 +162,18 @@ def test_fdr_bh_all_significant_when_all_below_alpha_over_n():
     # 4 p-values all < 0.0125 (= 0.05/4) -> all rejected
     result = fdr_bh([0.001, 0.002, 0.005, 0.008], alpha=0.05)
     assert all(result["reject"])
+
+
+@pytest.mark.parametrize("pvals", [[-0.01, 0.1], [0.1, 1.2], [0.1, float("nan")], [0.1, float("inf")]])
+def test_fdr_bh_rejects_invalid_pvalues(pvals):
+    with pytest.raises(ValueError, match="p-values"):
+        fdr_bh(pvals)
+
+
+@pytest.mark.parametrize("alpha", [0, -0.1, 1.2, float("nan")])
+def test_fdr_bh_rejects_invalid_alpha(alpha):
+    with pytest.raises(ValueError, match="alpha"):
+        fdr_bh([0.01], alpha=alpha)
 
 
 # -- recommend_test ------------------------------------------------------------

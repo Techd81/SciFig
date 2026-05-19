@@ -13,7 +13,7 @@ Generate complete Python code that applies journal style tokens, resolves a pale
 
 ## Template-Mining Bootstrap (REQUIRED before any chart code)
 
-Phase 3 must consult `template-mining/` (the 7-module knowledge base built from 77 顶刊复刻案例) before emitting chart code. Operational helpers live in `phases/code-gen/template_mining_helpers.py`.
+Phase 3 must consult `template-mining/` (the 7-module knowledge base built from the current 94-case 顶刊复刻 corpus) before emitting chart code. Operational helpers live in `phases/code-gen/template_mining_helpers.py`.
 
 **Bootstrap sequence at the top of every generator:**
 
@@ -24,7 +24,9 @@ from template_mining_helpers import (
     add_group_dividers, add_panel_label,
     density_sort, density_color_scatter,
     add_polygon_polar_grid, draw_gradient_box,
-    add_forest_panel, add_heatmap_pairwise_panel,
+    add_forest_panel, resolve_forest_model_style_map,
+    resolve_method_style_map, resolve_parity_split_style_map,
+    add_heatmap_pairwise_panel,
     apply_scatter_regression_floor, resolve_split_palette,
     set_polar_title,
     build_grid, select_narrative_arc, arc_required_motifs,
@@ -678,7 +680,7 @@ multipanel_source = multipanel_source.replace("```python", "", 1).rsplit("```", 
 # nature_radar_dual palette, sandwich z-order recipes, perfect-fit diagonals, etc.
 # Without this, generated scripts cannot call apply_journal_kernel, resolve_palette,
 # add_polygon_polar_grid, add_perfect_fit_diagonal, density_color_scatter,
-# add_forest_panel, bootstrap_chart, apply_zorder_recipe — leaving 77-case knowledge
+# add_forest_panel, bootstrap_chart, apply_zorder_recipe — leaving corpus knowledge
 # unreachable at runtime. Must be embedded BEFORE helpers.py so generators can resolve
 # template_mining_helpers public API symbols.
 template_mining_helpers_source = Path(".claude/skills/scifig-generate/phases/code-gen/template_mining_helpers.py").read_text(encoding="utf-8").strip()

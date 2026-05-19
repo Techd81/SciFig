@@ -738,8 +738,14 @@ def gen_lollipop_horizontal(df, dataProfile, chartPlan, rcParams, palette, col_m
     roles = dataProfile.get("semanticRoles", {})
     label_col = roles.get("label") or roles.get("group") or roles.get("x")
     val_col = roles.get("value") or roles.get("importance") or roles.get("mean_abs_shap") or roles.get("gain") or roles.get("y")
+    ale_col = roles.get("ale") or roles.get("ale_effect") or roles.get("effect") or roles.get("main_effect")
     template_case = (chartPlan.get("templateCasePlan") or chartPlan.get("visualContentPlan", {}).get("templateCasePlan") or {})
+    visual_plan = chartPlan.get("visualContentPlan", {})
+    if not isinstance(visual_plan, dict):
+        visual_plan = {}
+        chartPlan["visualContentPlan"] = visual_plan
     patterns = {str(p).lower() for p in dataProfile.get("specialPatterns", [])}
+    template_motifs = {str(m).lower() for m in (visual_plan.get("templateMotifs") or chartPlan.get("templateMotifs") or [])}
     is_rf_shap = (
         template_case.get("bundleKey") == "rf_feature_importance_shap"
         or "ml_explainability" in patterns
@@ -747,6 +753,61 @@ def gen_lollipop_horizontal(df, dataProfile, chartPlan, rcParams, palette, col_m
         or "shap_composite" in patterns
         or any(str(c).lower() in ("importance", "mean_abs_shap", "shap_value", "gain", "permutation") for c in df.columns)
     )
+
+    use_bipolar_lollipop_ale = (
+        standalone
+        and (
+            visual_plan.get("useBipolarLollipopAleBoard")
+            or "bipolar_lollipop_ale_board" in template_motifs
+            or "bipolar_lollipop_ale_board" in patterns
+            or "ale_bipolar_lollipop" in patterns
+        )
+    )
+    if use_bipolar_lollipop_ale:
+        feature_col = label_col or roles.get("feature") or roles.get("feature_id")
+        importance_col = val_col or roles.get("pfi") or roles.get("feature_importance")
+        if feature_col is None or importance_col is None or ale_col is None:
+            raise ValueError("bipolar_lollipop_ale_board requires feature, importance, and ale/effect roles")
+        draw_fn = globals().get("draw_bipolar_lollipop_ale_board")
+        if draw_fn is None:
+            raise RuntimeError("draw_bipolar_lollipop_ale_board helper is required for gen_lollipop_horizontal")
+        result = draw_fn(
+            df,
+            feature_col,
+            importance_col,
+            ale_col,
+            top_n=visual_plan.get("lollipopTopN", 15),
+            figsize=tuple(visual_plan.get("bipolarLollipopFigsize", [10.0, 6.0])),
+            wspace=visual_plan.get("bipolarLollipopWspace", 0.15),
+            importance_color=visual_plan.get("bipolarImportanceColor", "#4A6B8A"),
+            positive_color=visual_plan.get("bipolarPositiveColor", "#C0504D"),
+            negative_color=visual_plan.get("bipolarNegativeColor", "#4F81BD"),
+            stem_width=visual_plan.get("bipolarStemWidth", 2.5),
+            marker_size=visual_plan.get("bipolarMarkerSize", 80),
+            col_map=col_map,
+            zero_reference_fn=globals().get("add_zero_reference"),
+        )
+        count_fn = globals().get("_visual_count", lambda *args, **kwargs: None)
+        record_fn = globals().get("_record_template_motif", lambda *args, **kwargs: None)
+        planned_motifs = visual_plan.setdefault("templateMotifs", [])
+        for motif in ("bipolar_lollipop_ale_board", "shared_feature_axis", "signed_effect_axis"):
+            if motif not in planned_motifs:
+                planned_motifs.append(motif)
+            record_fn(visual_plan, motif)
+        count_fn(visual_plan, "lollipopLayerCount")
+        count_fn(visual_plan, "lollipopLayerCount")
+        count_fn(visual_plan, "referenceLineCount")
+        count_fn(visual_plan, "zeroReferenceLineCount")
+        count_fn(visual_plan, "sampleEncodingCount")
+        visual_plan["sharedFeatureOrdering"] = True
+        visual_plan["bipolarPaletteApplied"] = True
+        visual_plan["bipolarPositiveCount"] = result.get("positive_count")
+        visual_plan["bipolarNegativeCount"] = result.get("negative_count")
+        visual_plan["topFeatureLimit"] = result.get("top_n")
+        visual_plan["bipolarLollipopPanelCount"] = 2
+        visual_plan["lollipopCompositeLayout"] = "subplots(1,2)"
+        visual_plan["templateMatchMode"] = "case_022_bipolar_lollipop_ale_board"
+        return result["ax_ale"]
 
     if label_col is None or val_col is None:
         raise ValueError("lollipop_horizontal requires 'label' and 'value' in semanticRoles")

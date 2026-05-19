@@ -28,7 +28,7 @@ def plot(data: DataInput, chart: str = "auto", style: str = "nature", palette: A
         figsize=(profile["single_width_mm"] / 25.4, min(70.0, profile["max_height_mm"]) / 25.4),
         constrained_layout=True,
     )
-    generate(chart_key, df, data_profile, chart_plan, dict(plt.rcParams), palette_map, ax=ax)
+    ax = generate(chart_key, df, data_profile, chart_plan, dict(plt.rcParams), palette_map, ax=ax)
     warnings = add_group_stat_annotation(
         ax,
         df,

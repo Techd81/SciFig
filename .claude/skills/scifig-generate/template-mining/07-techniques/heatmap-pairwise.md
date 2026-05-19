@@ -1,6 +1,6 @@
 # Technique: Heatmap Pairwise (n×n)
 
-8/77 corpus cases. The exhaustive correlation matrix layout — Pearson, Spearman, mutual information, scatter matrix.
+12/94 corpus cases. The exhaustive correlation matrix layout — Pearson, Spearman, mutual information, scatter matrix.
 
 **Anchor cases:**
 - `期刊复现：Nature同款皮尔逊热力图_1777451326`
@@ -132,11 +132,202 @@ elif i < j:
 
 Anchor: `期刊复现：基于上三角局部填充饼图的相关性矩阵`.
 
+Runtime gap: current `scifig.plot chart=correlation` validates a signed
+color-mapped matrix, but does not yet render triangle-only Wedge pie-glyph
+cells or the empty lower-triangle sparse layout.
+
+## Variant: Lower-triangle correlation heatmap with diagonal colorbar
+
+Anchor: `进阶绘图：解决“多变量拥挤”痛点——Python 绘制带显著性星号与斜向色条的三角热图_1777452320`.
+
+Use this when a dense numeric feature table needs a compact Pearson/Spearman
+correlation overview and the source asks for a triangular heatmap, significance
+stars, grouping brackets, or a diagonal/oblique colorbar.
+
+Required rendering contract:
+
+- Render one square axes, not an n x n subplot matrix.
+- Compute correlation and p-value matrices from supplied raw data, or consume
+  supplied `r`/`p` matrices; never synthesize significance.
+- Mask the upper triangle with `np.triu(..., k=1)` so the lower triangle and
+  diagonal remain visible.
+- Use a zero-centered red-yellow-blue diverging palette such as
+  `#A50026 -> #F46D43 -> #FFFFBF -> #74ADD1 -> #313695`.
+- Annotate every rendered cell with `r`, adding `***`, `**`, or `*` only from
+  p-values; switch text to white when `abs(r) > 0.6`.
+- Draw grouping brackets outside the matrix with `clip_on=False`.
+- Draw the diagonal colorbar parallel to the matrix hypotenuse using small
+  polygon patches or an equivalent rotated colorbar helper.
+
+Case-073 evidence lives in
+`.workflow/case_studies/case_073_triangular_correlation_heatmap/comparison_report.json`.
+
+## Variant: Spearman as ML evidence-board context
+
+Anchor: `期刊配图：基于机器学习的Spearman相关性热力图与模型预测效果组合分析_1777456565`.
+
+Use pairwise-heatmap rules for the correlation panel only when Spearman is one part of a broader ML evaluation board. If the same prompt/data also includes SHAP or feature importance, actual/predicted values, and external validation metrics, route the whole request through `spearman_ml_evaluation_board` in `ml-model-diagnostics.md`.
+
+Correlation-panel contract:
+
+- Draw a full symmetric Spearman matrix, not a diagonal distribution pairplot.
+- Annotate every rendered cell with the signed coefficient.
+- Add significance stars only from supplied p-values.
+- Use a zero-centered diverging norm so positive and negative monotonic associations are visually comparable.
+- Keep the colorbar outside the heatmap panel when the panel is embedded in a 2x2 board.
+
+Case-065 evidence lives in
+`.workflow/case_studies/case_065_spearman_ml_evaluation_board/comparison_report.json`.
+The runtime `heatmap_symmetric` probe validates the correlation panel only; the
+full board belongs to `spearman_ml_evaluation_board`.
+
+## Variant: Spearman KDE pairplot matrix
+
+Anchor: `期刊配图复现：基于二维核密度与相关热力图的多变量联合分布矩阵（附代码）_1778681176`.
+
+Use this when a wide numeric table needs one compact matrix that combines
+monotonic association strength with two-variable distribution shape. This is
+not the Nature Pearson pairwise matrix: the diagonal cells are text labels, the
+upper triangle is Spearman `r` on colored tiles, and the lower triangle is
+filled 2D KDE contours rather than hollow scatter plus linear fit.
+
+Required rendering contract:
+
+- Layout is an `n x n` subplot matrix with `wspace=0.05` and `hspace=0.05`.
+- Diagonal cells hide axes and place the variable name in the center.
+- Upper-triangle cells use one signed correlation color scale such as
+  `coolwarm` / `Normalize(vmin=-1, vmax=1)` and center the numeric `r` label.
+- Lower-triangle cells render `sns.kdeplot(..., fill=True, levels≈8)` or an
+  equivalent `gaussian_kde` contour field for each variable pair.
+- Do not compare absolute density intensity across lower-triangle panels unless
+  the density grids are deliberately normalized together; each pair usually owns
+  its local KDE scale.
+- Use a single outside Spearman colorbar when space allows.
+
+Case-080 evidence lives in
+`.workflow/case_studies/case_080_spearman_kde_pairplot_matrix/comparison_report.json`.
+
+## Executable mapping: red-blue bubble correlation matrix
+
+Anchor: `如何用 Python 完美复刻一张“红蓝气泡”相关性分析图`.
+
+Use this when the prompt or data profile exposes a square correlation matrix,
+a long `row` / `column` / `r` table, or a wide numeric table with
+correlation/Pearson/Spearman cues.
+
+Required rendering contract:
+
+- Full symmetric grid: one bubble per finite matrix cell, not triangle-only.
+- Color encodes signed `r` with `TwoSlopeNorm(vmin=-1, vcenter=0, vmax=1)`.
+- Palette is `materials_teal_salmon_correlation`: `#8ECFC9`, `#FFFFFF`, `#FA7F6F`.
+- Bubble area encodes `abs(r) * 2000`; keep a dark hairline edge for white/near-zero cells.
+- Each finite cell gets a centered `"{r:.2f}"` label.
+- Axis labels sit at cell centers; x labels rotate 45 degrees; minor ticks draw the pale cell grid.
+
+Phase-3 binding:
+
+```python
+result = draw_bubble_correlation_matrix(
+    ax,
+    corr_long_or_matrix,
+    row_col="row",
+    col_col="column",
+    value_col="r",
+    palette=["#8ECFC9", "#FFFFFF", "#FA7F6F"],
+    size_scale=2000,
+    annotate=True,
+    colorbar_label="Pearson r",
+)
+```
+
+QA signals: `templateMotifsApplied` includes `bubble_correlation_matrix`,
+`correlationBubbleCount > 0`, `correlationBubbleCellCount == n*n`,
+`correlationNumericTextCount == n*n`, `colorbarSlotCount >= 1`, and the main
+axis gid is `scifig_bubble_correlation_matrix`.
+
+Case-076 duplicate-audit note:
+
+- `如何用 Python 完美复刻一张“红蓝气泡”相关性分析图_1777451587`
+  reappears later in the markdown-learning order, but it is the same source
+  already learned in Case-011. Keep the existing `bubble_correlation_matrix`
+  motif and heatmap-pairwise correlation evidence rules rather than minting a
+  second bubble-matrix template.
+- The closure evidence lives in
+  `.workflow/case_studies/case_076_red_blue_bubble_correlation_audit/comparison_report.json`.
+  It verifies that Case-011 already captured four reference screenshots, the
+  replica, comparison report, runtime probe, and runtime QA for signed color,
+  absolute-correlation bubble area, per-cell labels, and the matrix colorbar.
+
+## Variant: upper significance / lower bubble correlation matrix
+
+Anchor: `告别枯燥表格！Python绘制超吸睛的相关性气泡图_1778681959`.
+
+Case-097 evidence lives in
+`.workflow/case_studies/case_097_upper_sig_lower_bubble_correlation/comparison_report.json`.
+
+Use this when the matrix intentionally splits semantics by triangle: lower
+triangle encodes correlation strength as bubbles, while upper triangle prints
+the significance marker and coefficient.
+
+Rendering contract:
+
+- Compute both Spearman `r` and p-value matrices for the same feature order.
+- Leave the diagonal blank unless the prompt explicitly asks for variable names.
+- Draw lower-triangle bubbles with radius proportional to `abs(r)`; the source
+  uses `0.3 * abs(r)`.
+- Draw upper-triangle text as significance marker plus formatted coefficient.
+- Map both text color and bubble fill through one signed diverging color scale,
+  typically `seismic` over `[-1, 1]`.
+- Keep a colorbar for signed `r`, a bubble-size legend for `|r|`, and a separate
+  significance legend for p-value thresholds.
+
+QA signals: `lower_triangle_bubble_count == n * (n - 1) / 2`,
+`upper_triangle_text_count == n * (n - 1) / 2`,
+`significance_text_count == upper_triangle_text_count`,
+`diagonal_blank == true`, `colorbar_count == 1`,
+`bubble_size_legend_count == 1`, and `significance_legend_count == 1`.
+
+Case-093 duplicate-audit note:
+
+- `期刊复现：Nature同款皮尔逊热力图_1777451326` reappears later in the
+  markdown-learning order, but it is the same source already learned in
+  Case-028. Keep the `nature_pearson_pairwise_matrix` bundle with diagonal
+  histogram/KDE cells, upper Pearson tiles, lower hollow scatter + fit cells,
+  and outer-only labels.
+- The closure evidence lives in
+  `.workflow/case_studies/case_093_nature_pearson_pairwise_matrix_audit/comparison_report.json`.
+
+## Variant: Layered model-increment heatmap matrix
+
+Use this when the data contains row groups such as stations/cohorts, two
+baselines per group, several model rows, and several metric columns. The visual
+grammar is not an n x n correlation grid; it is a row-wise comparison board.
+
+Required rendering contract:
+
+- Layout is `GridSpec(n_groups, 3)` with `width_ratios=[1, 1, 0.05]`.
+- The first two columns are equal-width heatmaps with identical row/column order.
+- The third column is a narrow colorbar axis for that row, not an overlaid inset.
+- Signed deltas use one symmetric absolute limit across the full board and a
+  zero-centered diverging norm with `RdBu_r`.
+- Cells have white separators (`linewidth` about 1.5) and centered numeric labels.
+- Greek metric labels such as alpha and beta should use mathtext on x ticks.
+
+QA signals: `layeredHeatmapMatrix` true, `heatmapPanelCount == n_groups * 2`,
+`rowColorbarCount == n_groups`, `divergingNormCentered` true,
+`gridWidthRatios == [1, 1, 0.05]`, and `cellAnnotationCount` equals the number
+of rendered cells.
+
+Anchor: `期刊配图复现：Python 绘制多面板分层热力图矩阵`.
+
 ## Discipline rules
 
 - `hspace=wspace=0.05` — must be tight
+- Layered model-increment heatmaps use `wspace=0.10`, `hspace=0.30`, and a row colorbar column; do not force them into the n x n pairwise spacing rule.
 - Outer-only labels (else clutter)
 - Tinted background uses `TwoSlopeNorm(vmin=-1, vcenter=0, vmax=1)` — center at 0
+- For model-increment boards, compute `vmin=-limit`, `vmax=limit` from one board-level absolute limit; never normalize each row independently.
+- Bubble-correlation variant uses bubble area for `abs(r)` and signed color for `r`; do not add an imshow layer underneath.
 - Text color flips to white when |r| > 0.5 (contrast)
 - Significance stars only when p-values supplied; never invent
 - Lower-triangle markers are **hollow** (`facecolor='none'`) so cells with many points stay readable
@@ -147,3 +338,4 @@ Anchor: `期刊复现：基于上三角局部填充饼图的相关性矩阵`.
 - `outerOnlyLabels`: True
 - `divergingNormCentered`: cmap norm has `vcenter=0`
 - `significanceStarsOnlyIfP`: stars present iff p-value column in dataProfile
+- `bubbleCorrelationMatrix`: if planned, `correlationBubbleCellCount == n*n`

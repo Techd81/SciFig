@@ -1,6 +1,6 @@
 # Technique: Lollipop / Bipolar (ALE & SHAP signed effect)
 
-ALE main-effect lollipops (29/77 cases under `ale_pdp` family) and bipolar SHAP importance (`composite_two_lane`).
+ALE main-effect lollipops (36/94 cases under `ale_pdp` family) and bipolar SHAP importance (`composite_two_lane`).
 
 **Anchor cases:**
 - `期刊复刻：通过双侧棒棒糖图解析特征重要性与ALE主效应方向_1777455283`
@@ -105,6 +105,48 @@ ax_dir.spines['right'].set_visible(False)
 ```
 
 Anchor: `期刊复刻：通过双侧棒棒糖图解析特征重要性与ALE主效应方向`.
+
+## Executable mapping: PFI + signed ALE paired lollipops
+
+Anchor: `期刊复刻：通过双侧棒棒糖图解析特征重要性与ALE主效应方向`.
+
+Use this when rows contain a feature name, a positive feature-importance / PFI
+score, and a signed ALE/main-effect value. The feature order is determined by
+importance; the right panel keeps that order and maps ALE sign to red/blue.
+
+Phase-3 binding:
+
+```python
+result = draw_bipolar_lollipop_ale_board(
+    df,
+    feature_col="feature",
+    importance_col="importance",
+    ale_col="ale_effect",
+    figsize=(10, 6),
+    wspace=0.15,
+    importance_color="#4A6B8A",
+    positive_color="#C0504D",
+    negative_color="#4F81BD",
+)
+```
+
+Runtime path: `gen_lollipop_horizontal` enters `bipolar_lollipop_ale_board`
+mode when `visualContentPlan.templateMotifs` or `specialPatterns` contains
+`bipolar_lollipop_ale_board`, `ale_bipolar_lollipop`, or
+`pfi_ale_lollipop`.
+
+QA signals: importance axes gid `scifig_bipolar_lollipop_importance`, ALE axes
+gid `scifig_bipolar_lollipop_ale`, zero-line gid
+`scifig_bipolar_lollipop_zero_reference`, PFI stem/point gids
+`scifig_bipolar_lollipop_importance_stems` /
+`scifig_bipolar_lollipop_importance_points`, ALE stem/point gids
+`scifig_bipolar_lollipop_ale_stems` /
+`scifig_bipolar_lollipop_ale_points`, `bipolarPaletteApplied=True`, and
+`lollipopCompositeLayout="subplots(1,2)"`.
+
+Case-087 audit note: the later queue pass over this Markdown was treated as
+`duplicate_markdown_covered_by_case_022`; preserve the PFI-left / signed-ALE
+right contract and keep it distinct from SHAP beeswarm lollipop boards.
 
 ## QA contract
 

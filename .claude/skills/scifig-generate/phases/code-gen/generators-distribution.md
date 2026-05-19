@@ -45,6 +45,221 @@ def _extract_colors(palette, categories):
     return color_map
 
 
+def gen_dual_axis(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=None):
+    """Textbook dual-Y axis bar+spline line chart.
+
+    Left axis carries pale context bars; right axis carries a saturated smooth
+    line plus raw marker error bars.  Anchored to the Materials Today
+    porosity-strength template.
+    """
+    standalone = ax is None
+    plt.rcParams.update(rcParams)
+    roles = dataProfile.get("semanticRoles", {})
+    visual_plan = chartPlan.get("visualContentPlan", {})
+    if not isinstance(visual_plan, dict):
+        visual_plan = {}
+        chartPlan["visualContentPlan"] = visual_plan
+    patterns = {str(p).lower() for p in dataProfile.get("specialPatterns", [])}
+    template_motifs = {
+        str(m).lower()
+        for m in (visual_plan.get("templateMotifs") or chartPlan.get("templateMotifs") or [])
+    }
+    lower_to_col = {str(col).lower(): col for col in df.columns}
+
+    def _first_column(*names):
+        for name in names:
+            if name and name in df.columns:
+                return name
+            if name and str(name).lower() in lower_to_col:
+                return lower_to_col[str(name).lower()]
+        return None
+
+    def _column_list(raw):
+        if raw is None:
+            return None
+        if isinstance(raw, str):
+            parts = [part.strip() for part in raw.replace(";", ",").split(",")]
+            cols = []
+            for part in parts:
+                if part in df.columns:
+                    cols.append(part)
+                elif part.lower() in lower_to_col:
+                    cols.append(lower_to_col[part.lower()])
+            return cols or None
+        if isinstance(raw, (list, tuple)):
+            cols = []
+            for item in raw:
+                name = str(item)
+                if name in df.columns:
+                    cols.append(name)
+                elif name.lower() in lower_to_col:
+                    cols.append(lower_to_col[name.lower()])
+            return cols or None
+        return None
+
+    use_hist_cumfreq_grid = (
+        standalone
+        and (
+            visual_plan.get("useDualAxisHistCumfreqGrid")
+            or "dual_axis_hist_cumfreq_grid" in template_motifs
+            or "hist_cumfreq_grid" in template_motifs
+            or "cumulative_frequency_grid" in template_motifs
+            or "dual_axis_hist_cumfreq_grid" in patterns
+            or "hist_cumfreq_grid" in patterns
+            or "cumulative_frequency_grid" in patterns
+        )
+    )
+    if use_hist_cumfreq_grid:
+        draw_fn = globals().get("draw_dual_axis_hist_cumfreq_grid")
+        if draw_fn is None:
+            raise RuntimeError("draw_dual_axis_hist_cumfreq_grid helper is required for gen_dual_axis")
+        grid_shape = visual_plan.get("dualAxisDistributionGridShape", [3, 3])
+        if not isinstance(grid_shape, (list, tuple)) or len(grid_shape) != 2:
+            grid_shape = [3, 3]
+        value_cols = (
+            visual_plan.get("dualAxisDistributionColumns")
+            or roles.get("value_columns")
+            or roles.get("variables")
+            or roles.get("distribution_columns")
+        )
+        result = draw_fn(
+            df,
+            value_cols=_column_list(value_cols),
+            nrows=int(grid_shape[0]),
+            ncols=int(grid_shape[1]),
+            bins=visual_plan.get("dualAxisDistributionBins", 15),
+            figsize=tuple(visual_plan.get("dualAxisDistributionFigsize", [12.0, 10.0])),
+            wspace=visual_plan.get("dualAxisDistributionWspace", 0.40),
+            hspace=visual_plan.get("dualAxisDistributionHspace", 0.35),
+            hist_color=visual_plan.get("dualAxisHistColor", "gray"),
+            hist_edgecolor=visual_plan.get("dualAxisHistEdgeColor", "black"),
+            hist_alpha=visual_plan.get("dualAxisHistAlpha", 0.70),
+            line_color=visual_plan.get("dualAxisCumulativeColor", "blue"),
+            marker=visual_plan.get("dualAxisCumulativeMarker", "o"),
+            marker_size=visual_plan.get("dualAxisCumulativeMarkerSize", 4.0),
+            line_width=visual_plan.get("dualAxisCumulativeLinewidth", 1.5),
+            col_map=col_map,
+        )
+        count_fn = globals().get("_visual_count", lambda *args, **kwargs: None)
+        record_fn = globals().get("_record_template_motif", lambda *args, **kwargs: None)
+        planned_motifs = visual_plan.setdefault("templateMotifs", [])
+        for motif in ("dual_axis_hist_cumfreq_grid", "cumulative_frequency_curve", "multipanel_distribution_matrix"):
+            if motif not in planned_motifs:
+                planned_motifs.append(motif)
+            record_fn(visual_plan, motif)
+        panel_count = int(result.get("panel_count", 0))
+        for _ in range(panel_count):
+            count_fn(visual_plan, "dualAxisEncodingCount")
+            count_fn(visual_plan, "multiAxisEncodingCount")
+            count_fn(visual_plan, "twinAxisPanelCount")
+            count_fn(visual_plan, "histogramPanelCount")
+            count_fn(visual_plan, "cumulativeCurveCount")
+        count_fn(visual_plan, "sampleEncodingCount")
+        visual_plan["dualAxisDistributionLayout"] = f"{int(grid_shape[0])}x{int(grid_shape[1])}"
+        visual_plan["dualAxisDistributionGridShape"] = [int(grid_shape[0]), int(grid_shape[1])]
+        visual_plan["dualAxisDistributionBins"] = int(result.get("bins", visual_plan.get("dualAxisDistributionBins", 15)))
+        visual_plan["dualAxisDistributionVariableCount"] = len(result.get("columns") or [])
+        visual_plan["dualAxisDistributionVariables"] = list(result.get("columns") or [])
+        visual_plan["cumulativeFrequencyYLim"] = list(result.get("right_ylim", [0, 105]))
+        visual_plan["independentPanelScales"] = True
+        visual_plan["templateMatchMode"] = "case_020_dual_axis_hist_cumfreq_grid"
+        return result["axes_left"][0]
+
+    x_col = _first_column(roles.get("x"), roles.get("condition"), roles.get("group"), "group", "condition", "sample")
+    bar_col = _first_column(
+        roles.get("bar"),
+        roles.get("left_y"),
+        roles.get("primary_y"),
+        roles.get("porosity"),
+        "porosity",
+        "left_y",
+        "bar_value",
+    )
+    line_col = _first_column(
+        roles.get("line"),
+        roles.get("right_y"),
+        roles.get("secondary_y"),
+        roles.get("strength"),
+        "strength",
+        "right_y",
+        "line_value",
+    )
+    bar_err_col = _first_column(roles.get("bar_error"), roles.get("left_error"), roles.get("porosity_error"), "por_err", "bar_err", "porosity_err")
+    line_err_col = _first_column(roles.get("line_error"), roles.get("right_error"), roles.get("strength_error"), "str_err", "line_err", "strength_err")
+    group_col = _first_column(roles.get("group_series"), roles.get("family"), roles.get("series"), roles.get("category"))
+    if x_col is None or bar_col is None or line_col is None:
+        raise ValueError("dual_axis requires x, bar/left_y, and line/right_y semantic roles")
+
+    if standalone:
+        fig, ax = plt.subplots(figsize=(118 * (1 / 25.4), 68 * (1 / 25.4)),
+                           constrained_layout=True)
+
+    palette_values = visual_plan.get("dualAxisPalette") or palette.get("materials_porosity_terracotta")
+    if not palette_values:
+        palette_values = palette.get("categorical", ["#CFE2F3", "#9BC2E6", "#F48E66"])[:3]
+    if len(palette_values) < 3:
+        palette_values = ["#CFE2F3", "#9BC2E6", "#F48E66"]
+    draw_fn = globals().get("draw_textbook_dual_axis_bar_line")
+    if draw_fn is None:
+        raise RuntimeError("draw_textbook_dual_axis_bar_line helper is required for gen_dual_axis")
+    result = draw_fn(
+        ax,
+        df,
+        x_col=x_col,
+        bar_col=bar_col,
+        line_col=line_col,
+        bar_err_col=bar_err_col,
+        line_err_col=line_err_col,
+        group_col=group_col,
+        group_splits=visual_plan.get("dualAxisGroupSplits"),
+        left_ylim=visual_plan.get("dualAxisLeftYlim"),
+        right_ylim=visual_plan.get("dualAxisRightYlim"),
+        palette=palette_values,
+        spline_points=visual_plan.get("dualAxisSplinePoints", 300),
+        xtick_rotation=visual_plan.get("dualAxisXtickRotation", 90),
+        line_smoothing=visual_plan.get("dualAxisLineSmoothing", True),
+        show_mean_line=visual_plan.get("dualAxisShowMeanLine", False),
+        mean_line_label=visual_plan.get("dualAxisMeanLineLabel", "Mean"),
+        bar_width=visual_plan.get("dualAxisBarWidth", 0.6),
+        line_width=visual_plan.get("dualAxisLineWidth", 3.0),
+        marker_size=visual_plan.get("dualAxisMarkerSize", 8.0),
+        bar_edge_color=visual_plan.get("dualAxisBarEdgeColor"),
+        col_map=col_map,
+    )
+    count_fn = globals().get("_visual_count", lambda *args, **kwargs: None)
+    record_fn = globals().get("_record_template_motif", lambda *args, **kwargs: None)
+    planned_motifs = visual_plan.setdefault("templateMotifs", [])
+    motif = "textbook_dual_axis_bar_line"
+    nature_motif = "nature_comms_dual_axis_bar_line"
+    if nature_motif in template_motifs or nature_motif in patterns:
+        motif = nature_motif
+    if motif not in planned_motifs:
+        planned_motifs.append(motif)
+    record_fn(visual_plan, motif)
+    count_fn(visual_plan, "dualAxisEncodingCount")
+    count_fn(visual_plan, "multiAxisEncodingCount")
+    count_fn(visual_plan, "sampleEncodingCount")
+    if result.get("has_bar_error") or result.get("has_line_error"):
+        count_fn(visual_plan, "errorBarLayerCount")
+    visual_plan["groupDividerCount"] = len(result.get("divider_lines", []))
+    visual_plan["dualAxisSpineTinted"] = True
+    visual_plan["combinedLegend"] = True
+    visual_plan["topSpineHidden"] = True
+    visual_plan["dualAxisSplinePointCount"] = int(len(result.get("x_smooth", [])))
+    visual_plan["dualAxisLayerSandwich"] = True
+    if result.get("has_mean_line"):
+        count_fn(visual_plan, "referenceLineCount")
+        visual_plan["dualAxisMeanReferenceLine"] = True
+    if motif == nature_motif:
+        visual_plan["templateMatchMode"] = "case_026_nature_comms_dual_axis"
+        visual_plan["dualAxisColorLinkedRightAxis"] = True
+    elif "dual_axis" in patterns or motif in template_motifs:
+        visual_plan["templateMatchMode"] = "case_012_dual_axis"
+    if standalone:
+        apply_chart_polish(result["ax_left"], "dual_axis")
+    return result["ax_left"]
+
+
 def gen_histogram(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=None):
     """Grouped histogram with overlaid KDE density curves.
 
@@ -191,7 +406,88 @@ def gen_ridge(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=No
     """
     standalone = ax is None
     plt.rcParams.update(rcParams)
+    roles = dataProfile.get("semanticRoles", {})
     group_col, value_col, _ = _resolve_roles(dataProfile)
+    visual_plan = chartPlan.get("visualContentPlan", {})
+    if not isinstance(visual_plan, dict):
+        visual_plan = {}
+        chartPlan["visualContentPlan"] = visual_plan
+    patterns = {str(p).lower() for p in dataProfile.get("specialPatterns", [])}
+    template_motifs = {str(m).lower() for m in (visual_plan.get("templateMotifs") or chartPlan.get("templateMotifs") or [])}
+    lower_to_col = {str(col).lower(): col for col in df.columns}
+
+    def _first_column(*names):
+        for name in names:
+            if not name:
+                continue
+            if name in df.columns:
+                return name
+            lowered = str(name).lower()
+            if lowered in lower_to_col:
+                return lower_to_col[lowered]
+        return None
+
+    use_bayesian_ridge_heatmap = (
+        standalone
+        and (
+            visual_plan.get("useBayesianRidgeHeatmapBoard")
+            or "bayesian_ridge_heatmap_board" in template_motifs
+            or "ridge_heatmap_composite" in template_motifs
+            or "bayesian_ridge_heatmap_board" in patterns
+            or "ridge_heatmap_composite" in patterns
+        )
+    )
+    if use_bayesian_ridge_heatmap:
+        draw_fn = globals().get("draw_bayesian_ridge_heatmap_board")
+        if draw_fn is None:
+            raise RuntimeError("draw_bayesian_ridge_heatmap_board helper is required for gen_ridge")
+        condition_col = _first_column(roles.get("condition"), roles.get("panel"), roles.get("soc_group"), "condition", "soc_group", "panel")
+        factor_col = _first_column(roles.get("factor"), roles.get("feature"), roles.get("group"), "factor", "feature", "variable")
+        draw_col = _first_column(roles.get("posterior"), roles.get("value"), roles.get("effect"), "posterior", "draw", "effect", "value")
+        correlation_col = _first_column(roles.get("correlation"), roles.get("corr"), roles.get("r"), "correlation", "corr", "r")
+        probability_col = _first_column(roles.get("probability"), roles.get("posterior_prob"), "probability", "posterior_prob", "prob")
+        result = draw_fn(
+            df,
+            condition_col=condition_col,
+            factor_col=factor_col,
+            draw_col=draw_col,
+            correlation_col=correlation_col,
+            probability_col=probability_col,
+            condition_order=visual_plan.get("bayesianRidgeConditionOrder"),
+            figsize=tuple(visual_plan.get("bayesianRidgeHeatmapFigsize", [16.0, 10.0])),
+            width_ratios=visual_plan.get("bayesianRidgeHeatmapWidthRatios", [4.2, 0.35, 0.6, 4.2, 0.35]),
+            positive_color=visual_plan.get("bayesianRidgePositiveColor", "#D95F5F"),
+            negative_color=visual_plan.get("bayesianRidgeNegativeColor", "#4C78A8"),
+            heatmap_cmap=visual_plan.get("bayesianHeatmapCmap", "RdBu_r"),
+            heatmap_vlim=visual_plan.get("bayesianHeatmapVlim", 0.6),
+            col_map=col_map,
+        )
+        record_fn = globals().get("_record_template_motif", lambda *args, **kwargs: None)
+        count_fn = globals().get("_visual_count", lambda *args, **kwargs: None)
+        planned_motifs = visual_plan.setdefault("templateMotifs", [])
+        for motif in ("bayesian_ridge_heatmap_board", "ridge_heatmap_composite", "inset_heatmap_colorbar"):
+            if motif not in planned_motifs:
+                planned_motifs.append(motif)
+            record_fn(visual_plan, motif)
+        for _ in range(result.get("ridge_panel_count", 0)):
+            count_fn(visual_plan, "ridgePanelCount")
+        for _ in range(result.get("heat_strip_count", 0)):
+            count_fn(visual_plan, "heatmapStripCount")
+        for _ in range(result.get("ridge_fill_count", 0)):
+            count_fn(visual_plan, "ridgeFillCount")
+        for _ in range(result.get("inset_colorbar_count", 0)):
+            count_fn(visual_plan, "colorbarSlotCount")
+        count_fn(visual_plan, "sampleEncodingCount")
+        visual_plan["bayesianRidgeGridWidthRatios"] = result.get("grid_width_ratios")
+        visual_plan["bayesianRidgePanelCount"] = result.get("ridge_panel_count")
+        visual_plan["bayesianHeatStripCount"] = result.get("heat_strip_count")
+        visual_plan["bayesianRidgeFillCount"] = result.get("ridge_fill_count")
+        visual_plan["bayesianRidgeOutlineCount"] = result.get("ridge_outline_count")
+        visual_plan["bayesianRidgeProbabilityTextCount"] = result.get("probability_text_count")
+        visual_plan["bayesianHeatmapSignificanceTextCount"] = result.get("significance_text_count")
+        visual_plan["bayesianInsetColorbarCount"] = result.get("inset_colorbar_count")
+        visual_plan["templateMatchMode"] = "case_025_bayesian_ridge_heatmap_board"
+        return result["ridge_axes"][0]
 
     if value_col is None:
         raise ValueError("ridge requires a numeric value column in semanticRoles")
@@ -2185,7 +2481,7 @@ def gen_radar(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=No
     """Nature-style radar chart — pixel-faithful reproduction of the canonical
     Nature Vol 626 Fig 3c (semiconductor fibre) and the rest of the radar corpus.
 
-    Anchor cases (template/articles):
+    Anchor cases (template corpus):
       - 绝美！Nature 这张雷达图_1777449664 (the canonical reference)
       - 顶刊复刻 _ 中心挖空 + 立体高光的雷达图_1777451060
       - 期刊配图：基于极坐标系的多面板雷达图_1777454388
@@ -2199,6 +2495,9 @@ def gen_radar(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=No
       5. Closed-loop angle array (last angle equals first)
       6. Hidden radial number ticks (clutter removal)
       7. Optional max=<limit> annotations on each spoke (Nature-style)
+      8. Optional hollow-center / glass-marker variant for the case-001 radar
+         replica via add_hollow_polar_center, add_polar_spoke_tick_labels, and
+         scatter_glass_markers when the template motifs request it.
 
     Data layout — supports BOTH long and wide:
       Long: rows = (group × attribute); semanticRoles { 'group', 'attribute', 'value', 'error'? }
@@ -2217,6 +2516,92 @@ def gen_radar(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=No
     group_col = roles.get("group")
     val_col = roles.get("value") or roles.get("y")
     err_col = roles.get("error") or roles.get("std") or roles.get("se")
+    visual_plan = chartPlan.get("visualContentPlan") if isinstance(chartPlan.get("visualContentPlan"), dict) else {}
+    if not isinstance(visual_plan, dict):
+        visual_plan = {}
+        chartPlan["visualContentPlan"] = visual_plan
+    patterns = {str(p).lower() for p in dataProfile.get("specialPatterns", [])}
+    template_motifs = {
+        str(m).lower()
+        for m in (visual_plan.get("templateMotifs") or chartPlan.get("templateMotifs") or [])
+    }
+    lower_to_col = {str(col).lower(): col for col in df.columns}
+
+    def _first_column(*names):
+        for name in names:
+            if not name:
+                continue
+            if name in df.columns:
+                return name
+            lowered = str(name).lower()
+            if lowered in lower_to_col:
+                return lower_to_col[lowered]
+        return None
+
+    use_mirror_radial_bar_board = (
+        standalone
+        and (
+            visual_plan.get("useMirrorRadialBarBoard")
+            or "mirror_radial_bar_board" in template_motifs
+            or "mirror_radial_bar_board" in patterns
+            or "mirror_radial" in patterns
+        )
+    )
+    if use_mirror_radial_bar_board:
+        draw_fn = globals().get("draw_mirror_radial_bar_board")
+        if draw_fn is None:
+            raise RuntimeError("draw_mirror_radial_bar_board helper is required for gen_radar")
+        model_col = _first_column(
+            roles.get("model"), roles.get("group"), roles.get("label"),
+            "model", "models", "algorithm"
+        )
+        condition_col = _first_column(
+            roles.get("condition"), roles.get("pressure"), roles.get("panel"),
+            "condition", "pressure", "pressure_bar", "bar"
+        )
+        original_col = _first_column(
+            roles.get("original"), roles.get("original_features"), roles.get("baseline"),
+            "original", "original_features", "orig", "full_features", "full"
+        )
+        simplified_col = _first_column(
+            roles.get("simplified"), roles.get("simplified_features"), roles.get("reduced"),
+            "simplified", "simplified_features", "simp", "reduced_features", "reduced"
+        )
+        if model_col is None or original_col is None or simplified_col is None:
+            raise ValueError("mirror_radial_bar_board requires model, original, and simplified columns")
+        result = draw_fn(
+            df,
+            model_col=model_col,
+            condition_col=condition_col,
+            original_col=original_col,
+            simplified_col=simplified_col,
+            condition_order=visual_plan.get("mirrorRadialConditionOrder"),
+            condition_labels=visual_plan.get("mirrorRadialConditionLabels"),
+            max_val=visual_plan.get("mirrorRadialMaxValue"),
+            original_color=visual_plan.get("mirrorRadialOriginalColor", "#33CCFF"),
+            simplified_color=visual_plan.get("mirrorRadialSimplifiedColor", "#FFFF99"),
+            bar_width=visual_plan.get("mirrorRadialBarWidth", 0.45),
+            scale_rect=visual_plan.get("mirrorRadialScaleRect", [0.05, 0.40, 0.02, 0.40]),
+            figsize=tuple(visual_plan.get("mirrorRadialFigsize", [7.0, 7.0])),
+            col_map=col_map,
+        )
+        count_fn = globals().get("_visual_count", lambda *args, **kwargs: None)
+        record_fn = globals().get("_record_template_motif", lambda *args, **kwargs: None)
+        planned_motifs = visual_plan.setdefault("templateMotifs", [])
+        for motif in ("mirror_radial_bar_board", "mirror_radial_bar", "external_scale_bar"):
+            if motif not in planned_motifs:
+                planned_motifs.append(motif)
+            record_fn(visual_plan, motif)
+        count_fn(visual_plan, "externalScaleBarCount")
+        count_fn(visual_plan, "sampleEncodingCount")
+        visual_plan["mirrorRadialPanelCount"] = 1
+        visual_plan["mirrorRadialOriginalBarCount"] = result.get("original_bar_count")
+        visual_plan["mirrorRadialSimplifiedBarCount"] = result.get("simplified_bar_count")
+        visual_plan["radialBarLayerCount"] = result.get("radial_bar_layer_count")
+        visual_plan["mirrorRadialLayerCount"] = result.get("radial_bar_layer_count")
+        visual_plan["mirrorRadialPaletteApplied"] = result.get("palette")
+        visual_plan["templateMatchMode"] = "case_023_mirror_radial_bar_board"
+        return result["ax"]
 
     long_format = (attr_col is not None and val_col is not None
                    and attr_col in df.columns and val_col in df.columns)
@@ -2240,6 +2625,46 @@ def gen_radar(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=No
                       or template_palette_hex == ["#1F3A5F", "#C8553D"]
                       or list(fallback)[:2] == ["#1F3A5F", "#C8553D"])
 
+    def _collect_tokens(value):
+        tokens = []
+        if isinstance(value, (list, tuple, set)):
+            tokens.extend(str(v).lower() for v in value)
+        elif isinstance(value, dict):
+            for item in value.values():
+                tokens.extend(_collect_tokens(item))
+        elif value:
+            tokens.append(str(value).lower())
+        return tokens
+
+    motif_tokens = set()
+    for source in (
+        chartPlan.get("templateMotifs"),
+        chartPlan.get("visualMotifs"),
+        chartPlan.get("radarStyle"),
+        visual_plan.get("templateMotifs"),
+        visual_plan.get("visualMotifs"),
+        chartPlan.get("templateCasePlan"),
+    ):
+        motif_tokens.update(_collect_tokens(source))
+
+    def _has_template_motif(*needles):
+        for token in motif_tokens:
+            normalized = token.replace("_", " ")
+            for needle in needles:
+                n = str(needle).lower()
+                if n in token or n.replace("_", " ") in normalized:
+                    return True
+        return False
+
+    use_hollow_center = _has_template_motif(
+        "hollow_polar_center", "hollow-center", "center_hollow",
+        "hollow_highlight_radar", "center cutout", "中心挖空", "立体高光"
+    )
+    use_glass_markers = use_hollow_center or _has_template_motif(
+        "glass_marker_stack", "glass_markers",
+        "pseudo_3d_marker_highlight", "specular", "立体高光"
+    )
+
     # ─── Build closed-loop angles ─────────────────────────────────────────
     angles = [i / n_attrs * 2 * _pi for i in range(n_attrs)]
     angles_closed = angles + [angles[0]]
@@ -2249,6 +2674,10 @@ def gen_radar(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=No
                     or chartPlan.get("axisLimits")
                     or dataProfile.get("axisLimits")
                     or {})
+    radar_centers = (chartPlan.get("radarAxisCenters")
+                     or chartPlan.get("axisCenters")
+                     or dataProfile.get("axisCenters")
+                     or {})
     limits = []
     for attr in attributes:
         if attr in radar_limits and radar_limits[attr]:
@@ -2273,8 +2702,30 @@ def gen_radar(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=No
         nice = next(n for n in (1.0, 2.0, 2.5, 5.0, 10.0) if scaled <= n)
         limits.append(nice * (10 ** exp))
 
-    def _norm(values, limits):
-        return [float(v) / float(l) if l else 0.0 for v, l in zip(values, limits)]
+    centers = []
+    for attr, limit in zip(attributes, limits):
+        try:
+            center = float(radar_centers.get(attr, 0.0)) if isinstance(radar_centers, dict) else 0.0
+        except Exception:
+            center = 0.0
+        centers.append(center if center < float(limit) else 0.0)
+
+    def _norm(values, limits, centers=None):
+        centers = centers or [0.0] * len(limits)
+        out = []
+        for value, limit, center in zip(values, limits, centers):
+            denom = float(limit) - float(center)
+            normed = (float(value) - float(center)) / denom if denom else 0.0
+            out.append(float(np.clip(normed, 0.0, 1.1)))
+        return out
+
+    def _norm_error(errors, limits, centers=None):
+        centers = centers or [0.0] * len(limits)
+        out = []
+        for err, limit, center in zip(errors, limits, centers):
+            denom = float(limit) - float(center)
+            out.append(float(err) / denom if denom else 0.0)
+        return out
 
     # ─── Figure setup (standalone) ────────────────────────────────────────
     if standalone:
@@ -2319,6 +2770,18 @@ def gen_radar(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=No
             ax.errorbar(angles, values_norm, yerr=errors_norm,
                         fmt="o", color=color, markersize=6, capsize=3,
                         elinewidth=1.2, zorder=10)
+        elif use_glass_markers:
+            glass_marker_fn = globals().get("scatter_glass_markers")
+            if glass_marker_fn is not None:
+                try:
+                    glass_marker_fn(ax, angles, values_norm, color=color,
+                                    base_s=48, soft_s=18, hard_s=7, zorder=10)
+                except Exception:
+                    ax.scatter(angles, values_norm, s=42, color=color,
+                               edgecolor="white", linewidth=0.6, zorder=10)
+            else:
+                ax.scatter(angles, values_norm, s=42, color=color,
+                           edgecolor="white", linewidth=0.6, zorder=10)
         else:
             ax.scatter(angles, values_norm, s=42, color=color,
                        edgecolor="white", linewidth=0.6, zorder=10)
@@ -2336,8 +2799,8 @@ def gen_radar(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=No
                            and not sub[sub[attr_col] == a].empty) else 0.0
                        for a in attributes]
                       if err_col else None)
-            values_norm = _norm(values, limits)
-            errors_norm = _norm(errors, limits) if errors else None
+            values_norm = _norm(values, limits, centers)
+            errors_norm = _norm_error(errors, limits, centers) if errors else None
             color = cat_map.get(grp, fallback[i % len(fallback)])
             label = display_label(grp, col_map) if col_map else str(grp)
             _plot_group(values_norm, errors_norm, color, label)
@@ -2349,7 +2812,7 @@ def gen_radar(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=No
         for i, grp in enumerate(groups):
             sub = df[df[group_col] == grp].iloc[0]
             values = [float(sub[a]) if a in sub else 0.0 for a in attributes]
-            values_norm = _norm(values, limits)
+            values_norm = _norm(values, limits, centers)
             color = cat_map.get(grp, fallback[i % len(fallback)])
             label = display_label(grp, col_map) if col_map else str(grp)
             _plot_group(values_norm, None, color, label)
@@ -2363,7 +2826,7 @@ def gen_radar(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=No
                       for a in attributes]
         else:
             values = [float(df[a].mean()) for a in attributes]
-        values_norm = _norm(values, limits)
+        values_norm = _norm(values, limits, centers)
         color = fallback[0]
         _plot_group(values_norm, None, color, "value")
         template_rows.append(values_norm)
@@ -2378,8 +2841,34 @@ def gen_radar(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=No
     ax.set_yticklabels(["", "", "", ""])
     ax.set_ylim(0, 1.05)
 
+    if use_hollow_center:
+        hollow_fn = globals().get("add_hollow_polar_center")
+        if hollow_fn is not None:
+            try:
+                hollow_fn(ax, size=130, zorder=15)
+            except Exception:
+                ax.scatter([0], [0], s=130, c="white",
+                           edgecolors="black", linewidths=0.9, zorder=15)
+        else:
+            ax.scatter([0], [0], s=130, c="white",
+                       edgecolors="black", linewidths=0.9, zorder=15)
+        if any(c > 0 for c in centers):
+            spoke_label_fn = globals().get("add_polar_spoke_tick_labels")
+            first_center, first_limit = centers[0], limits[0]
+            tick_values = chartPlan.get("radarTickValues")
+            if not tick_values:
+                tick_values = [
+                    first_center + (first_limit - first_center) * q
+                    for q in (0.25, 0.5, 0.75, 1.0)
+                ]
+            if spoke_label_fn is not None:
+                try:
+                    spoke_label_fn(ax, tick_values, center=first_center,
+                                   angle=angles[0], fmt="{:g}")
+                except Exception:
+                    pass
+
     # ─── Per-spoke physical-limit annotation (Nature signature) ──────────
-    visual_plan = chartPlan.get("visualContentPlan") if isinstance(chartPlan.get("visualContentPlan"), dict) else {}
     if visual_plan.get("requireInPlotExplanatoryLabels", True):
         for ang, lim in zip(angles, limits):
             label_txt = (f"max={int(lim)}" if abs(lim - int(lim)) < 1e-6
@@ -2658,6 +3147,7 @@ def gen_grouped_bar(df, dataProfile, chartPlan, rcParams, palette, col_map=None,
         fig, ax = plt.subplots(figsize=(89 * (1 / 25.4), 60 * (1 / 25.4)),
                            constrained_layout=True)
     patterns = set(dataProfile.get("specialPatterns", []))
+    visual_plan = chartPlan.setdefault("visualContentPlan", {}) if isinstance(chartPlan, dict) else {}
     domain = (dataProfile.get("domainHints", {}) or {}).get("primary", "")
     tokens = " ".join(
         [str(c).lower() for c in df.columns]
@@ -2669,6 +3159,16 @@ def gen_grouped_bar(df, dataProfile, chartPlan, rcParams, palette, col_map=None,
         or "model_performance_benchmark" in patterns
         or "ml_model_family" in patterns
         or any(t in tokens for t in ("random forest", "randomforest", "rf", "rfr", "xgboost", "lightgbm", "gbdt", "svm", "knn"))
+    )
+    is_inset_heatmap_rank = (
+        "inset_heatmap_bar_rank" in patterns
+        or "ranked_bar_inset_heatmap" in patterns
+        or "bar_rank_heatmap_inset" in patterns
+        or (
+            "heatmap" in tokens
+            and any(t in tokens for t in ("rank", "ranking", "pearson", "correlation"))
+            and not is_ml_benchmark
+        )
     )
     metric_priority = ["auc", "roc_auc", "accuracy", "f1", "precision", "recall", "r2", "rmse", "mae", "mse", "error"]
 
@@ -2701,6 +3201,39 @@ def gen_grouped_bar(df, dataProfile, chartPlan, rcParams, palette, col_map=None,
             subgroup_col = "_metric_name"
             value_col = "_metric_value"
             wide_metric_mode = "metrics_as_subgroups"
+
+    if is_inset_heatmap_rank and standalone:
+        if value_col is None:
+            raise ValueError("grouped_bar inset_heatmap_bar_rank requires a numeric 'value' role")
+        draw_inset_heatmap_bar_rank = globals().get("draw_inset_heatmap_bar_rank")
+        if callable(draw_inset_heatmap_bar_rank):
+            numeric_candidates = [
+                col for col in source_df.columns
+                if col not in {group_col, subgroup_col, value_col}
+                and pd.api.types.is_numeric_dtype(source_df[col])
+            ]
+            result = draw_inset_heatmap_bar_rank(
+                source_df,
+                category_col=group_col,
+                value_col=value_col,
+                error_col=roles.get("error") if roles.get("error") in source_df.columns else None,
+                heatmap_cols=numeric_candidates[:6],
+                col_map=col_map,
+            )
+            record_fn = globals().get("_record_template_motif", lambda *args, **kwargs: None)
+            count_fn = globals().get("_visual_count", lambda *args, **kwargs: None)
+            planned = visual_plan.setdefault("templateMotifs", [])
+            for motif in ("inset_heatmap_bar_rank", "inset_heatmap_colorbar"):
+                if motif not in planned:
+                    planned.append(motif)
+                record_fn(visual_plan, motif)
+            count_fn(visual_plan, "insetCount")
+            count_fn(visual_plan, "colorbarSlotCount")
+            count_fn(visual_plan, "sampleEncodingCount")
+            visual_plan["templateMatchMode"] = "case_027_inset_heatmap_bar_rank"
+            visual_plan["rankedBarInsetHeatmapCategories"] = int(result.get("bar_count", 0))
+            visual_plan["rankedBarInsetHeatmapSamples"] = int(result.get("sample_point_count", 0))
+            return result["axis"]
 
     if subgroup_col is None or value_col is None:
         raise ValueError("grouped_bar requires 'subgroup' and 'value' in semanticRoles, or AI/ML wide metric columns")
@@ -3452,7 +3985,7 @@ def gen_km(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=None)
 def gen_forest(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=None):
     """Forest plot for effect sizes with confidence intervals.
 
-    Anchor cases (template/articles):
+    Anchor cases (template corpus):
       - Python科研绘图复现_绘制多面板分组森林图展示生存分析风险比(HR)_1777453520
       - 期刊配图复现_Python绘制机器学习预测-实验对比图 (clinical forest panels)
 
@@ -3470,11 +4003,149 @@ def gen_forest(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=N
     """
     standalone = ax is None
     roles = dataProfile.get("semanticRoles", {})
-    label_col = roles.get("label") or roles.get("group")
-    estimate_col = roles.get("estimate") or roles.get("value") or roles.get("hr") or roles.get("ratio")
-    ci_low_col = roles.get("ci_low") or roles.get("lower")
-    ci_high_col = roles.get("ci_high") or roles.get("upper")
-    se_col = roles.get("se")
+    columns_lower = {str(c).lower(): c for c in df.columns}
+
+    def _role_or_column(*names):
+        for name in names:
+            value = roles.get(name)
+            if value in df.columns:
+                return value
+            if isinstance(value, str) and value.lower() in columns_lower:
+                return columns_lower[value.lower()]
+            if name in columns_lower:
+                return columns_lower[name]
+        return None
+
+    label_col = _role_or_column("label", "term", "feature", "group")
+    estimate_col = _role_or_column("estimate", "value", "hr", "ratio", "hazard_ratio")
+    ci_low_col = _role_or_column("ci_low", "lower", "low", "lcl")
+    ci_high_col = _role_or_column("ci_high", "upper", "high", "ucl")
+    se_col = _role_or_column("se", "stderr", "std_error")
+    panel_col = _role_or_column("panel", "facet", "disease", "outcome", "cohort", "condition")
+    model_col = _role_or_column("model", "series", "adjustment", "model_name")
+
+    visual_plan = chartPlan.get("visualContentPlan")
+    if not isinstance(visual_plan, dict):
+        visual_plan = {}
+        chartPlan["visualContentPlan"] = visual_plan
+    template_motifs = {
+        str(m).lower()
+        for m in (visual_plan.get("templateMotifs") or chartPlan.get("templateMotifs") or [])
+    }
+    patterns = {str(p).lower() for p in dataProfile.get("specialPatterns", [])}
+    forest_tokens = " ".join(
+        str(v).lower()
+        for v in [
+            panel_col or "",
+            model_col or "",
+            estimate_col or "",
+            dataProfile.get("domain", ""),
+            *template_motifs,
+            *patterns,
+        ]
+    )
+    use_faceted_hr_forest = (
+        standalone
+        and bool(panel_col) and panel_col in df.columns
+        and bool(model_col) and model_col in df.columns
+        and bool(estimate_col) and estimate_col in df.columns
+        and bool(ci_low_col) and ci_low_col in df.columns
+        and bool(ci_high_col) and ci_high_col in df.columns
+        and panel_col != model_col
+        and (
+            "faceted_hr_forest" in template_motifs
+            or "hr_forest" in patterns
+            or ("forest" in forest_tokens and ("hr" in forest_tokens or "hazard" in forest_tokens))
+        )
+    )
+
+    if use_faceted_hr_forest:
+        plot_df = df[[panel_col, model_col, estimate_col, ci_low_col, ci_high_col]].copy()
+        for col in (estimate_col, ci_low_col, ci_high_col):
+            plot_df[col] = pd.to_numeric(plot_df[col], errors="coerce")
+        plot_df = plot_df.dropna(subset=[panel_col, model_col, estimate_col, ci_low_col, ci_high_col])
+        plot_df = plot_df[(plot_df[estimate_col] > 0) & (plot_df[ci_low_col] > 0) & (plot_df[ci_high_col] > 0)]
+        if plot_df.empty:
+            raise ValueError("faceted_hr_forest requires positive panel/model/hr/lower/upper rows")
+        panels = plot_df[panel_col].dropna().astype(str).unique().tolist()[:4]
+        models = plot_df[model_col].dropna().astype(str).unique().tolist()
+        style_fn = globals().get("resolve_forest_model_style_map")
+        model_styles = (
+            style_fn(models, variant="nature_hr_adjustment")
+            if style_fn is not None else {}
+        )
+        ncols = max(1, len(panels))
+        fig, axes = plt.subplots(
+            1, ncols, figsize=(3.5 * ncols, 4.0),
+            sharey=True, constrained_layout=False,
+        )
+        axes = np.atleast_1d(axes).tolist()
+        y_positions = np.arange(len(models))[::-1]
+        x_min = max(0.01, float(plot_df[ci_low_col].min()) * 0.90)
+        x_max = float(plot_df[ci_high_col].max()) * 1.08
+        handles_by_label = {}
+        for ax_idx, (sub_ax, panel_value) in enumerate(zip(axes, panels)):
+            panel_df = plot_df[plot_df[panel_col].astype(str) == str(panel_value)]
+            for model_idx, model_name in enumerate(models):
+                rows = panel_df[panel_df[model_col].astype(str) == str(model_name)]
+                if rows.empty:
+                    continue
+                row = rows.iloc[0]
+                hr = float(row[estimate_col])
+                lo = float(row[ci_low_col])
+                hi = float(row[ci_high_col])
+                if hi < lo:
+                    lo, hi = hi, lo
+                style = dict(model_styles.get(str(model_name), {}))
+                color = style.get("color", "#8DA0CB")
+                handle = sub_ax.errorbar(
+                    x=hr, y=y_positions[model_idx],
+                    xerr=[[max(hr - lo, 0.0)], [max(hi - hr, 0.0)]],
+                    fmt=style.get("marker", "o"),
+                    color=color, ecolor=color,
+                    elinewidth=style.get("elinewidth", 2.0),
+                    capsize=style.get("capsize", 4),
+                    markersize=style.get("markersize", 8),
+                    markerfacecolor=style.get("markerfacecolor", color),
+                    markeredgecolor=style.get("markeredgecolor", "white"),
+                    markeredgewidth=style.get("markeredgewidth", 0.6),
+                    zorder=style.get("zorder", 10),
+                )
+                handles_by_label.setdefault(str(model_name), handle.lines[0])
+            sub_ax.axvline(x=1.0, color="#777777", linestyle="--", linewidth=1.0, zorder=0)
+            sub_ax.set_title(str(display_label(panel_value, col_map) if col_map else panel_value),
+                             fontsize=8.5, fontweight="bold", pad=10)
+            sub_ax.set_xlim(x_min, x_max)
+            sub_ax.set_yticks(y_positions)
+            if ax_idx == 0:
+                sub_ax.set_yticklabels([str(m) for m in models], fontsize=7)
+            else:
+                sub_ax.tick_params(labelleft=False)
+            sub_ax.tick_params(axis="y", length=0)
+            sub_ax.tick_params(axis="x", labelsize=7, length=3)
+            sub_ax.spines["top"].set_visible(False)
+            sub_ax.spines["right"].set_visible(False)
+            sub_ax.set_xlabel("Hazard ratio (95% CI)", fontsize=7.5)
+        if handles_by_label:
+            legend_labels = [m for m in models if str(m) in handles_by_label]
+            fig.legend(
+                [handles_by_label[str(m)] for m in legend_labels],
+                [str(m) for m in legend_labels],
+                loc="upper center", bbox_to_anchor=(0.5, 0.98),
+                ncol=min(3, len(legend_labels)), frameon=False, fontsize=8,
+                handlelength=1.8,
+            )
+        fig.subplots_adjust(wspace=0.10, top=0.78, left=0.09, right=0.98, bottom=0.18)
+        planned_motifs = visual_plan.setdefault("templateMotifs", [])
+        if "faceted_hr_forest" not in planned_motifs:
+            planned_motifs.append("faceted_hr_forest")
+        globals().get("_record_template_motif", lambda *args, **kwargs: None)(
+            visual_plan, "faceted_hr_forest"
+        )
+        count_fn = globals().get("_visual_count", lambda *args, **kwargs: None)
+        for _ in axes:
+            count_fn(visual_plan, "referenceLineCount")
+        return axes[0]
 
     if label_col is None or estimate_col is None:
         raise ValueError("forest requires 'label' and 'estimate' in semanticRoles")
@@ -4204,9 +4875,17 @@ def gen_scatter_regression(df, dataProfile, chartPlan, rcParams, palette, col_ma
                 return columns_lower[name]
         return None
 
-    x_col = _role_or_column("actual", "observed", "measured", "x", "dose")
-    y_col = _role_or_column("predicted", "prediction", "fitted", "y", "value")
-    split_col = _role_or_column("split", "sample_type", "source", "cohort", "group")
+    x_col = _role_or_column("actual", "observed", "measured", "true", "y_true", "x", "dose", "concentration")
+    y_col = _role_or_column("predicted", "prediction", "fitted", "y_pred", "y", "value")
+    trend_x_col = _role_or_column("x", "sample", "sample_id", "sample_index", "index", "concentration", "dose", "time")
+    true_col = _role_or_column("true", "actual", "observed", "measured", "y_true")
+    predicted_col = _role_or_column("predicted", "prediction", "fitted", "y_pred")
+    split_col = _role_or_column("split", "sample_type", "source", "cohort", "group", "set", "dataset")
+    panel_col = _role_or_column("panel", "facet", "task", "target", "property", "condition", "temperature", "temp", "system", "material", "dopant")
+    method_col = _role_or_column("method", "model", "algorithm", "series", "source")
+    lower_col = _role_or_column("pi_low", "pi_lower", "lower", "lower_bound", "y_lower", "prediction_lower", "prediction_interval_lower")
+    upper_col = _role_or_column("pi_high", "pi_upper", "upper", "upper_bound", "y_upper", "prediction_upper", "prediction_interval_upper")
+    threshold_col = _role_or_column("threshold", "breakpoint", "changepoint", "split_value")
     template_case = (chartPlan.get("templateCasePlan") or chartPlan.get("visualContentPlan", {}).get("templateCasePlan") or {})
     patterns = {str(p).lower() for p in dataProfile.get("specialPatterns", [])}
     bundle_key = str(template_case.get("bundleKey") or "").lower()
@@ -4261,6 +4940,1111 @@ def gen_scatter_regression(df, dataProfile, chartPlan, rcParams, palette, col_ma
     if x_col is None or y_col is None:
         raise ValueError("scatter_regression requires 'x' and 'y' in semanticRoles")
 
+    inset_tokens = " ".join(
+        str(v).lower()
+        for v in [
+            bundle_key,
+            *patterns,
+            *template_motifs,
+            trend_x_col or "",
+            true_col or "",
+            predicted_col or "",
+            panel_col or "",
+            split_col or "",
+            lower_col or "",
+            upper_col or "",
+            feature_name_col or "",
+            feature_value_col or "",
+            shap_value_col or "",
+            interaction_col or "",
+            *template_families,
+            dataProfile.get("domain", ""),
+        ]
+    )
+    use_hump_threshold_regression = (
+        standalone
+        and (
+            visual_plan.get("useHumpThresholdRegression")
+            or
+            "hump_threshold_regression" in template_motifs
+            or "threshold_hump_regression" in template_motifs
+            or "hump_threshold_regression" in patterns
+            or "threshold_hump_regression" in patterns
+            or (
+                any(token in inset_tokens for token in ("hump", "threshold", "breakpoint", "changepoint", "驼峰", "阈值"))
+                and not is_shap_dependence
+            )
+        )
+    )
+
+    if use_hump_threshold_regression:
+        drawer = globals().get("draw_hump_threshold_regression")
+        if drawer is None:
+            raise RuntimeError("draw_hump_threshold_regression helper is required for hump threshold regression")
+        threshold_value = visual_plan.get("humpThresholdValue")
+        if threshold_value is None and threshold_col and threshold_col in df.columns:
+            threshold_series = pd.to_numeric(df[threshold_col], errors="coerce").dropna()
+            if len(threshold_series):
+                threshold_value = float(threshold_series.iloc[0])
+        result = drawer(
+            df,
+            x_col=x_col,
+            y_col=y_col,
+            threshold=threshold_value,
+            degree=visual_plan.get("humpThresholdPolynomialDegree", 3),
+            n_bootstraps=visual_plan.get("humpThresholdBootstraps", 200),
+            figsize=tuple(visual_plan.get("humpThresholdFigsize", [7.0, 5.0])),
+            ci_color=visual_plan.get("humpThresholdCIColor", "#D9D9D9"),
+            ci_alpha=visual_plan.get("humpThresholdCIAlpha", 0.60),
+            scatter_color=visual_plan.get("humpThresholdScatterColor", "#E87A6E"),
+            global_line_color=visual_plan.get("humpThresholdGlobalLineColor", "#404040"),
+            threshold_color=visual_plan.get("humpThresholdColor", "#E63946"),
+            low_segment_color=visual_plan.get("humpThresholdLowSegmentColor", "#2AB7CA"),
+            high_segment_color=visual_plan.get("humpThresholdHighSegmentColor", "#1E847F"),
+            scatter_size=visual_plan.get("humpThresholdScatterSize", 60),
+            scatter_alpha=visual_plan.get("humpThresholdScatterAlpha", 0.80),
+            col_map=col_map,
+        )
+        record_fn = globals().get("_record_template_motif", lambda *args, **kwargs: None)
+        count_fn = globals().get("_visual_count", lambda *args, **kwargs: None)
+        planned_motifs = visual_plan.setdefault("templateMotifs", [])
+        for motif in ("hump_threshold_regression", "regression_band_fillbtw", "threshold_split_line"):
+            if motif not in planned_motifs:
+                planned_motifs.append(motif)
+            record_fn(visual_plan, motif)
+        for _ in range(result.get("confidence_band_count", 0)):
+            count_fn(visual_plan, "confidenceBandCount")
+        for _ in range(result.get("scatter_count", 0)):
+            count_fn(visual_plan, "sampleEncodingCount")
+        for _ in range(result.get("global_fit_count", 0)):
+            count_fn(visual_plan, "regressionLineCount")
+        for _ in range(result.get("segment_fit_count", 0)):
+            count_fn(visual_plan, "segmentedRegressionLineCount")
+        for _ in range(result.get("threshold_line_count", 0)):
+            count_fn(visual_plan, "referenceLineCount")
+            count_fn(visual_plan, "thresholdLineCount")
+        for _ in range(result.get("external_legend_count", 0)):
+            count_fn(visual_plan, "externalLegendCount")
+        for _ in range(result.get("annotation_count", 0)):
+            count_fn(visual_plan, "annotationTextCount")
+        visual_plan["humpThresholdValue"] = result.get("threshold")
+        visual_plan["humpThresholdR2"] = result.get("r2")
+        visual_plan["humpThresholdSegmentLineCount"] = result.get("segment_fit_count")
+        visual_plan["templateMatchMode"] = "case_024_hump_threshold_regression"
+        return result["axis"]
+
+    use_shap_interaction_dependence_grid = (
+        standalone
+        and is_shap_dependence
+        and bool(feature_name_col) and feature_name_col in df.columns
+        and bool(interaction_col) and interaction_col in df.columns
+        and df[feature_name_col].dropna().astype(str).nunique() > 1
+        and (
+            "shap_interaction_dependence_grid" in template_motifs
+            or "interaction_color_mapped_scatter" in template_motifs
+            or "shap_interaction_grid" in patterns
+            or "interaction_effect" in patterns
+            or ("shap_dependence" in patterns and ("interaction" in inset_tokens or "secondary" in inset_tokens))
+        )
+    )
+
+    if use_shap_interaction_dependence_grid:
+        drawer = globals().get("draw_shap_interaction_dependence_grid")
+        if drawer is None:
+            raise RuntimeError("draw_shap_interaction_dependence_grid helper is required for SHAP interaction grid")
+        result = drawer(
+            df,
+            feature_col=feature_name_col,
+            feature_value_col=feature_value_col,
+            shap_value_col=shap_value_col,
+            interaction_col=interaction_col,
+            max_features=visual_plan.get("shapInteractionMaxFeatures", 6),
+            ncols=visual_plan.get("shapInteractionNcols", 3),
+            figsize=tuple(visual_plan.get("shapInteractionFigsize", [14.0, 8.0])),
+            cmap=visual_plan.get("shapInteractionColormap", "coolwarm"),
+            scatter_size=visual_plan.get("shapInteractionScatterSize", 15),
+            scatter_alpha=visual_plan.get("shapInteractionScatterAlpha", 0.80),
+            zero_color=visual_plan.get("shapInteractionZeroLineColor", "gray"),
+            colorbar_label=visual_plan.get("shapInteractionColorbarLabel", "Interaction Feature"),
+            col_map=col_map,
+        )
+        record_fn = globals().get("_record_template_motif", lambda *args, **kwargs: None)
+        count_fn = globals().get("_visual_count", lambda *args, **kwargs: None)
+        record_fn(visual_plan, "shap_interaction_dependence_grid")
+        record_fn(visual_plan, "interaction_color_mapped_scatter")
+        record_fn(visual_plan, "shap_dependence_grid")
+        for _ in range(result.get("panel_count", 0)):
+            count_fn(visual_plan, "shapInteractionPanelCount")
+        for _ in range(result.get("scatter_count", 0)):
+            count_fn(visual_plan, "shapInteractionScatterCount")
+            count_fn(visual_plan, "sampleEncodingCount")
+        for _ in range(result.get("colorbar_count", 0)):
+            count_fn(visual_plan, "colorbarSlotCount")
+        for _ in range(result.get("zero_line_count", 0)):
+            count_fn(visual_plan, "zeroReferenceLineCount")
+            count_fn(visual_plan, "referenceLineCount")
+        for _ in range(result.get("panel_label_count", 0)):
+            count_fn(visual_plan, "panelLabelCount")
+        visual_plan["shapInteractionPanelCount"] = result.get("panel_count", 0)
+        visual_plan["shapInteractionScatterCount"] = result.get("scatter_count", 0)
+        visual_plan["shapInteractionColorbarCount"] = result.get("colorbar_count", 0)
+        visual_plan["shapInteractionZeroLineCount"] = result.get("zero_line_count", 0)
+        visual_plan["shapInteractionColormap"] = result.get("cmap")
+        return result["axes"][0]
+
+    use_shap_dependence_background_grid = (
+        standalone
+        and is_shap_dependence
+        and bool(feature_name_col) and feature_name_col in df.columns
+        and not use_shap_interaction_dependence_grid
+        and df[feature_name_col].dropna().astype(str).nunique() > 1
+        and (
+            "shap_dependence_background_grid" in template_motifs
+            or "shap_dependence_grid" in template_motifs
+            or "signed_effect_background" in template_motifs
+            or "shap_dependence" in patterns
+            or "shap_background_grid" in patterns
+            or "shap_composite" in template_families
+        )
+    )
+
+    if use_shap_dependence_background_grid:
+        drawer = globals().get("draw_shap_dependence_background_grid")
+        if drawer is None:
+            raise RuntimeError("draw_shap_dependence_background_grid helper is required for SHAP dependence grid")
+        result = drawer(
+            df,
+            feature_col=feature_name_col,
+            feature_value_col=feature_value_col,
+            shap_value_col=shap_value_col,
+            max_features=visual_plan.get("shapDependenceMaxFeatures", 6),
+            ncols=visual_plan.get("shapDependenceNcols", 3),
+            figsize=tuple(visual_plan.get("shapDependenceFigsize", [12.0, 7.0])),
+            y_limits=tuple(visual_plan.get("shapDependenceYLimits", [-2.5, 2.5])),
+            positive_color=visual_plan.get("shapPositiveBackgroundColor", "#ffcccc"),
+            negative_color=visual_plan.get("shapNegativeBackgroundColor", "#cce5ff"),
+            background_alpha=visual_plan.get("shapBackgroundAlpha", 0.40),
+            scatter_color=visual_plan.get("shapDependenceScatterColor", "black"),
+            scatter_size=visual_plan.get("shapDependenceScatterSize", 15),
+            scatter_alpha=visual_plan.get("shapDependenceScatterAlpha", 0.70),
+            zero_color=visual_plan.get("shapZeroLineColor", "gray"),
+            col_map=col_map,
+        )
+        record_fn = globals().get("_record_template_motif", lambda *args, **kwargs: None)
+        count_fn = globals().get("_visual_count", lambda *args, **kwargs: None)
+        record_fn(visual_plan, "shap_dependence_background_grid")
+        record_fn(visual_plan, "signed_effect_background")
+        record_fn(visual_plan, "shap_dependence_grid")
+        for _ in range(result.get("panel_count", 0)):
+            count_fn(visual_plan, "shapDependencePanelCount")
+            count_fn(visual_plan, "panelLabelCount")
+        for _ in range(result.get("scatter_count", 0)):
+            count_fn(visual_plan, "shapDependenceScatterCount")
+            count_fn(visual_plan, "sampleEncodingCount")
+        for _ in range(result.get("zero_line_count", 0)):
+            count_fn(visual_plan, "zeroReferenceLineCount")
+            count_fn(visual_plan, "referenceLineCount")
+        for _ in range(result.get("background_zone_count", 0)):
+            count_fn(visual_plan, "backgroundZoneCount")
+        visual_plan["shapDependencePanelCount"] = result.get("panel_count", 0)
+        visual_plan["shapDependenceBackgroundZoneCount"] = result.get("background_zone_count", 0)
+        visual_plan["shapDependenceZeroLineCount"] = result.get("zero_line_count", 0)
+        visual_plan["shapDependenceYLimits"] = result.get("y_limits")
+        return result["axes"][0]
+
+    use_time_series_pi = (
+        standalone
+        and bool(trend_x_col) and trend_x_col in df.columns
+        and bool(true_col) and bool(predicted_col)
+        and true_col in df.columns and predicted_col in df.columns
+        and true_col != predicted_col
+        and (
+            "time_series_prediction_interval" in template_motifs
+            or "time_series_pi" in template_motifs
+            or "interval_uncertainty_band" in template_motifs
+            or "time_series_pi" in patterns
+            or "prediction_interval" in patterns
+            or "train_test_prediction_interval" in patterns
+            or "time_series_pi" in template_families
+            or (
+                "prediction" in inset_tokens
+                and "interval" in inset_tokens
+                and any(token in inset_tokens for token in ("train", "training", "test", "testing", "time", "series"))
+            )
+        )
+    )
+
+    if use_time_series_pi:
+        drawer = globals().get("draw_time_series_prediction_interval")
+        if drawer is None:
+            raise RuntimeError("draw_time_series_prediction_interval helper is required for time-series PI")
+        result = drawer(
+            df,
+            time_col=trend_x_col,
+            actual_col=true_col,
+            predicted_col=predicted_col,
+            lower_col=lower_col,
+            upper_col=upper_col,
+            split_col=split_col,
+            split_index=visual_plan.get("timeSeriesSplitIndex"),
+            figsize=tuple(visual_plan.get("timeSeriesPIFigsize", [10.0, 5.0])),
+            interval_color=visual_plan.get("timeSeriesPIBandColor", "skyblue"),
+            interval_alpha=visual_plan.get("timeSeriesPIAlpha", 0.40),
+            observed_color=visual_plan.get("timeSeriesObservedColor", "black"),
+            predicted_color=visual_plan.get("timeSeriesPredictedColor", "red"),
+            divider_color=visual_plan.get("timeSeriesDividerColor", "gray"),
+            observed_size=visual_plan.get("timeSeriesObservedSize", 15),
+            observed_alpha=visual_plan.get("timeSeriesObservedAlpha", 0.70),
+            predicted_lw=visual_plan.get("timeSeriesPredictedLinewidth", 1.5),
+            interval_label=visual_plan.get("timeSeriesPIBandLabel", "90% Prediction Interval"),
+            observed_label=visual_plan.get("timeSeriesObservedLabel", "Actual Observations"),
+            predicted_label=visual_plan.get("timeSeriesPredictedLabel", "Model Prediction"),
+            train_label=visual_plan.get("timeSeriesTrainLabel", "Training data set"),
+            test_label=visual_plan.get("timeSeriesTestLabel", "Testing data set"),
+            top_legend=visual_plan.get("timeSeriesTopLegend", True),
+            region_labels=visual_plan.get("timeSeriesRegionLabels", True),
+            col_map=col_map,
+        )
+        record_fn = globals().get("_record_template_motif", lambda *args, **kwargs: None)
+        count_fn = globals().get("_visual_count", lambda *args, **kwargs: None)
+        record_fn(visual_plan, "time_series_prediction_interval")
+        record_fn(visual_plan, "interval_uncertainty_band")
+        record_fn(visual_plan, "train_test_diagnostic")
+        if "prediction_diagnostic_matrix" in template_motifs:
+            record_fn(visual_plan, "prediction_diagnostic_matrix")
+        for _ in range(result.get("interval_band_count", 0)):
+            count_fn(visual_plan, "intervalBandCount")
+        for _ in range(result.get("observed_scatter_count", 0)):
+            count_fn(visual_plan, "observedScatterCount")
+            count_fn(visual_plan, "sampleEncodingCount")
+        for _ in range(result.get("predicted_line_count", 0)):
+            count_fn(visual_plan, "predictedLineCount")
+        for _ in range(result.get("train_test_divider_count", 0)):
+            count_fn(visual_plan, "trainTestDividerCount")
+            count_fn(visual_plan, "referenceLineCount")
+        for _ in range(result.get("train_test_region_label_count", 0)):
+            count_fn(visual_plan, "trainTestRegionLabelCount")
+        for _ in range(result.get("legend_count", 0)):
+            count_fn(visual_plan, "externalLegendCount")
+        visual_plan["timeSeriesPredictionIntervalCount"] = result.get("interval_band_count", 0)
+        visual_plan["timeSeriesObservedScatterCount"] = result.get("observed_scatter_count", 0)
+        visual_plan["timeSeriesPredictedLineCount"] = result.get("predicted_line_count", 0)
+        visual_plan["timeSeriesTrainTestDividerPresent"] = result.get("train_test_divider_count", 0) > 0
+        visual_plan["timeSeriesSplitIndex"] = result.get("split_index")
+        visual_plan["timeSeriesUsesSuppliedInterval"] = result.get("uses_supplied_interval")
+        return result["axis"]
+
+    use_inset_raincloud_residual = (
+        standalone
+        and bool(true_col) and bool(predicted_col)
+        and true_col in df.columns and predicted_col in df.columns
+        and true_col != predicted_col
+        and (
+            "inset_raincloud_residual" in template_motifs
+            or "inset_raincloud" in patterns
+            or "inset_residual_raincloud" in patterns
+            or ("raincloud" in inset_tokens and ("inset" in inset_tokens or "residual" in inset_tokens))
+        )
+    )
+
+    if use_inset_raincloud_residual:
+        draw_raincloud_fn = globals().get("draw_inset_raincloud")
+        if draw_raincloud_fn is None:
+            def draw_raincloud_fn(ax, residuals, *, color="#008000",
+                                  rect=(0.55, 0.35, 0.40, 0.35),
+                                  title="Residual", seed=42):
+                vals = np.asarray(residuals, dtype=float)
+                vals = vals[np.isfinite(vals)]
+                if len(vals) < 3:
+                    return None
+                inset = ax.inset_axes(list(rect), zorder=10)
+                inset.set_gid("scifig_inset_raincloud")
+                inset.set_facecolor("white")
+                inset.patch.set_alpha(0.96)
+                for spine in inset.spines.values():
+                    spine.set_linewidth(0.8)
+                    spine.set_color("#222222")
+                y_min = float(np.nanmin(vals))
+                y_max = float(np.nanmax(vals))
+                span = max(y_max - y_min, 1e-9)
+                pad = span * 0.15
+                grid = np.linspace(y_min - pad, y_max + pad, 120)
+                if len(vals) >= 5 and float(np.nanstd(vals)) > 1e-12:
+                    try:
+                        from scipy.stats import gaussian_kde
+                        density = gaussian_kde(vals)(grid)
+                    except Exception:
+                        hist, edges = np.histogram(vals, bins=min(12, max(5, int(np.sqrt(len(vals))))), density=True)
+                        grid = (edges[:-1] + edges[1:]) / 2
+                        density = hist
+                    if np.nanmax(density) > 0:
+                        density = density / np.nanmax(density) * 0.38
+                        inset.fill_betweenx(grid, 0, density, color=color, alpha=0.40, linewidth=0, zorder=1)
+                        inset.plot(density, grid, color=color, linewidth=1.15, zorder=2)
+                q1, med, q3 = np.percentile(vals, [25, 50, 75])
+                box_x = 0.50
+                inset.add_patch(plt.Rectangle((box_x - 0.045, q1), 0.09, max(q3 - q1, span * 0.015),
+                                              facecolor="white", edgecolor=color, linewidth=1.0, zorder=3))
+                inset.plot([box_x - 0.045, box_x + 0.045], [med, med], color=color, linewidth=1.45, zorder=4)
+                rng = np.random.default_rng(seed)
+                inset.scatter(box_x + 0.13 + rng.random(len(vals)) * 0.15, vals,
+                              s=10, color=color, alpha=0.55, edgecolor="white", linewidth=0.25, zorder=5)
+                inset.axhline(0, color="black", linestyle="--", linewidth=0.65, alpha=0.70, zorder=4)
+                inset.set_xlim(0, 0.84)
+                inset.set_ylim(y_min - pad, y_max + pad)
+                inset.set_xticks([])
+                inset.tick_params(axis="y", labelsize=5.0, length=2, width=0.45, direction="in")
+                inset.set_ylabel("Residual", fontsize=5.2)
+                inset.set_title(title, fontsize=5.4, pad=1.5)
+                return inset
+
+        metric_cols = [
+            col for col in (
+                _role_or_column("mse"),
+                _role_or_column("mae"),
+                _role_or_column("medae", "median_absolute_error"),
+                _role_or_column("difference", "diff"),
+            )
+            if col and col in df.columns
+        ]
+        plot_cols = [true_col, predicted_col]
+        if trend_x_col and trend_x_col in df.columns and trend_x_col not in plot_cols:
+            plot_cols.append(trend_x_col)
+        if panel_col and panel_col in df.columns and panel_col not in plot_cols:
+            plot_cols.append(panel_col)
+        for col in metric_cols:
+            if col not in plot_cols:
+                plot_cols.append(col)
+        plot_df = df[plot_cols].copy()
+        plot_df[true_col] = pd.to_numeric(plot_df[true_col], errors="coerce")
+        plot_df[predicted_col] = pd.to_numeric(plot_df[predicted_col], errors="coerce")
+        if trend_x_col and trend_x_col in plot_df.columns:
+            plot_df[trend_x_col] = pd.to_numeric(plot_df[trend_x_col], errors="coerce")
+        plot_df = plot_df.dropna(subset=[true_col, predicted_col])
+        if plot_df.empty:
+            raise ValueError("inset_raincloud_residual requires non-empty true/predicted rows")
+
+        if panel_col and panel_col in plot_df.columns:
+            panels = plot_df[panel_col].dropna().astype(str).unique().tolist()[:2]
+            if not panels:
+                panels = ["Panel"]
+        else:
+            panels = ["Panel"]
+        n_panels = max(1, len(panels))
+        fig = plt.figure(figsize=(12, 5))
+        gs = fig.add_gridspec(1, n_panels, wspace=0.25)
+        true_color = visual_plan.get("truePredPalette", {}).get("true", "#FFA500")
+        pred_color = visual_plan.get("truePredPalette", {}).get(
+            "predicted", visual_plan.get("insetRaincloudColor", "#008000")
+        )
+        inset_rect = visual_plan.get("insetRaincloudRect", [0.55, 0.35, 0.40, 0.35])
+        count_fn = globals().get("_visual_count", lambda *args, **kwargs: None)
+        record_fn = globals().get("_record_template_motif", lambda *args, **kwargs: None)
+        floor_fn = globals().get("apply_scatter_regression_floor")
+        axes = []
+        for idx, panel_value in enumerate(panels):
+            sub_ax = fig.add_subplot(gs[0, idx])
+            axes.append(sub_ax)
+            if floor_fn is not None:
+                try:
+                    floor_fn(sub_ax, despine=True, grid_axis="both")
+                except Exception:
+                    sub_ax.grid(True, linestyle="--", color="#E0E0E0", linewidth=0.45, alpha=0.60, zorder=0)
+            if panel_col and panel_col in plot_df.columns:
+                panel_df = plot_df[plot_df[panel_col].astype(str) == str(panel_value)].copy()
+            else:
+                panel_df = plot_df.copy()
+            if trend_x_col and trend_x_col in panel_df.columns and panel_df[trend_x_col].notna().any():
+                panel_df = panel_df.sort_values(trend_x_col)
+                x_values = panel_df[trend_x_col].to_numpy(dtype=float)
+                x_label = display_label(trend_x_col, col_map) if col_map else str(trend_x_col)
+            else:
+                panel_df = panel_df.reset_index(drop=True)
+                x_values = np.arange(1, len(panel_df) + 1)
+                x_label = "Sample index"
+            true_values = panel_df[true_col].to_numpy(dtype=float)
+            pred_values = panel_df[predicted_col].to_numpy(dtype=float)
+            residuals = pred_values - true_values
+            sub_ax.plot(
+                x_values, true_values, color=true_color, marker="s", markersize=4.8,
+                linewidth=1.45, label="True", zorder=3,
+            )
+            sub_ax.plot(
+                x_values, pred_values, color=pred_color, marker="o", markersize=4.8,
+                linewidth=1.45, label="Predicted", zorder=4,
+            )
+            if len(panel_df) >= 2:
+                sub_ax.fill_between(x_values, true_values, pred_values,
+                                    color="#888888", alpha=0.12, linewidth=0, zorder=2)
+            mse = float(np.nanmean(residuals ** 2)) if len(residuals) else np.nan
+            mae = float(np.nanmean(np.abs(residuals))) if len(residuals) else np.nan
+            medae = float(np.nanmedian(np.abs(residuals))) if len(residuals) else np.nan
+            diff = float(np.nanmean(residuals)) if len(residuals) else np.nan
+            metric_text = f"MSE: {mse:.3f}\nMAE: {mae:.3f}\nMedAE: {medae:.3f}\nDifference: {diff:.3f}"
+            sub_ax.text(0.05, 0.05, metric_text, transform=sub_ax.transAxes,
+                        ha="left", va="bottom", fontsize=7.2, color="#222222", zorder=9)
+            sub_ax.legend(loc="upper left", frameon=False, fontsize=7.5, handlelength=1.6)
+            sub_ax.text(-0.12, 1.04, chr(ord("a") + idx), transform=sub_ax.transAxes,
+                        fontsize=10, fontweight="bold", ha="left", va="bottom", zorder=20)
+            sub_ax.set_title(str(display_label(panel_value, col_map) if col_map else panel_value),
+                             fontsize=8.2, fontweight="bold", pad=3)
+            sub_ax.set_xlabel(x_label)
+            sub_ax.set_ylabel(display_label(true_col, col_map) if col_map else str(true_col))
+            sub_ax.tick_params(labelsize=7, length=3, direction="in")
+            for spine_name in ("top", "right"):
+                sub_ax.spines[spine_name].set_visible(False)
+            inset_ax = draw_raincloud_fn(
+                sub_ax, residuals, color=pred_color, rect=inset_rect,
+                title="Residual", seed=42 + idx,
+            )
+            count_fn(visual_plan, "metricTextCount")
+            count_fn(visual_plan, "panelLabelCount")
+            if inset_ax is not None:
+                count_fn(visual_plan, "insetCount")
+                count_fn(visual_plan, "insetRaincloudCount")
+                count_fn(visual_plan, "referenceLineCount")
+                count_fn(visual_plan, "subAxesCount")
+        planned_motifs = visual_plan.setdefault("templateMotifs", [])
+        if "inset_raincloud_residual" not in planned_motifs:
+            planned_motifs.append("inset_raincloud_residual")
+        record_fn(visual_plan, "inset_raincloud_residual")
+        visual_plan["useInsetAxes"] = True
+        visual_plan["useInsetRaincloud"] = True
+        fig.subplots_adjust(left=0.07, right=0.98, bottom=0.14, top=0.90, wspace=0.25)
+        return axes[0]
+
+    gam_tokens = " ".join(
+        str(v).lower()
+        for v in [
+            bundle_key,
+            *patterns,
+            *template_motifs,
+            x_col,
+            y_col,
+            split_col or "",
+            dataProfile.get("domain", ""),
+        ]
+    )
+    use_gam_log_residual_diagnostic = (
+        standalone
+        and (
+            "gam_log_residual_diagnostic" in template_motifs
+            or "gam_residual_diagnostic" in patterns
+            or ("gam" in gam_tokens and "residual" in gam_tokens)
+            or ("spline" in gam_tokens and "residual" in gam_tokens)
+        )
+    )
+
+    if use_gam_log_residual_diagnostic:
+        import matplotlib.gridspec as gridspec
+        import matplotlib.ticker as ticker
+
+        plot_cols = [x_col, y_col]
+        if split_col and split_col in df.columns:
+            plot_cols.append(split_col)
+        plot_df = df[plot_cols].copy()
+        plot_df[x_col] = pd.to_numeric(plot_df[x_col], errors="coerce")
+        plot_df[y_col] = pd.to_numeric(plot_df[y_col], errors="coerce")
+        plot_df = plot_df.dropna(subset=[x_col, y_col])
+        plot_df = plot_df[(plot_df[x_col] > 0) & (plot_df[y_col] > 0)]
+        if len(plot_df) < 8:
+            raise ValueError("gam_log_residual_diagnostic requires at least 8 positive x/y rows")
+
+        log_x = np.log10(plot_df[x_col].to_numpy(dtype=float))
+        log_y = np.log10(plot_df[y_col].to_numpy(dtype=float))
+        smooth_log_x = np.linspace(float(np.nanmin(log_x)), float(np.nanmax(log_x)), 220)
+        try:
+            from sklearn.linear_model import LinearRegression
+            from sklearn.pipeline import make_pipeline
+            from sklearn.preprocessing import SplineTransformer
+            n_knots = int(min(7, max(4, len(plot_df) // 80)))
+            model = make_pipeline(
+                SplineTransformer(n_knots=n_knots, degree=3, include_bias=False),
+                LinearRegression(),
+            )
+            model.fit(log_x.reshape(-1, 1), log_y)
+            smooth_log_y = model.predict(smooth_log_x.reshape(-1, 1))
+            fitted_log_y = model.predict(log_x.reshape(-1, 1))
+            r2 = float(model.score(log_x.reshape(-1, 1), log_y))
+        except Exception:
+            degree = min(3, max(1, len(np.unique(log_x)) - 1))
+            coeff = np.polyfit(log_x, log_y, degree)
+            poly = np.poly1d(coeff)
+            smooth_log_y = poly(smooth_log_x)
+            fitted_log_y = poly(log_x)
+            ss_res = float(np.sum((log_y - fitted_log_y) ** 2))
+            ss_tot = float(np.sum((log_y - np.nanmean(log_y)) ** 2))
+            r2 = 1 - ss_res / ss_tot if ss_tot > 0 else np.nan
+        residuals = log_y - fitted_log_y
+        band = 1.64 * float(np.nanstd(residuals)) if len(residuals) else 0.0
+        smooth_x = np.power(10.0, smooth_log_x)
+        smooth_y = np.power(10.0, smooth_log_y)
+        lower = np.power(10.0, smooth_log_y - band)
+        upper = np.power(10.0, smooth_log_y + band)
+
+        if split_col and split_col in plot_df.columns:
+            groups = plot_df[split_col].fillna("Non").astype(str).to_numpy()
+        else:
+            groups = np.full(len(plot_df), "Non", dtype=object)
+            if len(residuals) >= 20:
+                groups[np.abs(residuals) >= np.nanquantile(np.abs(residuals), 0.90)] = "Adj"
+                groups[residuals >= np.nanquantile(residuals, 0.95)] = "In"
+        style_fn = globals().get("resolve_gam_residual_style_map")
+        group_order = ["Non", "Adj", "In"]
+        for value in pd.unique(pd.Series(groups)):
+            if value not in group_order:
+                group_order.append(value)
+        group_styles = (
+            style_fn(group_order) if style_fn is not None
+            else {g: {"color": "#B0B0B0", "alpha": 0.45, "size": 22, "zorder": 2, "linewidth": 0.0} for g in group_order}
+        )
+
+        fig = plt.figure(figsize=(12, 5.5))
+        gs = gridspec.GridSpec(1, 2, figure=fig, width_ratios=[1, 1], wspace=0.25)
+        ax_a = fig.add_subplot(gs[0, 0])
+        ax_b = fig.add_subplot(gs[0, 1])
+        for sub_ax in (ax_a, ax_b):
+            sub_ax.spines["top"].set_visible(False)
+            sub_ax.spines["right"].set_visible(False)
+            sub_ax.tick_params(labelsize=8, length=3.5, direction="in")
+
+        for group in group_order:
+            mask = groups == group
+            if not np.any(mask):
+                continue
+            style = dict(group_styles.get(group, {}))
+            ax_a.scatter(
+                plot_df.loc[mask, x_col], plot_df.loc[mask, y_col],
+                c=style.get("color", "#B0B0B0"), alpha=style.get("alpha", 0.45),
+                s=style.get("size", 22), linewidths=style.get("linewidth", 0.0),
+                zorder=style.get("zorder", 2), label=(group if group != "Non" else "_nolegend_"),
+            )
+        ax_a.fill_between(smooth_x, lower, upper, color="black", alpha=0.15, linewidth=0, zorder=2)
+        ax_a.plot(smooth_x, smooth_y, color="black", linewidth=2.5, zorder=3)
+        ax_a.set_xscale("log")
+        ax_a.set_yscale("log")
+        tick_values = [1e-2, 1e-1, 1, 10, 100, 1000, 10000]
+        ax_a.set_xticks([v for v in tick_values if plot_df[x_col].min() <= v <= plot_df[x_col].max()])
+        ax_a.xaxis.set_minor_locator(ticker.NullLocator())
+        ax_a.yaxis.set_minor_locator(ticker.NullLocator())
+        ax_a.text(
+            0.10, 0.90, f"$R^2 = {r2:.2f}$", transform=ax_a.transAxes,
+            fontsize=13, fontweight="bold", fontstyle="italic", zorder=20,
+        )
+        ax_a.text(-0.12, 1.03, "a", transform=ax_a.transAxes, fontsize=12, fontweight="bold")
+        ax_a.set_xlabel(display_label(x_col, col_map) if col_map else str(x_col))
+        ax_a.set_ylabel(display_label(y_col, col_map) if col_map else str(y_col))
+
+        ax_b.axhline(0, color="black", linestyle="--", linewidth=1.0, alpha=0.55, zorder=2)
+        for group in group_order:
+            mask = groups == group
+            if not np.any(mask):
+                continue
+            style = dict(group_styles.get(group, {}))
+            ax_b.scatter(
+                plot_df.loc[mask, x_col], residuals[mask],
+                c=style.get("color", "#B0B0B0"), alpha=style.get("alpha", 0.45),
+                s=style.get("size", 22), linewidths=style.get("linewidth", 0.0),
+                zorder=style.get("zorder", 2), label=(group if group != "Non" else "_nolegend_"),
+            )
+        ax_b.set_xscale("log")
+        ax_b.set_xticks([v for v in tick_values if plot_df[x_col].min() <= v <= plot_df[x_col].max()])
+        ax_b.xaxis.set_minor_locator(ticker.NullLocator())
+        ax_b.text(
+            0.07, 0.90, "positive residuals\nindicate hidden links",
+            transform=ax_b.transAxes, fontsize=9, color="#333333", zorder=20,
+        )
+        ax_b.text(-0.12, 1.03, "b", transform=ax_b.transAxes, fontsize=12, fontweight="bold")
+        ax_b.set_xlabel(display_label(x_col, col_map) if col_map else str(x_col))
+        ax_b.set_ylabel("log residual")
+        handles, legend_labels = ax_a.get_legend_handles_labels()
+        if legend_labels:
+            fig.legend(handles, legend_labels, loc="lower center", bbox_to_anchor=(0.52, -0.02),
+                       ncol=min(2, len(legend_labels)), frameon=False, fontsize=8)
+            fig.subplots_adjust(bottom=0.16, top=0.94)
+        planned_motifs = visual_plan.setdefault("templateMotifs", [])
+        if "gam_log_residual_diagnostic" not in planned_motifs:
+            planned_motifs.append("gam_log_residual_diagnostic")
+        record_fn = globals().get("_record_template_motif", lambda *args, **kwargs: None)
+        count_fn = globals().get("_visual_count", lambda *args, **kwargs: None)
+        record_fn(visual_plan, "gam_log_residual_diagnostic")
+        count_fn(visual_plan, "confidenceBandCount")
+        count_fn(visual_plan, "smoothFitLineCount")
+        count_fn(visual_plan, "referenceLineCount")
+        count_fn(visual_plan, "residualDiagnosticPanelCount")
+        count_fn(visual_plan, "r2AnnotationCount")
+        count_fn(visual_plan, "panelLabelCount")
+        count_fn(visual_plan, "panelLabelCount")
+        return ax_a
+
+    nested_joint_tokens = " ".join(
+        str(v).lower()
+        for v in [
+            bundle_key,
+            *patterns,
+            *template_motifs,
+            x_col,
+            y_col,
+            method_col or "",
+            split_col or "",
+            dataProfile.get("domain", ""),
+        ]
+    )
+    use_nested_marginal_joint_matrix = (
+        standalone
+        and bool(method_col) and method_col in df.columns
+        and bool(split_col) and split_col in df.columns
+        and method_col != split_col
+        and (
+            "nested_marginal_joint_matrix" in template_motifs
+            or "marginal_joint_matrix" in template_motifs
+            or "nested_marginal_joint" in patterns
+            or ("marginal" in nested_joint_tokens and "model" in nested_joint_tokens)
+        )
+    )
+
+    if use_nested_marginal_joint_matrix:
+        from matplotlib.gridspec import GridSpecFromSubplotSpec
+
+        plot_df = df[[method_col, split_col, x_col, y_col]].copy()
+        plot_df[x_col] = pd.to_numeric(plot_df[x_col], errors="coerce")
+        plot_df[y_col] = pd.to_numeric(plot_df[y_col], errors="coerce")
+        plot_df = plot_df.dropna(subset=[method_col, split_col, x_col, y_col])
+        if plot_df.empty:
+            raise ValueError("nested_marginal_joint_matrix requires non-empty model/split/x/y rows")
+        models = plot_df[method_col].dropna().astype(str).unique().tolist()[:6]
+        splits = plot_df[split_col].dropna().astype(str).unique().tolist()
+        style_fn = globals().get("resolve_parity_split_style_map")
+        split_styles = (
+            style_fn(splits, variant="nested_marginal_joint")
+            if style_fn is not None else {}
+        )
+
+        def _draw_side_kde(side_ax, values, color, orientation="x"):
+            vals = np.asarray(values, dtype=float)
+            vals = vals[np.isfinite(vals)]
+            if len(vals) < 5 or np.nanstd(vals) <= 1e-12:
+                return
+            grid = np.linspace(float(vals.min()), float(vals.max()), 120)
+            try:
+                from scipy.stats import gaussian_kde
+                density = gaussian_kde(vals)(grid)
+            except Exception:
+                hist, edges = np.histogram(vals, bins=18, density=True)
+                grid = (edges[:-1] + edges[1:]) / 2
+                density = hist
+            if orientation == "x":
+                side_ax.fill_between(grid, 0, density, color=color, alpha=0.30, linewidth=0)
+                side_ax.plot(grid, density, color=color, linewidth=0.8, alpha=0.9)
+            else:
+                side_ax.fill_betweenx(grid, 0, density, color=color, alpha=0.30, linewidth=0)
+                side_ax.plot(density, grid, color=color, linewidth=0.8, alpha=0.9)
+
+        ncols = 3 if len(models) > 2 else max(1, len(models))
+        nrows = int(np.ceil(len(models) / max(ncols, 1)))
+        fig = plt.figure(figsize=(14, max(4.2, 4.3 * nrows)))
+        outer = fig.add_gridspec(nrows, ncols, wspace=0.32, hspace=0.36)
+        main_axes = []
+        marginal_axes = []
+        handles_by_label = {}
+        for model_idx, model_name in enumerate(models):
+            inner = GridSpecFromSubplotSpec(
+                2, 2, subplot_spec=outer[model_idx // ncols, model_idx % ncols],
+                width_ratios=[4, 1], height_ratios=[1, 4],
+                wspace=0.05, hspace=0.05,
+            )
+            ax_top = fig.add_subplot(inner[0, 0])
+            ax_main = fig.add_subplot(inner[1, 0], sharex=ax_top)
+            ax_right = fig.add_subplot(inner[1, 1], sharey=ax_main)
+            main_axes.append(ax_main)
+            marginal_axes.extend([ax_top, ax_right])
+            model_df = plot_df[plot_df[method_col].astype(str) == str(model_name)]
+            lo = float(np.nanmin([model_df[x_col].min(), model_df[y_col].min(), 0.0]))
+            hi = float(np.nanmax([model_df[x_col].max(), model_df[y_col].max(), 1.0]))
+            pad = max((hi - lo) * 0.04, 1e-9)
+            ax_main.plot([lo - pad, hi + pad], [lo - pad, hi + pad],
+                         color="gray", linestyle="--", alpha=0.62, linewidth=1.0, zorder=0)
+            for split in splits:
+                split_df = model_df[model_df[split_col].astype(str) == str(split)].sort_values(x_col)
+                if split_df.empty:
+                    continue
+                style = dict(split_styles.get(str(split), {}))
+                color = style.get("color", "#d62728")
+                scatter = ax_main.scatter(
+                    split_df[x_col], split_df[y_col],
+                    c=color, s=18, alpha=0.70, label=str(split),
+                    edgecolor="white", linewidth=0.35, zorder=4,
+                )
+                handles_by_label.setdefault(str(split), scatter)
+                _draw_side_kde(ax_top, split_df[x_col], color, orientation="x")
+                _draw_side_kde(ax_right, split_df[y_col], color, orientation="y")
+            residuals = model_df[y_col] - model_df[x_col]
+            ss_res = float(np.sum((model_df[y_col] - model_df[x_col]) ** 2))
+            ss_tot = float(np.sum((model_df[x_col] - model_df[x_col].mean()) ** 2))
+            r2 = 1 - ss_res / ss_tot if ss_tot > 0 else np.nan
+            mae = float(np.mean(np.abs(residuals))) if len(residuals) else np.nan
+            rmse = float(np.sqrt(np.mean(residuals ** 2))) if len(residuals) else np.nan
+            ax_main.text(
+                0.95, 0.05, f"R2: {r2:.5f}\nMAE: {mae:.5f}\nRMSE: {rmse:.5f}",
+                transform=ax_main.transAxes, ha="right", va="bottom",
+                fontsize=5.6, fontweight="bold",
+                bbox=dict(facecolor="white", alpha=0.80, edgecolor="none"),
+                zorder=8,
+            )
+            ax_main.set_xlim(lo - pad, hi + pad)
+            ax_main.set_ylim(lo - pad, hi + pad)
+            ax_main.set_aspect("equal", adjustable="box")
+            ax_main.set_title(str(display_label(model_name, col_map) if col_map else model_name),
+                              fontsize=7.5, fontweight="bold", pad=2)
+            if model_idx // ncols == nrows - 1:
+                ax_main.set_xlabel("Actual", fontsize=6.6)
+            if model_idx % ncols == 0:
+                ax_main.set_ylabel("Predicted", fontsize=6.6)
+            ax_main.tick_params(labelsize=5.8, length=2.5)
+            for marginal in (ax_top, ax_right):
+                marginal.axis("off")
+        if handles_by_label:
+            legend_labels = [s for s in splits if str(s) in handles_by_label]
+            fig.legend(
+                [handles_by_label[str(s)] for s in legend_labels],
+                [str(s) for s in legend_labels],
+                loc="upper center", bbox_to_anchor=(0.5, 0.995),
+                ncol=min(2, len(legend_labels)), frameon=False, fontsize=8,
+            )
+        planned_motifs = visual_plan.setdefault("templateMotifs", [])
+        if "nested_marginal_joint_matrix" not in planned_motifs:
+            planned_motifs.append("nested_marginal_joint_matrix")
+        globals().get("_record_template_motif", lambda *args, **kwargs: None)(
+            visual_plan, "nested_marginal_joint_matrix"
+        )
+        count_fn = globals().get("_visual_count", lambda *args, **kwargs: None)
+        for _ in main_axes:
+            count_fn(visual_plan, "referenceLineCount")
+            count_fn(visual_plan, "metricBoxCount")
+        for _ in marginal_axes:
+            count_fn(visual_plan, "marginalAxesCount")
+            count_fn(visual_plan, "subAxesCount")
+        return main_axes[0]
+
+    parity_tokens = " ".join(
+        str(v).lower()
+        for v in [
+            bundle_key,
+            *patterns,
+            *template_motifs,
+            x_col,
+            y_col,
+            panel_col or "",
+            split_col or "",
+            dataProfile.get("domain", ""),
+        ]
+    )
+    use_density_parity_matrix = (
+        standalone
+        and bool(panel_col) and panel_col in df.columns
+        and (
+            "density_parity_matrix" in template_motifs
+            or "kde_parity_matrix" in template_motifs
+            or "density_parity_matrix" in patterns
+            or "kde_parity_matrix" in patterns
+            or ("parity" in parity_tokens and ("density" in parity_tokens or "kde" in parity_tokens))
+        )
+    )
+
+    if use_density_parity_matrix:
+        drawer = globals().get("draw_density_parity_matrix")
+        if drawer is None:
+            raise RuntimeError("draw_density_parity_matrix helper is required for density parity matrix")
+        result = drawer(
+            df,
+            actual_col=x_col,
+            predicted_col=y_col,
+            panel_col=panel_col,
+            max_panels=visual_plan.get("densityParityMaxPanels", 2),
+            cmap=visual_plan.get("densityParityColormap", visual_plan.get("densityColormap", "jet")),
+            scatter_size=visual_plan.get("densityParityScatterSize", 20),
+            scatter_alpha=visual_plan.get("densityParityAlpha", 0.90),
+            reference_color=visual_plan.get("densityParityReferenceColor", "#D62728"),
+            colorbar_label=visual_plan.get("densityParityColorbarLabel", "Density"),
+            metric_box=visual_plan.get("densityParityMetricBox", True),
+            figsize=tuple(visual_plan.get("densityParityFigsize", [12.0, 5.0])),
+            wspace=visual_plan.get("densityParityWspace", 0.30),
+            col_map=col_map,
+        )
+        record_fn = globals().get("_record_template_motif", lambda *args, **kwargs: None)
+        count_fn = globals().get("_visual_count", lambda *args, **kwargs: None)
+        record_fn(visual_plan, "density_parity_matrix")
+        record_fn(visual_plan, "density_encoded_scatter")
+        record_fn(visual_plan, "metric_table_in_panel")
+        if "prediction_diagnostic_matrix" in template_motifs:
+            record_fn(visual_plan, "prediction_diagnostic_matrix")
+        for _ in range(result.get("reference_line_count", 0)):
+            count_fn(visual_plan, "referenceLineCount")
+        for _ in range(result.get("metric_box_count", 0)):
+            count_fn(visual_plan, "metricBoxCount")
+            count_fn(visual_plan, "metricTextCount")
+        for _ in range(result.get("density_scatter_count", 0)):
+            count_fn(visual_plan, "densityColorEncodingCount")
+            count_fn(visual_plan, "sampleEncodingCount")
+        for _ in range(result.get("colorbar_count", 0)):
+            count_fn(visual_plan, "colorbarSlotCount")
+        visual_plan["densityParityPanelCount"] = result.get("panel_count", 0)
+        visual_plan["densityParityScatterCount"] = result.get("density_scatter_count", 0)
+        visual_plan["densityParityColorbarCount"] = result.get("colorbar_count", 0)
+        visual_plan["densityParityColormap"] = result.get("cmap")
+        visual_plan["densitySortedPoints"] = True
+        return result["axes"][0]
+
+    use_parity_ci_matrix = (
+        standalone
+        and bool(panel_col) and panel_col in df.columns
+        and bool(split_col) and split_col in df.columns
+        and (
+            "parity_ci_matrix" in template_motifs
+            or "parity_ci_matrix" in patterns
+            or ("parity" in parity_tokens and ("ci" in parity_tokens or "confidence" in parity_tokens))
+        )
+    )
+
+    if use_parity_ci_matrix:
+        plot_df = df[[panel_col, split_col, x_col, y_col]].copy()
+        plot_df[x_col] = pd.to_numeric(plot_df[x_col], errors="coerce")
+        plot_df[y_col] = pd.to_numeric(plot_df[y_col], errors="coerce")
+        plot_df = plot_df.dropna(subset=[panel_col, split_col, x_col, y_col])
+        if plot_df.empty:
+            raise ValueError("parity_ci_matrix requires non-empty panel/split/x/y rows")
+
+        panels = plot_df[panel_col].dropna().astype(str).unique().tolist()[:4]
+        splits = plot_df[split_col].dropna().astype(str).unique().tolist()
+        style_fn = globals().get("resolve_parity_split_style_map")
+        split_styles = (
+            style_fn(splits, variant="spt_train_test")
+            if style_fn is not None else {}
+        )
+
+        def _fit_line_ci(x_values, y_values, grid):
+            x_arr = np.asarray(x_values, dtype=float)
+            y_arr = np.asarray(y_values, dtype=float)
+            if len(x_arr) < 3 or np.nanstd(x_arr) <= 1e-12:
+                mean_y = float(np.nanmean(y_arr)) if len(y_arr) else 0.0
+                return np.full_like(grid, mean_y), np.full_like(grid, mean_y), np.full_like(grid, mean_y)
+            slope, intercept = np.polyfit(x_arr, y_arr, 1)
+            pred = slope * grid + intercept
+            resid = y_arr - (slope * x_arr + intercept)
+            se = float(np.sqrt(np.sum(resid ** 2) / max(len(x_arr) - 2, 1)))
+            x_mean = float(np.nanmean(x_arr))
+            denom = float(np.sum((x_arr - x_mean) ** 2))
+            spread = se * np.sqrt(1 / max(len(x_arr), 1) + (grid - x_mean) ** 2 / max(denom, 1e-12))
+            return pred, pred - 1.96 * spread, pred + 1.96 * spread
+
+        fig = plt.figure(figsize=(12, 10))
+        gs = fig.add_gridspec(2, 2, wspace=0.25, hspace=0.25)
+        axes = [fig.add_subplot(gs[i // 2, i % 2]) for i in range(len(panels))]
+        handles_by_label = {}
+        for idx, (sub_ax, panel_value) in enumerate(zip(axes, panels)):
+            panel_df = plot_df[plot_df[panel_col].astype(str) == str(panel_value)]
+            lo = float(np.nanmin([panel_df[x_col].min(), panel_df[y_col].min(), 0.0]))
+            hi = float(np.nanmax([panel_df[x_col].max(), panel_df[y_col].max()]))
+            pad = max((hi - lo) * 0.04, 1e-9)
+            sub_ax.plot([lo - pad, hi + pad], [lo - pad, hi + pad],
+                        color="maroon", linestyle="--", linewidth=2.0, zorder=2)
+            for split in splits:
+                split_df = panel_df[panel_df[split_col].astype(str) == str(split)].sort_values(x_col)
+                if split_df.empty:
+                    continue
+                style = dict(split_styles.get(str(split), {}))
+                color = style.get("color", "#313695")
+                sub_ax.scatter(
+                    split_df[x_col], split_df[y_col],
+                    c="none", edgecolors=style.get("markeredgecolor", color),
+                    s=style.get("scatter_size", 54),
+                    alpha=style.get("scatter_alpha", 0.72),
+                    linewidths=1.1, marker=style.get("marker", "o"),
+                    label=str(split), zorder=style.get("zorder_scatter", 5),
+                )
+                grid = np.linspace(lo, hi, 120)
+                reg, ci_low, ci_high = _fit_line_ci(split_df[x_col], split_df[y_col], grid)
+                line = sub_ax.plot(
+                    grid, reg, color=color, linewidth=style.get("linewidth", 2.0),
+                    alpha=0.85, zorder=style.get("zorder_line", 4),
+                )[0]
+                sub_ax.fill_between(
+                    grid, ci_low, ci_high, color=color,
+                    alpha=style.get("ci_alpha", 0.15), linewidth=0,
+                    zorder=style.get("zorder_band", 3),
+                )
+                handles_by_label.setdefault(str(split), line)
+            residuals = panel_df[y_col] - panel_df[x_col]
+            ss_res = float(np.sum((panel_df[y_col] - panel_df[x_col]) ** 2))
+            ss_tot = float(np.sum((panel_df[x_col] - panel_df[x_col].mean()) ** 2))
+            r2 = 1 - ss_res / ss_tot if ss_tot > 0 else np.nan
+            rmse = float(np.sqrt(np.mean(residuals ** 2))) if len(residuals) else np.nan
+            sub_ax.text(
+                0.05, 0.95, f"$\\mathbf{{R^2: {r2:.2f}}}$\nRMSE: {rmse:.2f}",
+                transform=sub_ax.transAxes, fontsize=8, fontweight="bold",
+                color="#A50026", va="top",
+                bbox=dict(facecolor="white", alpha=0.62, edgecolor="none"),
+                zorder=10,
+            )
+            sub_ax.text(
+                -0.15, 1.05, chr(ord("a") + idx),
+                transform=sub_ax.transAxes, fontsize=14, fontweight="bold",
+                va="top", ha="right", zorder=12,
+            )
+            sub_ax.set_title(str(display_label(panel_value, col_map) if col_map else panel_value),
+                             fontsize=8.5, fontweight="bold")
+            sub_ax.set_xlim(lo - pad, hi + pad)
+            sub_ax.set_ylim(lo - pad, hi + pad)
+            sub_ax.set_aspect("equal", adjustable="box")
+            sub_ax.set_xlabel("Actual")
+            sub_ax.set_ylabel("Predicted")
+            sub_ax.tick_params(labelsize=6, length=3)
+        if handles_by_label:
+            legend_labels = [s for s in splits if str(s) in handles_by_label]
+            fig.legend(
+                [handles_by_label[str(s)] for s in legend_labels],
+                [str(s) for s in legend_labels],
+                loc="upper center", bbox_to_anchor=(0.5, 0.99),
+                ncol=min(2, len(legend_labels)), frameon=False, fontsize=8,
+            )
+        planned_motifs = visual_plan.setdefault("templateMotifs", [])
+        if "parity_ci_matrix" not in planned_motifs:
+            planned_motifs.append("parity_ci_matrix")
+        globals().get("_record_template_motif", lambda *args, **kwargs: None)(
+            visual_plan, "parity_ci_matrix"
+        )
+        count_fn = globals().get("_visual_count", lambda *args, **kwargs: None)
+        for _ in axes:
+            count_fn(visual_plan, "referenceLineCount")
+            count_fn(visual_plan, "metricBoxCount")
+            count_fn(visual_plan, "panelLabelCount")
+        return axes[0]
+
+    adsorption_tokens = " ".join(
+        str(v).lower()
+        for v in [
+            bundle_key,
+            *patterns,
+            *template_motifs,
+            x_col,
+            y_col,
+            panel_col or "",
+            method_col or "",
+            dataProfile.get("domain", ""),
+        ]
+    )
+    use_adsorption_isotherm_board = (
+        standalone
+        and bool(panel_col) and panel_col in df.columns
+        and bool(method_col) and method_col in df.columns
+        and (
+        "adsorption_isotherm_multipanel" in template_motifs
+        or "adsorption_isotherm" in patterns
+        or "isotherm" in adsorption_tokens
+        or "adsorption" in adsorption_tokens
+        )
+    )
+
+    if use_adsorption_isotherm_board:
+        plot_df = df[[panel_col, method_col, x_col, y_col]].copy()
+        plot_df[x_col] = pd.to_numeric(plot_df[x_col], errors="coerce")
+        plot_df[y_col] = pd.to_numeric(plot_df[y_col], errors="coerce")
+        plot_df = plot_df.dropna(subset=[panel_col, method_col, x_col, y_col])
+        if plot_df.empty:
+            raise ValueError("adsorption_isotherm_multipanel requires non-empty panel/method/x/y rows")
+        panels = plot_df[panel_col].dropna().astype(str).unique().tolist()[:6]
+        methods = plot_df[method_col].dropna().astype(str).unique().tolist()
+        style_fn = globals().get("resolve_method_style_map")
+        method_styles = (
+            style_fn(methods, variant="cej_adsorption")
+            if style_fn is not None else {}
+        )
+        ncols = 3 if len(panels) > 2 else len(panels)
+        nrows = int(np.ceil(len(panels) / max(ncols, 1)))
+        fig = plt.figure(figsize=(15 * (1 / 1.35), max(5.2, 3.4 * nrows)))
+        gs = fig.add_gridspec(nrows, ncols, wspace=0.30, hspace=0.34)
+        axes = []
+        handles_by_label = {}
+        floor_fn = globals().get("apply_scatter_regression_floor")
+        for idx, panel_value in enumerate(panels):
+            sub_ax = fig.add_subplot(gs[idx // ncols, idx % ncols])
+            axes.append(sub_ax)
+            if floor_fn is not None:
+                try:
+                    floor_fn(sub_ax, despine=True, grid_axis="both")
+                except Exception:
+                    sub_ax.grid(True, linestyle="--", color="#E0E0E0", linewidth=0.45, alpha=0.65, zorder=0)
+            else:
+                sub_ax.grid(True, linestyle="--", color="#E0E0E0", linewidth=0.45, alpha=0.65, zorder=0)
+            panel_df = plot_df[plot_df[panel_col].astype(str) == str(panel_value)]
+            for method in methods:
+                method_df = panel_df[panel_df[method_col].astype(str) == str(method)].sort_values(x_col)
+                if method_df.empty:
+                    continue
+                style = dict(method_styles.get(str(method), {}))
+                color = style.get("color", "#4A6B8A")
+                marker = style.get("marker", "o")
+                linestyle = style.get("linestyle", "-")
+                zorder = style.get("zorder", 3)
+                draw = style.get("draw", "line_marker")
+                if draw == "hollow_marker" or linestyle == "None":
+                    handle = sub_ax.plot(
+                        method_df[x_col], method_df[y_col],
+                        linestyle="None", marker=marker, markersize=4.2,
+                        markerfacecolor=style.get("markerfacecolor", "white"),
+                        markeredgecolor=style.get("markeredgecolor", color),
+                        markeredgewidth=0.9, color=color, label=str(method),
+                        zorder=zorder,
+                    )[0]
+                else:
+                    handle = sub_ax.plot(
+                        method_df[x_col], method_df[y_col],
+                        linestyle=linestyle, marker=marker, markersize=3.4,
+                        markerfacecolor=style.get("markerfacecolor", color),
+                        markeredgecolor=style.get("markeredgecolor", color),
+                        color=color, linewidth=1.25, label=str(method),
+                        zorder=zorder,
+                    )[0]
+                handles_by_label.setdefault(str(method), handle)
+            sub_ax.text(
+                -0.15, 1.06, f"({chr(ord('a') + idx)})",
+                transform=sub_ax.transAxes, fontsize=8.5, fontweight="bold",
+                va="top", ha="right", zorder=20,
+            )
+            sub_ax.text(
+                0.04, 0.91, str(display_label(panel_value, col_map) if col_map else panel_value),
+                transform=sub_ax.transAxes, fontsize=6.2, fontweight="bold",
+                ha="left", va="center",
+                bbox=dict(boxstyle="round,pad=0.16", facecolor="white",
+                          edgecolor="#BBBBBB", linewidth=0.35, alpha=0.88),
+                zorder=15,
+            )
+            if idx // ncols == nrows - 1:
+                sub_ax.set_xlabel(display_label(x_col, col_map) if col_map else x_col)
+            if idx % ncols == 0:
+                sub_ax.set_ylabel(display_label(y_col, col_map) if col_map else y_col)
+            sub_ax.tick_params(labelsize=6, length=2.5)
+        legend_labels = [m for m in methods if str(m) in handles_by_label]
+        if legend_labels:
+            fig.legend(
+                [handles_by_label[str(m)] for m in legend_labels],
+                [str(m) for m in legend_labels],
+                loc="lower center", bbox_to_anchor=(0.5, 0.01),
+                ncol=min(4, len(legend_labels)), frameon=True, fontsize=6.2,
+                borderpad=0.3, handlelength=2.0,
+            )
+        fig.subplots_adjust(bottom=0.10, top=0.94)
+        planned_motifs = visual_plan.setdefault("templateMotifs", [])
+        if "adsorption_isotherm_multipanel" not in planned_motifs:
+            planned_motifs.append("adsorption_isotherm_multipanel")
+        globals().get("_record_template_motif", lambda *args, **kwargs: None)(
+            visual_plan, "adsorption_isotherm_multipanel"
+        )
+        count_fn = globals().get("_visual_count", lambda *args, **kwargs: None)
+        for _ in axes:
+            count_fn(visual_plan, "panelLabelCount")
+        return axes[0]
+
     if standalone:
         fig, ax = plt.subplots(figsize=(89 * (1 / 25.4), 65 * (1 / 25.4)),
                            constrained_layout=True)
@@ -4298,6 +6082,12 @@ def gen_scatter_regression(df, dataProfile, chartPlan, rcParams, palette, col_ma
     if use_marginal_joint:
         visual_plan["useMarginalAxes"] = True
         visual_plan["useDensityColorEncoding"] = True
+        visual_plan.setdefault("reserveMarginalTitleGap", False)
+        visual_plan.setdefault("marginalTopGap", 0.008)
+        visual_plan.setdefault("marginalSideGap", 0.008)
+        visual_plan.setdefault("marginalColor", "#69b3a2")
+        visual_plan.setdefault("densityColormap", "GnBu_r")
+        visual_plan.setdefault("densityColorMethod", "kde")
         if "joint_marginal_grid" not in visual_plan.get("templateMotifs", []):
             visual_plan.setdefault("templateMotifs", []).append("joint_marginal_grid")
         if "density_encoded_scatter" not in visual_plan.get("templateMotifs", []):
@@ -4426,8 +6216,12 @@ def gen_scatter_regression(df, dataProfile, chartPlan, rcParams, palette, col_ma
         ax.text(
             0.05, 0.95, f"R2={r2:.3f}\nRMSE={rmse:.3g}\nMAE={mae:.3g}",
             transform=ax.transAxes, ha="left", va="top", fontsize=5.2,
-            bbox=dict(boxstyle="round,pad=0.22", facecolor="white", edgecolor="#333333", linewidth=0.4, alpha=0.92),
-            zorder=6,
+            bbox=dict(
+                boxstyle=("square,pad=0.30" if use_marginal_joint else "round,pad=0.22"),
+                facecolor="white", edgecolor="#333333",
+                linewidth=(0.8 if use_marginal_joint else 0.4), alpha=0.92,
+            ),
+            zorder=(20 if use_marginal_joint else 6),
         )
         handles, labels = ax.get_legend_handles_labels()
         if labels:
@@ -4453,7 +6247,7 @@ def gen_scatter_regression(df, dataProfile, chartPlan, rcParams, palette, col_ma
     if use_marginal_joint and "_add_marginal_distribution_axes" in globals():
         marginal_axes = _add_marginal_distribution_axes(
             ax, plot_df[x_col], plot_df[y_col], visual_plan,
-            color=palette.get("categorical", ["#69B3A2"])[0],
+            color=visual_plan.get("marginalColor", palette.get("categorical", ["#69B3A2"])[0]),
         )
         if density_scatter is not None:
             if marginal_axes:
@@ -4513,16 +6307,172 @@ def gen_dotplot(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=
     value_col = roles.get("value") or roles.get("shap_value") or roles.get("effect")
     feature_col = roles.get("feature_id") or roles.get("y")
     feature_value_col = roles.get("feature_value") or roles.get("color") or roles.get("hue")
+    importance_col = roles.get("importance") or roles.get("feature_importance") or roles.get("gain") or roles.get("weight")
+    category_col = roles.get("category") or roles.get("feature_group") or roles.get("class")
+    row_col = roles.get("row") or roles.get("variable_x") or roles.get("source") or roles.get("x")
+    col_col = roles.get("column") or roles.get("col") or roles.get("variable_y") or roles.get("target") or roles.get("y")
+    correlation_value_col = (
+        roles.get("correlation")
+        or roles.get("corr")
+        or roles.get("pearson_r")
+        or roles.get("spearman_r")
+        or roles.get("r")
+        or roles.get("value")
+    )
     template_case = (chartPlan.get("templateCasePlan") or chartPlan.get("visualContentPlan", {}).get("templateCasePlan") or {})
+    visual_plan = chartPlan.get("visualContentPlan", {})
+    if not isinstance(visual_plan, dict):
+        visual_plan = {}
+        chartPlan["visualContentPlan"] = visual_plan
     patterns = {str(p).lower() for p in dataProfile.get("specialPatterns", [])}
+    template_motifs = {str(m).lower() for m in (visual_plan.get("templateMotifs") or chartPlan.get("templateMotifs") or [])}
     is_shap_beeswarm = (
         template_case.get("bundleKey") == "rf_feature_importance_shap"
         or "shap_composite" in patterns
         or "ml_explainability" in patterns
+        or "lollipop_shap_beeswarm_board" in patterns
+        or "shap_bar_pie_summary_board" in patterns
+        or "shap_bar_beeswarm_inset_pie" in patterns
+        or "lollipop_shap_beeswarm_board" in template_motifs
+        or "shap_bar_pie_summary_board" in template_motifs
+        or "shap_bar_beeswarm_inset_pie" in template_motifs
         or "shap_value" in {str(c).lower() for c in df.columns}
     )
 
     if is_shap_beeswarm and feature_col and value_col and feature_col in df.columns and value_col in df.columns:
+        use_lollipop_shap_beeswarm_board = (
+            standalone
+            and (
+                visual_plan.get("useLollipopShapBeeswarmBoard")
+                or "lollipop_shap_beeswarm_board" in template_motifs
+                or "lollipop_shap_beeswarm_board" in patterns
+            )
+        )
+        if use_lollipop_shap_beeswarm_board:
+            draw_fn = globals().get("draw_lollipop_shap_beeswarm_board")
+            if draw_fn is not None:
+                result = draw_fn(
+                    df,
+                    feature_col,
+                    value_col,
+                    importance_col=importance_col if importance_col in df.columns else None,
+                    feature_value_col=feature_value_col if feature_value_col in df.columns else None,
+                    top_n=visual_plan.get("shapTopN", 15),
+                    width_ratios=visual_plan.get("lollipopShapWidthRatios", [1.0, 2.5]),
+                    figsize=tuple(visual_plan.get("lollipopShapFigsize", [12.0, 6.0])),
+                    wspace=visual_plan.get("lollipopShapWspace", 0.05),
+                    adjust=visual_plan.get("lollipopShapSubplotsAdjust", {"left": 0.15, "right": 0.90, "top": 0.90, "bottom": 0.15}),
+                    stem_color=visual_plan.get("lollipopStemColor", "grey"),
+                    point_color=visual_plan.get("lollipopPointColor", "teal"),
+                    cmap=visual_plan.get("lollipopShapColormap", "coolwarm"),
+                    col_map=col_map,
+                    zero_reference_fn=globals().get("add_zero_reference"),
+                )
+                count_fn = globals().get("_visual_count", lambda *args, **kwargs: None)
+                record_fn = globals().get("_record_template_motif", lambda *args, **kwargs: None)
+                planned_motifs = visual_plan.setdefault("templateMotifs", [])
+                for motif in ("lollipop_shap_beeswarm_board", "shared_feature_axis", "shap_summary_beeswarm"):
+                    if motif not in planned_motifs:
+                        planned_motifs.append(motif)
+                    record_fn(visual_plan, motif)
+                count_fn(visual_plan, "lollipopLayerCount")
+                count_fn(visual_plan, "shapBeeswarmCount")
+                count_fn(visual_plan, "referenceLineCount")
+                count_fn(visual_plan, "zeroReferenceLineCount")
+                count_fn(visual_plan, "sampleEncodingCount")
+                visual_plan["sharedFeatureOrdering"] = True
+                visual_plan["featureValueColorEncoded"] = bool(feature_value_col and feature_value_col in df.columns)
+                visual_plan["topFeatureLimit"] = result.get("top_n")
+                visual_plan["shapCompositeLayout"] = "subplots(1,2)"
+                visual_plan["lollipopShapPanelCount"] = 2
+                visual_plan["lollipopShapWidthRatios"] = list(result.get("width_ratios", [1.0, 2.5]))
+                visual_plan["templateMatchMode"] = "case_021_lollipop_shap_beeswarm_board"
+                return result["ax_beeswarm"]
+        use_shap_bar_pie_summary_board = (
+            standalone
+            and (
+                visual_plan.get("useShapBarPieSummaryBoard")
+                or "shap_bar_pie_summary_board" in template_motifs
+                or "shap_bar_pie_summary_board" in patterns
+            )
+        )
+        if use_shap_bar_pie_summary_board:
+            draw_fn = globals().get("draw_shap_bar_pie_summary_board")
+            if draw_fn is not None:
+                result = draw_fn(
+                    df,
+                    feature_col,
+                    value_col,
+                    feature_value_col=feature_value_col if feature_value_col in df.columns else None,
+                    category_col=category_col if category_col in df.columns else None,
+                    top_n=visual_plan.get("shapTopN", 15),
+                    width_ratios=visual_plan.get("shapBarPieWidthRatios", [1.2, 0.8, 1.5]),
+                    height_ratios=visual_plan.get("shapBarPieHeightRatios", [1.0, 1.0]),
+                    col_map=col_map,
+                    zero_reference_fn=globals().get("add_zero_reference"),
+                )
+                count_fn = globals().get("_visual_count", lambda *args, **kwargs: None)
+                record_fn = globals().get("_record_template_motif", lambda *args, **kwargs: None)
+                planned_motifs = visual_plan.setdefault("templateMotifs", [])
+                for motif in ("shap_bar_pie_summary_board", "standalone_category_pie", "shap_summary_beeswarm"):
+                    if motif not in planned_motifs:
+                        planned_motifs.append(motif)
+                    record_fn(visual_plan, motif)
+                count_fn(visual_plan, "referenceLineCount")
+                count_fn(visual_plan, "zeroReferenceLineCount")
+                count_fn(visual_plan, "colorbarSlotCount")
+                count_fn(visual_plan, "standalonePieCount")
+                count_fn(visual_plan, "piePanelCount")
+                count_fn(visual_plan, "sampleEncodingCount")
+                for _ in range(3):
+                    count_fn(visual_plan, "panelLabelCount")
+                visual_plan["sharedFeatureOrdering"] = True
+                visual_plan["topFeatureLimit"] = result.get("top_n")
+                visual_plan["featureValueColorEncoded"] = bool(feature_value_col and feature_value_col in df.columns)
+                visual_plan["shapCompositeLayout"] = "GridSpec(2,3)"
+                visual_plan["shapBarPiePanelCount"] = 3
+                visual_plan["shapStandalonePieCategoryCount"] = len(result.get("categories") or [])
+                return result["ax_bee"]
+        use_shap_composite_board = (
+            standalone
+            and (
+                visual_plan.get("useShapCompositeBoard")
+                or "shap_bar_beeswarm_inset_pie" in template_motifs
+                or "shap_bar_beeswarm_inset_pie" in patterns
+                or ("shap_composite" in patterns and feature_value_col and feature_value_col in df.columns)
+            )
+        )
+        if use_shap_composite_board:
+            draw_fn = globals().get("draw_shap_bar_beeswarm_inset_pie")
+            if draw_fn is not None:
+                result = draw_fn(
+                    df,
+                    feature_col,
+                    value_col,
+                    feature_value_col=feature_value_col if feature_value_col in df.columns else None,
+                    category_col=category_col if category_col in df.columns else None,
+                    top_n=visual_plan.get("shapTopN", 15),
+                    width_ratios=visual_plan.get("shapCompositeWidthRatios", [1.15, 0.05, 1.20, 0.05]),
+                    pie_bbox=visual_plan.get("shapInsetPieBbox", [0.50, 0.20, 0.45, 0.45]),
+                    col_map=col_map,
+                    zero_reference_fn=globals().get("add_zero_reference"),
+                )
+                count_fn = globals().get("_visual_count", lambda *args, **kwargs: None)
+                record_fn = globals().get("_record_template_motif", lambda *args, **kwargs: None)
+                planned_motifs = visual_plan.setdefault("templateMotifs", [])
+                if "shap_bar_beeswarm_inset_pie" not in planned_motifs:
+                    planned_motifs.append("shap_bar_beeswarm_inset_pie")
+                record_fn(visual_plan, "shap_bar_beeswarm_inset_pie")
+                count_fn(visual_plan, "referenceLineCount")
+                count_fn(visual_plan, "colorbarSlotCount")
+                count_fn(visual_plan, "insetCount")
+                count_fn(visual_plan, "insetPieCount")
+                count_fn(visual_plan, "subAxesCount")
+                count_fn(visual_plan, "sampleEncodingCount")
+                visual_plan["sharedFeatureOrdering"] = True
+                visual_plan["topFeatureLimit"] = result.get("top_n")
+                visual_plan["featureValueColorEncoded"] = bool(feature_value_col and feature_value_col in df.columns)
+                return result["ax_bee"]
         if standalone:
             fig, ax = plt.subplots(figsize=(92 * (1 / 25.4), 92 * (1 / 25.4)),
                                constrained_layout=True)
@@ -4578,6 +6528,92 @@ def gen_dotplot(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=
         if standalone:
             apply_chart_polish(ax, "dotplot")
         return ax
+
+    lower_to_col = {str(col).lower(): col for col in df.columns}
+    def _first_column(*names):
+        for name in names:
+            if name and name in df.columns:
+                return name
+            if name and str(name).lower() in lower_to_col:
+                return lower_to_col[str(name).lower()]
+        return None
+
+    row_col = _first_column(row_col, "row", "var1", "variable1", "variable_x", "feature_x", "x")
+    col_col = _first_column(col_col, "column", "col", "var2", "variable2", "variable_y", "feature_y", "y")
+    correlation_value_col = _first_column(
+        correlation_value_col, "value", "r", "corr", "correlation", "pearson_r", "spearman_r"
+    )
+    has_long_correlation = bool(row_col and col_col and correlation_value_col)
+    numeric_cols = list(df.select_dtypes(include="number").columns)
+    use_bubble_correlation = (
+        standalone
+        and (
+            visual_plan.get("useBubbleCorrelationMatrix")
+            or "bubble_correlation_matrix" in template_motifs
+            or "correlation_evidence_matrix" in template_motifs
+            or "bubble_correlation_matrix" in patterns
+            or "red_blue_bubble_correlation" in patterns
+            or ("correlation" in patterns and (has_long_correlation or len(numeric_cols) >= 2))
+        )
+        and (has_long_correlation or len(numeric_cols) >= 2)
+    )
+    if use_bubble_correlation:
+        draw_fn = globals().get("draw_bubble_correlation_matrix")
+        if draw_fn is not None:
+            if ax is None:
+                fig, ax = plt.subplots(figsize=(118 * (1 / 25.4), 104 * (1 / 25.4)),
+                                   constrained_layout=True)
+            correlation_label = visual_plan.get("bubbleCorrelationColorbarLabel")
+            if not correlation_label:
+                if str(correlation_value_col).lower() in {"value", "r", "corr", "correlation", "pearson_r", "spearman_r"}:
+                    correlation_label = "Pearson r"
+                elif isinstance(col_map, dict):
+                    correlation_label = col_map.get(correlation_value_col, correlation_value_col)
+                else:
+                    correlation_label = correlation_value_col or "Pearson r"
+            if has_long_correlation:
+                result = draw_fn(
+                    ax,
+                    df,
+                    row_col=row_col,
+                    col_col=col_col,
+                    value_col=correlation_value_col,
+                    palette=visual_plan.get("bubbleCorrelationPalette", ["#8ECFC9", "#FFFFFF", "#FA7F6F"]),
+                    size_scale=visual_plan.get("bubbleCorrelationSizeScale", 2000),
+                    annotate=visual_plan.get("bubbleCorrelationAnnotate", True),
+                    colorbar_label=correlation_label,
+                    col_map=col_map,
+                )
+            else:
+                corr_matrix = df[numeric_cols].corr(method="pearson")
+                result = draw_fn(
+                    ax,
+                    corr_matrix,
+                    palette=visual_plan.get("bubbleCorrelationPalette", ["#8ECFC9", "#FFFFFF", "#FA7F6F"]),
+                    size_scale=visual_plan.get("bubbleCorrelationSizeScale", 2000),
+                    annotate=visual_plan.get("bubbleCorrelationAnnotate", True),
+                    colorbar_label="Pearson r",
+                    col_map=col_map,
+                )
+            count_fn = globals().get("_visual_count", lambda *args, **kwargs: None)
+            record_fn = globals().get("_record_template_motif", lambda *args, **kwargs: None)
+            planned_motifs = visual_plan.setdefault("templateMotifs", [])
+            for motif in ("bubble_correlation_matrix", "correlation_evidence_matrix"):
+                if motif not in planned_motifs:
+                    planned_motifs.append(motif)
+                record_fn(visual_plan, motif)
+            count_fn(visual_plan, "correlationBubbleCount")
+            count_fn(visual_plan, "colorbarSlotCount")
+            count_fn(visual_plan, "sampleEncodingCount")
+            count_fn(visual_plan, "metricTextCount")
+            visual_plan["correlationBubbleCellCount"] = int(result.get("n", 0) ** 2)
+            visual_plan["correlationNumericTextCount"] = int(result.get("text_count", 0))
+            visual_plan["divergingNormCentered"] = True
+            visual_plan["bubbleAreaEncodesAbsCorrelation"] = True
+            visual_plan["signedColorEncodesCorrelation"] = True
+            if standalone:
+                apply_chart_polish(result["ax"], "dotplot")
+            return result["ax"]
 
     if group_col is None or value_col is None:
         raise ValueError("dotplot requires 'group' and 'value' in semanticRoles")
@@ -5575,7 +7611,7 @@ def gen_rf_classifier_report_board(df, dataProfile, chartPlan, rcParams, palette
 def gen_heatmap_triangular(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=None):
     """Triangular correlation/distance heatmap aligned with corpus discipline.
 
-    Anchor cases (template/articles):
+    Anchor cases (template corpus):
       - 期刊复现：Nature同款皮尔逊热力图_1777451326
       - 进阶绘图：解决多变量拥挤痛点—Python 绘制带显著性星号与斜向色条的三角热图_1777452320
       - 期刊配图：基于机器学习的Spearman相关性热力图_1777456565

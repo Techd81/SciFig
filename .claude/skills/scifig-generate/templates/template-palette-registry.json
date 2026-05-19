@@ -50,6 +50,22 @@
       "source_anchors": ["template-mining/03-palette-bank.md"],
       "anti_palette": false
     },
+    "nature_gam_residual_3": {
+      "name": "nature_gam_residual_3",
+      "type": "categorical",
+      "anchors": ["#B0B0B0", "#5FA896", "#FBC15E"],
+      "n_max": 3,
+      "source_anchors": ["template-mining/03-palette-bank.md", "template-mining/07-techniques/gam-residual-diagnostic.md"],
+      "anti_palette": false
+    },
+    "mgea_true_pred_green_orange": {
+      "name": "mgea_true_pred_green_orange",
+      "type": "categorical",
+      "anchors": ["#FFA500", "#008000"],
+      "n_max": 2,
+      "source_anchors": ["template-mining/03-palette-bank.md", "template-mining/07-techniques/inset-distribution.md"],
+      "anti_palette": false
+    },
     "cej_vibrant_3": {
       "name": "cej_vibrant_3",
       "type": "categorical",
@@ -188,6 +204,14 @@
       "anchors": ["#3B6FB6", "#F7F7F7", "#B5403A"],
       "n_max": 3,
       "source_anchors": ["heatmap_pairwise", "template-mining/03-palette-bank.md"],
+      "anti_palette": false
+    },
+    "materials_teal_salmon_correlation": {
+      "name": "materials_teal_salmon_correlation",
+      "type": "diverging",
+      "anchors": ["#8ECFC9", "#FFFFFF", "#FA7F6F"],
+      "n_max": 3,
+      "source_anchors": ["template-mining/03-palette-bank.md", "template-mining/07-techniques/heatmap-pairwise.md"],
       "anti_palette": false
     }
   },

@@ -730,17 +730,126 @@ def gen_parallel_coordinates(df, dataProfile, chartPlan, rcParams, palette, col_
 
 
 def gen_mediation_path(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=None):
-    """Mediation path diagram: X -> M -> Y with path coefficients.
+    """Mediation path diagram: X -> M -> Y or PLS-PM/SEM directed topology.
 
     Semantic roles:
       - x: independent variable (column name or computed summary key)
       - mediator: mediating variable column
       - y: dependent variable column
+      - source/target/coefficient: optional PLS-PM/SEM edge table roles
     Coefficients are computed as standardized betas via OLS.
     """
     standalone = ax is None
     plt.rcParams.update(rcParams)
     roles = dataProfile.get("semanticRoles", {})
+    visual_plan = chartPlan.get("visualContentPlan", {}) if isinstance(chartPlan, dict) else {}
+    if not isinstance(visual_plan, dict):
+        visual_plan = {}
+        if isinstance(chartPlan, dict):
+            chartPlan["visualContentPlan"] = visual_plan
+    patterns = {str(p).lower() for p in dataProfile.get("specialPatterns", [])} if isinstance(dataProfile, dict) else set()
+    template_motifs = {
+        str(m).lower()
+        for m in (visual_plan.get("templateMotifs") or chartPlan.get("templateMotifs", []) if isinstance(chartPlan, dict) else [])
+    }
+    source_col = roles.get("source") or roles.get("from") or roles.get("feature_id")
+    target_col = roles.get("target") or roles.get("to") or roles.get("group")
+    coef_col = (
+        roles.get("coefficient") or roles.get("coef") or roles.get("path_coef")
+        or roles.get("effect") or roles.get("value") or roles.get("edge_weight")
+    )
+    sig_col = roles.get("significance") or roles.get("sig") or roles.get("stars")
+    p_col = roles.get("p_value") or roles.get("p") or roles.get("pvalue")
+    columns_lower = {str(c).lower(): c for c in getattr(df, "columns", [])}
+    explicit_path_signal = bool(
+        (roles.get("source") or roles.get("from") or columns_lower.get("source") or columns_lower.get("from"))
+        and (roles.get("target") or roles.get("to") or columns_lower.get("target") or columns_lower.get("to"))
+        and (
+            roles.get("coefficient") or roles.get("coef") or roles.get("path_coef") or roles.get("effect") or roles.get("edge_weight")
+            or columns_lower.get("coefficient") or columns_lower.get("coef") or columns_lower.get("path_coef")
+            or columns_lower.get("effect") or columns_lower.get("edge_weight")
+        )
+    )
+    source_col = source_col if source_col in getattr(df, "columns", []) else columns_lower.get("source") or columns_lower.get("from")
+    target_col = target_col if target_col in getattr(df, "columns", []) else columns_lower.get("target") or columns_lower.get("to")
+    coef_col = coef_col if coef_col in getattr(df, "columns", []) else (
+        columns_lower.get("coefficient") or columns_lower.get("coef") or columns_lower.get("path_coef")
+        or columns_lower.get("effect") or columns_lower.get("value") or columns_lower.get("edge_weight")
+    )
+    sig_col = sig_col if sig_col in getattr(df, "columns", []) else columns_lower.get("significance") or columns_lower.get("sig") or columns_lower.get("stars")
+    p_col = p_col if p_col in getattr(df, "columns", []) else columns_lower.get("p_value") or columns_lower.get("p") or columns_lower.get("pvalue")
+    curvature_col = roles.get("curvature") or roles.get("rad")
+    curvature_col = curvature_col if curvature_col in getattr(df, "columns", []) else columns_lower.get("curvature") or columns_lower.get("rad")
+    total_effect_col = roles.get("total_effect") or roles.get("totalEffect")
+    total_effect_col = total_effect_col if total_effect_col in getattr(df, "columns", []) else columns_lower.get("total_effect") or columns_lower.get("totaleffect")
+    explicit_pls_motif = (
+        "pls_pm_path_model" in template_motifs
+        or "sem_path_model" in template_motifs
+        or "path_model_total_effects" in template_motifs
+        or bool(patterns & {"pls_pm_path_model", "sem_path_model", "path_model_total_effects", "pls_pm", "sem"})
+    )
+    if explicit_pls_motif and not source_col:
+        source_col = roles.get("feature_id") if roles.get("feature_id") in getattr(df, "columns", []) else None
+    if explicit_pls_motif and not target_col:
+        target_col = roles.get("group") if roles.get("group") in getattr(df, "columns", []) else None
+    if explicit_pls_motif and not coef_col:
+        coef_col = roles.get("value") if roles.get("value") in getattr(df, "columns", []) else None
+    is_pls_pm = explicit_pls_motif or explicit_path_signal
+    if is_pls_pm:
+        if not all([source_col, target_col, coef_col]):
+            raise ValueError("PLS-PM mediation_path requires 'source', 'target', and 'coefficient' edge roles")
+        if standalone:
+            fig, ax = plt.subplots(figsize=(115 * (1 / 25.4), 82 * (1 / 25.4)),
+                               constrained_layout=True)
+        drawer = globals().get("draw_pls_pm_path_model")
+        if drawer is None:
+            raise RuntimeError("draw_pls_pm_path_model helper is required for PLS-PM mediation_path")
+        result = drawer(
+            ax,
+            df,
+            source_col=source_col,
+            target_col=target_col,
+            coef_col=coef_col,
+            significance_col=sig_col,
+            p_col=p_col,
+            curvature_col=curvature_col,
+            node_positions=visual_plan.get("plsNodePositions") or visual_plan.get("nodePositions"),
+            total_effects=visual_plan.get("plsTotalEffects") or visual_plan.get("totalEffects"),
+            total_effect_col=total_effect_col,
+            target_node=visual_plan.get("plsTargetNode") or visual_plan.get("targetNode"),
+            gof_text=visual_plan.get("plsGofText") or visual_plan.get("gofText"),
+            positive_color=visual_plan.get("plsPositiveColor", "#D73027"),
+            negative_color=visual_plan.get("plsNegativeColor", "#2B6CB0"),
+            inset_rect=visual_plan.get("plsInsetRect", [0.70, 0.65, 0.25, 0.30]),
+            linewidth_base=visual_plan.get("pathLinewidthBase", 1.0),
+            linewidth_scale=visual_plan.get("pathLinewidthScale", 8.0),
+            col_map=col_map,
+        )
+        if callable(globals().get("_record_template_motif")):
+            _record_template_motif(visual_plan, "pls_pm_path_model")
+        if callable(globals().get("_visual_count")):
+            _visual_count(visual_plan, "sampleEncodingCount")
+            _visual_count(visual_plan, "insetCount")
+            _visual_count(visual_plan, "referenceLineCount")
+            for _ in range(result.get("significance_label_count", 0)):
+                _visual_count(visual_plan, "significanceLabelCount")
+        visual_plan["pathEdgeCount"] = result.get("edge_count", 0)
+        visual_plan["pathNodeCount"] = result.get("node_count", 0)
+        visual_plan["pathPositiveEdgeCount"] = result.get("positive_edge_count", 0)
+        visual_plan["pathNegativeEdgeCount"] = result.get("negative_edge_count", 0)
+        visual_plan["totalEffectBarCount"] = result.get("total_effect_bar_count", 0)
+        visual_plan["pathLinewidthEncodesAbsCoefficient"] = True
+        visual_plan["signedPathColorEncoding"] = True
+        visual_plan["gofAnnotationPresent"] = bool(visual_plan.get("plsGofText") or visual_plan.get("gofText"))
+        visual_plan["pathModelTargetNode"] = result.get("target_node")
+        if standalone:
+            try:
+                ax.figure.set_layout_engine(None)
+            except Exception:
+                pass
+            ax.figure.subplots_adjust(left=0.03, right=0.98, bottom=0.04, top=0.98)
+        return ax
+
     x_col = roles.get("x") or roles.get("condition")
     m_col = roles.get("mediator") or roles.get("feature_id")
     y_col = roles.get("y") or roles.get("value")
@@ -1108,10 +1217,19 @@ def gen_line(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=Non
     columns_lower = {str(c).lower(): c for c in df.columns}
     patterns = {str(p).lower() for p in dataProfile.get("specialPatterns", [])}
     template_case = (chartPlan.get("templateCasePlan") or chartPlan.get("visualContentPlan", {}).get("templateCasePlan") or {})
+    visual_plan = chartPlan.get("visualContentPlan", {}) if isinstance(chartPlan, dict) else {}
+    if not isinstance(visual_plan, dict):
+        visual_plan = {}
+        chartPlan["visualContentPlan"] = visual_plan
+    template_motifs = {
+        str(m).lower()
+        for m in (visual_plan.get("templateMotifs") or chartPlan.get("templateMotifs") or [])
+    } if isinstance(chartPlan, dict) else set()
     is_incremental_ml = (
         template_case.get("bundleKey") == "incremental_feature_selection_curve"
         or "incremental_feature_selection" in patterns
         or "feature_selection" in patterns
+        or "incremental_feature_selection_curve" in template_motifs
         or any(token in columns_lower for token in ("n_features", "top_k", "feature_count", "ablation"))
     )
 
@@ -1135,9 +1253,12 @@ def gen_line(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=Non
     if is_incremental_ml and x_col and x_col in df.columns:
         score_name = str(y_col).lower()
         lower_is_better = any(token in score_name for token in ("rmse", "mae", "mse", "error", "loss"))
-        color_map = _extract_colors(palette, df[group_col].dropna().unique()) if group_col and group_col in df.columns else {}
+        motif_palette = visual_plan.get("featureSelectionPalette") or palette.get("ml_model_performance_10")
+        if motif_palette:
+            fallback = list(motif_palette)
+        color_map = _extract_colors({"categorical": fallback}, df[group_col].dropna().unique()) if group_col and group_col in df.columns else {}
         groups = [(None, df)] if not group_col or group_col not in df.columns else list(df.groupby(group_col))
-        marker_cycle = ["o", "s", "^", "D", "v", "P", "X", "*"]
+        marker_cycle = list(visual_plan.get("featureSelectionMarkers") or ["o", "v", "^", "s", "D", "p", "*", "h", "X"])
 
         def _final_score(item):
             _, grp = item
@@ -1178,6 +1299,8 @@ def gen_line(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=Non
             return ordered.iloc[elbow_offset]
 
         groups = sorted(groups, key=_final_score, reverse=not lower_is_better)
+        if group_col and group_col in df.columns:
+            color_map = {name: fallback[i % len(fallback)] for i, (name, _) in enumerate(groups)}
         decision_source = None
         for i, (name, grp) in enumerate(groups):
             ordered = grp.sort_values(x_col)
@@ -1199,7 +1322,15 @@ def gen_line(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=Non
             )
         if decision_source is not None:
             decision_label, decision_grp = decision_source
-            decision_row = _decision_point(decision_grp)
+            supplied_decision_x = visual_plan.get("featureSelectionDecisionX")
+            if supplied_decision_x is not None and x_col in decision_grp.columns:
+                decision_candidates = decision_grp.copy()
+                decision_candidates["_x_numeric"] = pd.to_numeric(decision_candidates[x_col], errors="coerce")
+                decision_candidates["_delta"] = (decision_candidates["_x_numeric"] - float(supplied_decision_x)).abs()
+                decision_candidates = decision_candidates.dropna(subset=["_delta"])
+                decision_row = decision_candidates.sort_values("_delta").iloc[0] if len(decision_candidates) else _decision_point(decision_grp)
+            else:
+                decision_row = _decision_point(decision_grp)
         else:
             decision_label, decision_row = "feature path", _decision_point(df)
         if decision_row is not None:
@@ -1211,19 +1342,39 @@ def gen_line(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=Non
             callout_x = 0.98 if standalone else 0.04
             callout_ha = "right" if standalone else "left"
             ax.text(
-                callout_x, 0.06, f"best {x_col}={best_x:g}\n{decision_label[:14]} {best_y:.3g}",
+                callout_x, 0.06, f"best {x_col}: {best_x:g}\n{decision_label[:14]} {best_y:.3g}",
                 transform=ax.transAxes, ha=callout_ha, va="bottom", fontsize=5.2, color="#111111",
                 bbox=dict(boxstyle="round,pad=0.22", facecolor="white", edgecolor="#333333", linewidth=0.45, alpha=0.92),
                 zorder=6,
             )
+            visual_plan["featureSelectionDecisionX"] = float(best_x)
+            visual_plan["featureSelectionDecisionY"] = float(best_y)
         ax.xaxis.grid(True, linestyle="--", linewidth=0.3, alpha=0.25, zorder=0)
         ax.yaxis.grid(True, linestyle="--", linewidth=0.3, alpha=0.25, zorder=0)
         ax.set_xlabel(_display_col(x_col, col_map))
         ax.set_ylabel(_display_col(y_col, col_map) if standalone else "")
         handles, labels = ax.get_legend_handles_labels()
         if labels:
-            ax.legend(loc="upper right", ncol=min(4, len(labels)),
-                      frameon=False, fontsize=5)
+            if visual_plan.get("featureSelectionLegendOutside", standalone):
+                ax.figure.legend(handles, labels, loc="lower center",
+                                 ncol=min(4, len(labels)), frameon=False,
+                                 fontsize=5, handletextpad=0.5)
+                visual_plan["externalLegend"] = True
+            else:
+                ax.legend(loc="upper right", ncol=min(4, len(labels)),
+                          frameon=False, fontsize=5)
+                visual_plan["externalLegend"] = False
+        if callable(globals().get("_record_template_motif")):
+            _record_template_motif(visual_plan, "incremental_feature_selection_curve")
+        if callable(globals().get("_visual_count")):
+            _visual_count(visual_plan, "referenceLineCount")
+            _visual_count(visual_plan, "referenceLineCount")
+            _visual_count(visual_plan, "sampleEncodingCount")
+            _visual_count(visual_plan, "inPlotExplanatoryLabelCount")
+        visual_plan["featureSelectionModelCount"] = len(groups)
+        visual_plan["featureSelectionSortedByFinalScore"] = True
+        visual_plan["featureSelectionPreserveZigZag"] = True
+        visual_plan["rfHighlighted"] = any("rf" == str(name).lower() or "random forest" in str(name).lower() for name, _ in groups if name is not None)
         if ax.figure is not None:
             try:
                 if hasattr(ax.figure, "set_layout_engine"):
@@ -1233,7 +1384,8 @@ def gen_line(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=Non
             except Exception:
                 pass
             sp = ax.figure.subplotpars
-            ax.figure.subplots_adjust(left=max(sp.left, 0.16), bottom=max(sp.bottom, 0.26), right=min(sp.right, 0.94))
+            right_margin = 0.78 if visual_plan.get("externalLegend") else 0.94
+            ax.figure.subplots_adjust(left=max(sp.left, 0.16), bottom=max(sp.bottom, 0.26), right=min(sp.right, right_margin))
     elif x_col is None:
         x_vals = np.arange(len(df))
         if group_col and group_col in df.columns:

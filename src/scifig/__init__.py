@@ -16,6 +16,12 @@ from . import generators_scatter as _generators_scatter  # noqa: F401
 from . import generators_clinical as _generators_clinical  # noqa: F401
 from . import generators_genomics as _generators_genomics  # noqa: F401
 from . import generators_ml as _generators_ml  # noqa: F401
+from . import generators_radar as _generators_radar  # noqa: F401
+from . import generators_diagnostics as _generators_diagnostics  # noqa: F401
+from . import generators_ranked as _generators_ranked  # noqa: F401
+from . import generators_composition as _generators_composition  # noqa: F401
+from . import generators_engineering as _generators_engineering  # noqa: F401
+from . import generators_network as _generators_network  # noqa: F401
 
 __all__ = [
     "CHART_GENERATORS",

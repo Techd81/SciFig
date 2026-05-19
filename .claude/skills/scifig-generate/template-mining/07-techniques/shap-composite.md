@@ -1,6 +1,6 @@
 # Technique: SHAP Composite
 
-26/77 corpus cases — the largest family. SHAP composites usually combine **3 sub-views**: importance ranking (top), beeswarm (middle), and dependence/local force (bottom or beside).
+35/94 corpus cases — the largest family. SHAP composites usually combine **3 sub-views**: importance ranking (top), beeswarm (middle), and dependence/local force (bottom or beside).
 
 **Anchor cases:**
 - `期刊配图复现 _ Python绘制多面板SHAP蜂群图_1777452005`
@@ -103,6 +103,287 @@ ax_pie.pie(share, labels=labels, colors=['#E64B35', '#4DBBD5', '#00A087', '#7F7F
 
 Anchor: `期刊复现：组合SHAP摘要图与饼图解析分子特征对自由基反应预测的全局影响`, `期刊复现：随机森林(RF)模型驱动的EFI特征重要度条形图与SHAP圆环图可视化`.
 
+## Executable mapping: bar + beeswarm + inset pie
+
+Anchor: `复现顶刊 _ 拒绝千篇一律的SHAP图，用Matplotlib手绘一张“蜂群+条形”组合图`.
+
+`gen_dotplot` enters `shap_bar_beeswarm_inset_pie` mode when the figure is
+standalone and `visualContentPlan.templateMotifs` or `specialPatterns` contains
+`shap_bar_beeswarm_inset_pie`; `shap_composite` with feature-value columns may
+also route here. The generator calls `draw_shap_bar_beeswarm_inset_pie`, which
+expects a long SHAP table: `feature_id`, `shap_value`, optional `feature_value`,
+and optional `category` / `feature_group`.
+
+Layout discipline:
+
+- `GridSpec(1, 4, width_ratios=[1.15, 0.05, 1.20, 0.05], wspace=0.10)`
+- left panel: mean `|SHAP|` horizontal bars, one shared feature order
+- right panel: density-aware vertical jitter beeswarm, `SHAP value` on x
+- colorbar slot: dedicated axes, label `Feature value`, ticks `Low` / `High`
+- inset pie: inside the bar panel at `(0.50, 0.20, 0.45, 0.45)`, `gid="scifig_shap_inset_pie"`
+
+Runtime QA signals:
+
+- `templateMotifsApplied` includes `shap_bar_beeswarm_inset_pie`
+- `referenceLineCount`, `colorbarSlotCount`, `insetPieCount`, and `sampleEncodingCount` increment
+- `sharedFeatureOrdering=True`, `featureValueColorEncoded=True`, and `topFeatureLimit <= 15`
+
+Case-047 compact variant:
+
+- Source layout uses `GridSpec(1, 2, width_ratios=[1, 1.2], wspace=0.15)` and
+  a manually positioned inset pie via `fig.add_axes`.
+- The left bar colors and inset pie slices must come from the same feature
+  category totals; the pie is a category summary of the bar evidence, not a
+  separate claim.
+- The right beeswarm hides duplicate y labels and relies on the left panel's
+  ranked feature order; row mismatches invalidate the explanation.
+- The SHAP x-axis is signed model contribution, while feature-value color is
+  normalized within each feature row. Do not promote row colors to physical
+  causality.
+- Runtime status: `dotplot` validates only the right-side feature-value dot
+  surface. The full compact bar + inset pie + beeswarm board is learned here as
+  a template composition.
+
+Case-047 evidence lives in
+`.workflow/case_studies/case_047_shap_bar_beeswarm_inset_pie/comparison_report.json`.
+
+## Variant: Global/local bar + beeswarm + colorbar
+
+Anchor: `期刊配图复现 _ 手把手教你用 Python 绘制 SHAP 全局与局部解释组合图_1777452973`.
+
+Use this when the figure should pair global feature importance with local
+sample-level SHAP direction without an inset pie, donut, or extra prediction
+validation panel.
+
+Required rendering contract:
+
+- Layout: `GridSpec(1, 3, width_ratios=[0.8, 1.2, 0.05], wspace=0.05)`.
+- Left panel: horizontal mean `|SHAP|` bars sorted by global importance, with
+  bold feature labels and an x-grid behind bars.
+- Right panel: beeswarm points use the same feature order and hide duplicate y
+  labels; vertical jitter stays within the feature row.
+- Reference: one SHAP x=0 vertical line plus dotted horizontal row separators
+  keeps local positive/negative effects readable.
+- Color: map raw/normalized feature values with `coolwarm` and use a dedicated
+  narrow colorbar axis with manual Low/High text and no numeric ticks.
+- Runtime boundary: current `dotplot` validates only the right local dot
+  surface. Record a gap until a registered one-call generator composes the left
+  mean-`|SHAP|` bar panel and narrow colorbar slot.
+
+Case-059 evidence lives in
+`.workflow/case_studies/case_059_shap_global_local_bar_beeswarm/comparison_report.json`.
+
+## Variant: GS-XGBoost grouped bar + beeswarm
+
+Anchor: `期刊配图：基于GS-XGBoost与SHAP特征重要性的条形图与蜂群图组合可视化_1777456159`.
+
+Use this when a GS-XGBoost / XGBoost explanation board needs to compress many
+binary structure descriptors into one interpretable row while still showing
+global mean `|SHAP|` ranking and local SHAP direction.
+
+Required rendering contract:
+
+- Layout: `GridSpec(1, 2, width_ratios=[1, 1.3], wspace=0.35)` with a wide
+  right beeswarm lane.
+- Preprocess: aggregate same-family binary structure descriptors into one
+  `structures_total` or equivalent row before ranking, then sort all features by
+  mean `|SHAP|`.
+- Left panel: horizontal mean `|SHAP|` bars own the y tick labels and may carry
+  dashed physical-group brackets for merged structure, adsorbent descriptors,
+  reaction conditions, and porous properties.
+- Right panel: beeswarm points use the same feature order, signed SHAP values on
+  x, row-local jitter on y, and low-to-high feature-value color semantics.
+- Color: use the source blue-low / red-high ramp (`#4A90E2` to `#E94B3C`) and
+  mount a narrow inset colorbar outside the beeswarm axis with only Low/High
+  labels.
+- Runtime boundary: current `dotplot` validates only the right SHAP-like point
+  surface. Record a gap until a one-call generator composes the grouped bar
+  lane, brackets, and inset colorbar.
+
+Case-063 evidence lives in
+`.workflow/case_studies/case_063_gs_xgboost_shap_grouped_bar_beeswarm/comparison_report.json`.
+
+## Variant: Multi-panel SHAP beeswarm matrix
+
+Anchor: `期刊配图复现 _ Python绘制多面板SHAP蜂群图_1777452005`.
+
+Use this when one explanation task is repeated across regions, cohorts, or
+submodels and each panel must combine global mean `|SHAP|` importance with
+sample-level signed SHAP distributions.
+
+Required rendering contract:
+
+- Layout: `GridSpec(2, 6)` with top spans `[0:2]`, `[2:4]`, `[4:6]` and
+  bottom centered spans `[1:3]`, `[3:5]`.
+- Per panel: create `ax_top = ax_bottom.twiny()` for purple mean `|SHAP|`
+  background bars.
+- Beeswarm: sort features by panel-local mean `|SHAP|`, compute density-aware
+  vertical jitter from SHAP value bins, and color points by normalized feature
+  value using `viridis`.
+- Reference: repeat a black x=0 line in every panel.
+- Colorbar: attach one manual board-level `Feature value` colorbar with Low/High
+  ticks; do not add five local colorbars.
+
+QA signals: `activePanelCount == 5`, `twinyAxisCount == 5`,
+`shapBarCount > 0`, `shapBeeswarmCount > 0`, `zeroReferenceLineCount == 5`,
+`colorbarSlotCount == 1`, `featureValueColorEncoded=True`.
+
+Case-057 evidence lives in
+`.workflow/case_studies/case_057_multipanel_shap_beeswarm_matrix/comparison_report.json`.
+
+Case-075 duplicate-audit note:
+
+- `复现顶刊 _ 拒绝千篇一律的SHAP图，用Matplotlib手绘一张“蜂群+条形”组合图_1777452577`
+  reappears later in the markdown-learning order, but it is the same source
+  already learned in Case-010. Keep the existing
+  `shap_bar_beeswarm_inset_pie` motif and dotplot/SHAP composite executable
+  branch rather than minting another SHAP composite template.
+- The closure evidence lives in
+  `.workflow/case_studies/case_075_shap_bar_beeswarm_inset_pie_audit/comparison_report.json`.
+  It verifies that Case-010 already captured the reference images, replica,
+  comparison report, runtime probe, and runtime QA for the importance bar,
+  SHAP beeswarm, feature-value colorbar, and inset pie.
+
+## Variant: RF EFI + SHAP donut
+
+Anchor:
+`期刊复现：随机森林(RF)模型驱动的EFI特征重要度条形图与SHAP圆环图可视化_1777456510`.
+
+Use this when RF feature importance and global mean `|SHAP|` are the two
+explainability signals:
+
+- The SHAP component is a hollow donut (`wedgeprops.width=0.45`) rather than a
+  beeswarm. Treat it as contribution-share evidence only.
+- External labels need grey leader lines and collision-aware y spacing; inline
+  labels on small slices are not acceptable for dense feature sets.
+- Sort the donut by mean `|SHAP|`; do not force it to match the EFI bar order
+  unless the source data explicitly asks for rank-aligned reading.
+- Keep the unit boundary visible: EFI and mean `|SHAP|` are different
+  statistics, so matching ranks are evidence, while absolute values are not
+  cross-panel comparable.
+
+Runtime status: current SHAP fallbacks use `dotplot`/beeswarm or lollipop
+importance lanes. The hollow-donut callout layout is a learned template gap.
+
+## Variant: GS-XGBoost grouped SHAP bar + beeswarm
+
+Anchor: `期刊配图：基于GS-XGBoost与SHAP特征重要性的条形图与蜂群图组合可视化`.
+
+Use this when many binary or structural descriptors should be merged into one
+interpretable feature group before plotting the global ranking.
+
+Required rendering contract:
+
+- Asymmetric `GridSpec(1, 2, width_ratios=[1, 1.3], wspace=0.35)`.
+- Left lane: mean `|SHAP|` horizontal bars; colors encode physical feature
+  groups such as adsorbent descriptors, reaction conditions, merged structure,
+  or porous properties.
+- Draw dashed bracket annotations outside the bar-axis y labels to identify
+  feature groups without repeating the labels in the beeswarm.
+- Right lane: SHAP beeswarm using the same feature order, a vertical zero
+  reference line, and feature-value color encoding.
+- Use a compact inset colorbar beside the beeswarm with ticks `Low` / `High`
+  rather than a full extra GridSpec column.
+
+QA signals: `sharedFeatureOrdering=True`, `groupBracketCount >= 1`,
+`mergedStructureFeature=True`, `insetColorbarCount == 1`, and
+`zeroReferenceLineCount >= 1`.
+
+## Executable mapping: lollipop + SHAP beeswarm board
+
+Anchor: `期刊复刻：多面板结合XGBoost特征重要性棒棒糖图与SHAP蜂群图`.
+
+Use this when a model-explanation table includes feature importance / gain plus
+long-form SHAP values. The source uses a 1x2 board with a compact importance
+lane at left and a wider SHAP beeswarm lane at right, both sharing the feature
+y-axis.
+
+Phase-3 binding:
+
+```python
+result = draw_lollipop_shap_beeswarm_board(
+    df,
+    feature_col="feature_id",
+    shap_value_col="shap_value",
+    importance_col="importance",
+    feature_value_col="feature_value",
+    width_ratios=[1.0, 2.5],
+    figsize=(12, 6),
+    wspace=0.05,
+)
+```
+
+Runtime path: `gen_dotplot` enters `lollipop_shap_beeswarm_board` mode when the
+visual plan or `specialPatterns` includes `lollipop_shap_beeswarm_board`.
+
+QA signals: left axes gid `scifig_lollipop_shap_importance`, right axes gid
+`scifig_lollipop_shap_beeswarm`, stem gid `scifig_lollipop_importance_stems`,
+point gid `scifig_lollipop_importance_points`, SHAP point gid
+`scifig_lollipop_shap_points`, zero-line gid
+`scifig_lollipop_shap_zero_reference`, `lollipopLayerCount=1`,
+`shapBeeswarmCount=1`, `sharedFeatureOrdering=True`, and
+`shapCompositeLayout="subplots(1,2)"`.
+
+Case-086 audit note: the later queue pass over this Markdown was treated as
+`duplicate_markdown_covered_by_case_021`; preserve this lollipop-left /
+beeswarm-right contract separately from bar-based SHAP composites.
+
+## Executable mapping: bar + standalone pie + summary beeswarm
+
+Anchor: `期刊图表复现：组合SHAP摘要图与饼图解析分子特征对自由基反应预测的全局影响`.
+
+`gen_dotplot` enters `shap_bar_pie_summary_board` mode when the visual plan or
+`specialPatterns` includes `shap_bar_pie_summary_board`. This is distinct from
+the Case-010 inset-pie board: the descriptor-category pie is its own panel, not
+an inset inside the bar axes. The generator calls
+`draw_shap_bar_pie_summary_board`, which expects the same long SHAP table roles:
+`feature_id`, `shap_value`, `feature_value`, and `category` / `feature_group`.
+
+Layout discipline:
+
+- `GridSpec(2, 3, width_ratios=[1.2, 0.8, 1.5], height_ratios=[1, 1])`
+- panel (a): left mean `|SHAP|` horizontal bars spanning both rows
+- panel (b): standalone descriptor category pie in `gs[0, 1]`
+- panel (c): right SHAP summary beeswarm spanning both rows
+- colorbar: attached to panel (c), label `Feature Value`, ticks `Low` / `High`
+- panel labels `(a)`, `(b)`, `(c)` in axes-relative coordinates
+
+Runtime QA signals:
+
+- `templateMotifsApplied` includes `shap_bar_pie_summary_board`
+- `standalonePieCount=1`, `piePanelCount=1`, `colorbarSlotCount=1`
+- `referenceLineCount=1`, `zeroReferenceLineCount=1`, and `panelLabelCount=3`
+- `sharedFeatureOrdering=True`, `featureValueColorEncoded=True`, and `topFeatureLimit <= 15`
+
+Case-084 audit note: the later queue pass over this Markdown was treated as
+`duplicate_markdown_covered_by_case_019`; keep using this standalone-pie SHAP
+summary board instead of the Case-010 inset-pie variant.
+
+## Variant: Target-wise SHAP mean-importance triptych
+
+Anchor: `期刊复现：子图平铺展示比表面积与孔容的全局SHAP值与关键特征排行_1777454297`.
+
+Use this when the input supplies precomputed mean absolute SHAP values for
+several prediction targets, and the figure's job is to compare target-specific
+driver rankings:
+
+- Layout is `1x3` with one target per panel, for example SSA, Vt, and NC.
+- Bars are horizontal mean `|SHAP|` rankings. The x-axis is magnitude only; do
+  not describe positive/negative SHAP direction or causal feature effects from
+  this view.
+- Keep independent x-axis limits. Cross-panel comparison is by rank and feature
+  identity, not raw bar length.
+- Apply `RdYlBu_r` or equivalent warm-to-cool emphasis with local per-panel
+  normalization so each target retains its own visual hierarchy.
+- Place numeric labels on every bar, using contrast-aware text when labels sit
+  inside the bars.
+- Runtime status: current `lollipop_horizontal` validates only one ranked
+  feature panel. No public generator yet composes the full three-target SHAP
+  mean-importance triptych with local normalization and value labels.
+
+Case-046 evidence lives in
+`.workflow/case_studies/case_046_shap_mean_importance_triptych/comparison_report.json`.
+
 ## Variant: 上三下二 (top-wide + 2 below) — SHAP global+local hero
 
 ```python
@@ -115,33 +396,183 @@ ax_br  = fig.add_subplot(gs[1, 1])   # bottom-right: dependence plot for #1 feat
 
 Anchor: `期刊复现：基于SHAP复合图揭示高能分子特征对性能的全局与局部影响`.
 
-## Variant: 6-panel SHAP dependence grid (ALE-style)
+## Variant: Prediction + SHAP/PDP explanation board
 
-For each top-6 feature: SHAP value vs feature value, colored by interaction feature:
+Anchor: `期刊配图：多面板预测散点与SHAP局部依赖特征解释组合图_1777456052`.
+
+Use this when a model-report figure must connect prediction validity to
+explanation in one board. This is not a pure SHAP summary; it is a progression
+from model performance to attribution.
+
+Rendering contract:
+
+- Layout is an asymmetric `GridSpec(2, 2)` with `height_ratios=[1, 1.2]`.
+- Panel A: parity scatter with `y=x` reference, equal aspect, and an in-axes
+  `R^2` or metric box.
+- Panel B: residual distribution or compact residual diagnostic to expose bias
+  not captured by the metric box.
+- Panel C: global SHAP importance bars, usually mean `|SHAP|`, sorted by feature
+  importance.
+- Panel D: local dependence/PDP for the top mechanism feature, with scatter and
+  a smooth trend line.
+
+Case-070 boundary: the article code only details GridSpec setup and parity
+plotting. Residual, SHAP, and PDP panels are learned from the visual grammar and
+should be marked as reconstructed when raw model outputs are absent.
+
+QA signals: `panelCount == 4`, `perfectFitLineCount >= 1`, `metricBoxCount >= 1`,
+`residualHistogramCount >= 1`, `shapBarCount > 0`, `pdpScatterCount > 0`,
+`pdpTrendLineCount >= 1`, and `exportDpi == 600`.
+
+Case-070 evidence lives in
+`.workflow/case_studies/case_070_prediction_shap_pdp_board/comparison_report.json`.
+
+## Variant: Molecular SHAP + parity evidence board
+
+Anchor: `期刊复现：基于SHAP复合图揭示高能分子特征对性能的全局与局部影响_1777454774`.
+
+Use this when molecular descriptor attribution must be tied to prediction
+quality rather than shown as a standalone explanation:
+
+- Layout is a heterogeneous `2x2` GridSpec: SHAP beeswarm, global mean-absolute
+  SHAP bars, train/test parity, and external validation parity.
+- SHAP beeswarm and importance bars should share feature ordering so local
+  direction and global magnitude are directly comparable.
+- Internal parity needs a perfect-fit diagonal, train/test split colors, and a
+  compact metric inset for R2/RMSE or equivalent supplied metrics.
+- External validation gets its own parity panel; do not merge it into training
+  or testing points if the article/prompt frames it as independent robustness.
+- Runtime status: current `dotplot` validates only the SHAP summary lane. A
+  public generator does not yet compose the 2x2 SHAP plus parity board.
+
+Case-037 evidence lives in
+`.workflow/case_studies/case_037_shap_molecule_global_local_parity/comparison_report.json`.
+
+## Variant: 6-panel SHAP dependence grid (signed-background style)
+
+For each top-6 feature: SHAP value vs feature value, with red/blue signed SHAP background zones:
 
 ```python
-fig = plt.figure(figsize=(15, 9))
-gs  = GridSpec(2, 3, hspace=0.35, wspace=0.25)
+fig, axes = plt.subplots(2, 3, figsize=(12, 7))
+axes = axes.ravel()
 
-for k, feat_idx in enumerate(order[:6]):
-    ax = fig.add_subplot(gs[k // 3, k % 3])
-    fv = feature_values[:, feat_idx]
-    sv = shap_values[:, feat_idx]
-    # color by the strongest interaction feature
-    interact_idx = strongest_interaction[feat_idx]
-    iv = feature_values[:, interact_idx]
-    iv_n = (iv - iv.min()) / (iv.max() - iv.min() + 1e-12)
-    ax.scatter(fv, sv, c=iv_n, cmap='viridis', s=15, alpha=0.7,
-               edgecolor='white', linewidth=0.2, zorder=4)
-    ax.axhline(0, color='black', linewidth=1.0, zorder=3)
-    ax.set_title(feature_names[feat_idx], fontsize=12)
+for k, feature in enumerate(feature_names[:6]):
+    ax = axes[k]
+    ax.axhspan(0, 2.5, color='#ffcccc', alpha=0.4, zorder=0)
+    ax.axhspan(-2.5, 0, color='#cce5ff', alpha=0.4, zorder=0)
+    ax.axhline(0, color='gray', linestyle='--', linewidth=1.5, zorder=1)
+    ax.scatter(feature_values[feature], shap_values[feature],
+               color='black', s=15, alpha=0.7, zorder=2)
+    ax.set_ylim(-2.5, 2.5)
+    ax.set_xlabel(feature, fontsize=12, fontweight='bold')
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
 ```
 
 Anchor: `期刊图表复现：多面板SHAP依赖图展示分子特征对自由基反应速率的非线性影响`.
 
-Executable mapping: `scatter_regression` switches into SHAP dependence mode when the data carries `feature_value` + `shap_value` plus optional `interaction_value`. It must draw the zero contribution line, feature-value color encoding, a compact effect summary, and an outside colorbar only for standalone figures so composite panels stay render-QA safe.
+Executable mapping: `scatter_regression` calls `draw_shap_dependence_background_grid` when long-form data carries `feature_id` + `feature_value` + `shap_value` for multiple features and the motif or profile indicates SHAP dependence/background signed zones. It must draw positive/negative background bands, a dashed zero contribution line, black scatter, uniform y-limits, and no colorbar for this signed-background variant.
+
+Case-082 audit note: the later queue pass over this Markdown was treated as
+`duplicate_markdown_covered_by_case_017`; reuse this signed-background SHAP
+dependence grid contract rather than adding another SHAP scatter variant.
+
+## Variant: 6-panel SHAP interaction dependence grid
+
+Case-018 uses the same 2x3 long-form SHAP dependence structure but encodes a secondary interaction feature as scatter color:
+
+```python
+fig = plt.figure(figsize=(14, 8))
+gs = fig.add_gridspec(2, 3, wspace=0.4, hspace=0.3)
+
+scatter = ax.scatter(x_data, shap_values, c=color_data, cmap='coolwarm',
+                     s=15, alpha=0.8, edgecolors='none', zorder=2)
+ax.axhline(0, color='gray', linestyle='--', linewidth=0.8, zorder=1)
+ax.text(-0.15, 1.05, '(a)', transform=ax.transAxes,
+        fontsize=12, fontweight='bold', va='bottom')
+cbar = fig.colorbar(scatter, ax=ax, fraction=0.046, pad=0.04)
+cbar.set_label('Interaction Feature', size=9)
+```
+
+Executable mapping: `scatter_regression` calls `draw_shap_interaction_dependence_grid` when long-form data carries `feature_id` + `feature_value` + `shap_value` + `interaction_value` and the motif or profile indicates SHAP interaction dependence. This branch has priority over the signed-background grid.
+
+Case-083 audit note: the later queue pass over this Markdown was treated as
+`duplicate_markdown_covered_by_case_018`; reuse the interaction-color SHAP
+dependence grid contract, including per-panel colorbars and independent y-scales.
+
+Case-039 global-colorbar variant: `期刊复现：基于多面板组合的SHAP依赖图解析特征对模型预测的非线性影响`
+uses a rotated `3x2` SHAP dependence grid with one shared interaction-value
+colorbar in a reserved right-side axes. Each panel draws feature value on x,
+SHAP value on y, interaction value as `viridis` scatter color, a red dashed
+`y=0` semantic baseline, and a quadratic trend with a light-blue confidence
+band. Use one global color normalization so identical colors carry identical
+interaction-value meaning across all six panels. Runtime status: current
+`scatter_regression` validates only a single generic scatter plus OLS trend,
+not this 3x2 SHAP interaction grid or global colorbar composition.
+
+## Variant: 2x2 SHAP conversion dependence matrix
+
+Anchor:
+`期刊复现：通过多面板SHAP依赖图解析特征对转化率的主效应与交互作用_1777454562`.
+
+Use this when SHAP dependence panels are explicitly organized as prediction
+target rows crossed with main-feature columns:
+
+- Layout is `plt.subplots(2, 2, figsize=(15, 10))` with `wspace=0.35` and
+  `hspace=0.45`; rows are targets such as CH4 and CO2 conversion, columns are
+  main features such as surface area and reaction temperature.
+- Every panel maps `x=feature_value`, `y=shap_value`, and `c=secondary_feature`
+  with `RdYlBu_r`; the colorbar is local to that panel and labeled Secondary
+  Feature.
+- Draw a black nonlinear trend line in every panel to summarize the main
+  effect, then a gray dashed `y=0` line to preserve positive/negative SHAP
+  contribution semantics.
+- Interpretation boundary: SHAP values are model attributions, not absolute
+  conversion rates or causal intervention effects. Do not compare color depth
+  across panels unless the same secondary feature and normalization are shared.
+
+Runtime status: current `scatter_regression` validates only one dependence-like
+scatter panel; no public generator composes the full 2x2 target-by-feature
+conversion matrix with four local colorbars.
+
+## Variant: SHAP PDP threshold panel array
+
+Anchor: `期刊复现：基于RF-XGB的SHAP部分依赖图解析关键参数阈值_1777454077`.
+
+Use this when SHAP partial-dependence rows carry feature id, feature value,
+SHAP contribution, and optionally an interaction/context value:
+
+- Layout is a horizontal `1xN` panel array. Each variable keeps its own x-axis
+  units while sharing the same SHAP-contribution interpretation.
+- Every panel must draw a dashed `y=0` baseline so positive and negative model
+  contributions remain legible.
+- Scatter points may be colored by a secondary interaction value; the colorbar
+  is contextual and must not replace the SHAP contribution axis.
+- Add threshold annotations only where the provided data support the threshold
+  region. Do not infer sparse intervals as hard physical cutoffs.
+- Runtime status: current `scatter_regression` validates generic scatter plus
+  OLS only. It does not yet provide the SHAP baseline, nonlinear smooth,
+  interaction colorbar, threshold callout, or 1xN composition.
+
+Case-036 evidence lives in
+`.workflow/case_studies/case_036_rf_xgb_shap_pdp_threshold/comparison_report.json`.
+
+Case-094 audit note: `期刊复现：SHAP依赖图解析环境因子对目标变量的影响方向与程度_1777454034`
+was already learned as Case-029. Despite the title, the visual grammar is a
+single-panel SHAP summary/beeswarm: sorted features, vertical SHAP=0 reference,
+coolwarm feature-value points, and Low/High colorbar. Do not route this source
+to the SHAP dependence grid unless the user asks for feature-value-vs-SHAP
+panels.
+
+Case-030 learned note: `期刊复现：SHAP蜂群图解析环境因子对目标变量的影响方向与程度_1777455105`
+is the explicit environmental SHAP summary variant. It reinforces the same
+single-panel contract as Case-029 but makes the global-importance ordering
+rule explicit: sort features by mean `|SHAP|`, keep the dashed x=0 contribution
+divider, color points by raw feature value, and use Low/High colorbar ticks as
+the semantic legend. The closure evidence lives in
+`.workflow/case_studies/case_030_shap_beeswarm_environment/comparison_report.json`;
+the runtime `dotplot` probe passes the structural contract, with documented
+wording/colorbar tick gaps.
 
 ## Discipline rules (universal across the 26 cases)
 

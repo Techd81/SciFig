@@ -1,6 +1,7 @@
 """Semantic enrichment pass — adds narrative-arc, signature-trick clues
-and preamble prose to the case-index. Reads the .md files but only keeps
-~600 chars of prose (the visual-analysis paragraph). Run after extract.py.
+and preamble prose to the case-index. Reads each source_path recorded by
+extract.py but only keeps ~600 chars of prose (the visual-analysis paragraph).
+Run after extract.py.
 
 Output:
   - case-index.json (overwritten with extra fields)
@@ -14,7 +15,7 @@ from collections import Counter
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[5]
-ARTICLES = ROOT / "template" / "articles"
+TEMPLATE_ROOT = ROOT / "template"
 SKILL_DIR = Path(__file__).resolve().parents[1]
 OUT_DIR = Path(__file__).resolve().parent
 
@@ -78,7 +79,11 @@ def pull_preamble(md: str) -> str:
     """Grab the first 800 chars after title that's prose (not code)."""
     # remove markdown code blocks
     no_code = re.sub(r"```.*?```", "", md, flags=re.DOTALL)
-    no_imgs = re.sub(r"!\[[^\]]*\]\([^)]+\)", "", no_code)
+    no_imgs = re.sub(
+        r"!\[([^\]]*)\]\([^)]+\)",
+        lambda match: f" [image: {match.group(1).strip() or 'reference'}] ",
+        no_code,
+    )
     # take from first '原图' or '前言' to next 'Step ' / 'step '
     m = re.search(r"(原图解析|前言|视觉语言|视觉拆解)(.*?)(?=Step\s*1|步骤\s*1|核心代码|代码|\n#{1,3}\s*\d{2}\s)",
                   no_imgs, re.DOTALL | re.IGNORECASE)
@@ -105,6 +110,16 @@ def detect_tricks(code: str) -> list[str]:
     return out
 
 
+def resolve_case_path(case: dict) -> Path:
+    """Resolve both new source_path records and legacy file-only records."""
+    if case.get("source_path"):
+        return ROOT / case["source_path"]
+    matches = sorted(TEMPLATE_ROOT.rglob(case["file"]))
+    if not matches:
+        raise FileNotFoundError(case["file"])
+    return matches[0]
+
+
 def main():
     cases = json.loads(CASE_INDEX.read_text(encoding="utf-8"))
     enriched = []
@@ -112,7 +127,7 @@ def main():
     trick_counter: Counter = Counter()
 
     for case in cases:
-        path = ARTICLES / case["file"]
+        path = resolve_case_path(case)
         md = path.read_text(encoding="utf-8", errors="replace")
         preamble = pull_preamble(md)
         # extract code blocks again (re-use pattern)
@@ -122,6 +137,18 @@ def main():
         case["narrative_arc"] = arc
         case["signature_tricks"] = tricks
         case["preamble"] = preamble
+        case["image_evidence"] = {
+            "image_count": case.get("image_count", 0),
+            "remote_image_count": case.get("remote_image_count", 0),
+            "first_images": [
+                {
+                    "alt": image.get("alt", ""),
+                    "url": image.get("url", ""),
+                    "line": image.get("line"),
+                }
+                for image in case.get("images", [])[:3]
+            ],
+        }
         enriched.append(case)
         arc_counter[arc] += 1
         for t in tricks:
@@ -131,7 +158,7 @@ def main():
 
     # write a human-readable digest grouped by narrative arc
     out = ["# Template Mining — Per-Case Narrative & Trick Digest", "",
-           f"Source: 77 cases.  Re-run `enrich.py` after `extract.py` to refresh.", ""]
+           f"Source: {len(cases)} cases.  Re-run `enrich.py` after `extract.py` to refresh.", ""]
 
     out.append("## Narrative arc distribution\n")
     out.append("| Arc | Cases | % |")
@@ -158,10 +185,16 @@ def main():
             grid = c["grid"]["gridspec"] or c["grid"]["subplots"] or "—"
             tricks = ",".join(c["signature_tricks"][:6]) or "—"
             palette = ",".join(c.get("palette_hex", [])[:4]) or "—"
+            image_count = c.get("image_count", 0)
+            code_blocks = c.get("code_block_count", 0)
             title = c["title"][:60]
             out.append(f"- **{short_id}** `{title}`")
-            out.append(f"  - family: {fams} | grid: {grid} | palette: {palette}")
+            out.append(f"  - family: {fams} | grid: {grid} | palette: {palette} | images: {image_count} | code blocks: {code_blocks}")
             out.append(f"  - tricks: {tricks}")
+            first_images = c.get("image_evidence", {}).get("first_images", [])
+            if first_images:
+                urls = "; ".join(image["url"] for image in first_images)
+                out.append(f"  - image refs: {urls}")
 
     (OUT_DIR / "narratives.md").write_text("\n".join(out) + "\n", encoding="utf-8")
     print(f"Updated {CASE_INDEX} (added narrative_arc, signature_tricks, preamble)")

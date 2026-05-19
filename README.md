@@ -4,6 +4,8 @@
 
 **Turn experimental data into publication-ready scientific figures — directly inside Claude Code.**
 
+**公益token群175877552 希望人人tokne自由**
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org/downloads/)
 [![Charts](https://img.shields.io/badge/charts-121%20types-orange.svg)](#charts)
@@ -330,7 +332,7 @@ SciFig/
 │   │       ├── source-lint.py             # Forbidden-pattern lint (skill + package)
 │   │       └── generators-*.py            # Domain-grouped generator implementations
 │   ├── specs/                             # Chart catalog, domain playbooks, journal profiles
-│   ├── template-mining/                   # 7-module visual grammar knowledge base (77 cases)
+│   ├── template-mining/                   # 7-module visual grammar knowledge base (94 cases)
 │   └── templates/                         # Runtime resources: palette, layout, zorder registries
 ├── src/scifig/                            # Pip-installable Python package (V0.1.3+)
 │   ├── api.py                             # scifig.plot() fluent API
@@ -357,7 +359,7 @@ MIT — see [LICENSE](LICENSE). Copyright (c) 2026 Techd.
 
 ## Acknowledgements
 
-- 77 reference cases extracted from open Nature / Cell / Science / Lancet / NEJM / JAMA figures.
+- 94 reference cases extracted from the local `template/` corpus, including open Nature / Cell / Science / Lancet / NEJM / JAMA-style figures.
 - Color systems credit Bang Wong (Nature Methods 2011) and Masataka Okabe / Kei Ito (J*FLY* 2008).
 - Built as a [Claude Code](https://docs.anthropic.com/en/docs/claude-code) skill.
 
@@ -667,7 +669,7 @@ SciFig/
 │   │       ├── source-lint.py             # 禁用模式 lint（技能 + 包）
 │   │       └── generators-*.py            # 按领域分组的 generator 实现
 │   ├── specs/                             # 图表目录、领域 playbook、期刊样式
-│   ├── template-mining/                   # 7 模块视觉语法知识库（77 案例）
+│   ├── template-mining/                   # 7 模块视觉语法知识库（94 案例）
 │   └── templates/                         # 运行时资源：palette、layout、zorder 注册表
 ├── src/scifig/                            # 可 pip 安装的 Python 包（V0.1.3+）
 │   ├── api.py                             # scifig.plot() Fluent API
@@ -694,7 +696,7 @@ MIT，详见 [LICENSE](LICENSE)。版权 (c) 2026 Techd。
 
 ## 致谢
 
-- 77 个参考案例提取自开放的 Nature / Cell / Science / Lancet / NEJM / JAMA 图。
+- 94 个参考案例来自本地 `template/` 语料库，包括开放的 Nature / Cell / Science / Lancet / NEJM / JAMA 风格图。
 - 配色系统来自 Bang Wong（Nature Methods 2011）与 Masataka Okabe / Kei Ito（J*FLY* 2008）。
 - 作为 [Claude Code](https://docs.anthropic.com/en/docs/claude-code) 技能构建。
 

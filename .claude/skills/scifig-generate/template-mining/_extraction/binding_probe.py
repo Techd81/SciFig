@@ -41,13 +41,15 @@ BINDINGS = {
     # ── POLAR / RADAR FAMILY ──
     # add_polygon_polar_grid replaces the default circular polar grid with the
     # corpus-anchored polygon dashed grid (Nature Vol 626 Fig 3c discipline).
-    "gen_radar":              ["add_polygon_polar_grid"],
+    "gen_radar":              ["add_polygon_polar_grid", "add_hollow_polar_center",
+                               "add_polar_spoke_tick_labels", "scatter_glass_markers",
+                               "draw_mirror_radial_bar_board"],
     "gen_biodiversity_radar": ["add_polygon_polar_grid"],
 
     # ── FOREST / CI FAMILY ──
-    # add_forest_panel encodes one-call forest discipline: dashed reference
-    # line + asymmetric CI whiskers + per-row HR(CI) annotation column.
-    "gen_forest":             ["add_forest_panel"],
+    # add_forest_panel encodes one-call forest discipline; resolve_forest_model_style_map
+    # preserves Nature Comms Model 1/2/3 colors for faceted HR boards.
+    "gen_forest":             ["add_forest_panel", "resolve_forest_model_style_map"],
     "gen_caterpillar_plot":   ["add_forest_panel"],
     "gen_risk_ratio_plot":    ["add_forest_panel"],
     "gen_ci_plot":            ["add_forest_panel"],
@@ -76,13 +78,42 @@ BINDINGS = {
     "gen_diverging_bar":      ["add_zero_reference"],
     "gen_likert_divergent":   ["add_zero_reference"],
     "gen_decision_curve":     ["add_zero_reference"],
-    "gen_lollipop_horizontal": ["add_zero_reference"],
-    "gen_dotplot":            ["add_zero_reference"],
+    "gen_lollipop_horizontal": ["add_zero_reference",
+                                "draw_bipolar_lollipop_ale_board"],
+    "gen_dotplot":            ["add_zero_reference", "draw_shap_bar_beeswarm_inset_pie",
+                               "draw_shap_bar_pie_summary_board",
+                               "draw_lollipop_shap_beeswarm_board",
+                               "draw_bubble_correlation_matrix"],
+
+    # ── DISTRIBUTION / RIDGELINE FAMILY ──
+    "gen_ridge":              ["draw_bayesian_ridge_heatmap_board"],
+
+    # ── RANKED BAR + INSET FAMILY ──
+    "gen_grouped_bar":        ["draw_inset_heatmap_bar_rank"],
+
+    # ── DUAL-AXIS FAMILY ──
+    # draw_textbook_dual_axis_bar_line owns the Materials Today layer sandwich;
+    # draw_dual_axis_hist_cumfreq_grid owns the HPC 3x3 histogram + cumulative
+    # frequency twin-axis matrix.
+    "gen_dual_axis":          ["draw_textbook_dual_axis_bar_line",
+                               "draw_dual_axis_hist_cumfreq_grid"],
+
+    # ── PATH / SEM FAMILY ──
+    # draw_pls_pm_path_model owns directed PLS-PM/SEM topology: signed path
+    # colors, abs(coef) linewidths, significance labels, and total-effect inset.
+    "gen_mediation_path":     ["draw_pls_pm_path_model"],
 
     # ── SCATTER REGRESSION FLOOR FAMILY ──
     # apply_scatter_regression_floor owns the L0 floor: light dashed grid +
     # despine, applied BEFORE drawing scatter so the grid sits at zorder=0.
-    "gen_scatter_regression": ["apply_scatter_regression_floor", "add_zero_reference"],
+    "gen_scatter_regression": ["apply_scatter_regression_floor", "add_zero_reference",
+                               "resolve_method_style_map", "resolve_parity_split_style_map",
+                               "resolve_gam_residual_style_map", "draw_inset_raincloud",
+                               "draw_density_parity_matrix",
+                               "draw_time_series_prediction_interval",
+                               "draw_shap_dependence_background_grid",
+                               "draw_shap_interaction_dependence_grid",
+                               "draw_hump_threshold_regression"],
     "gen_dose_response":      ["apply_scatter_regression_floor"],
     "gen_scale_location":     ["apply_scatter_regression_floor"],
 }

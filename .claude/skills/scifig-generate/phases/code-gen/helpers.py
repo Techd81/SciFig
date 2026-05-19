@@ -278,14 +278,18 @@ def default_visual_content_plan():
         "statProvenance": [],
         "metricBoxCount": 0,
         "metricTableCount": 0,
+        "metricTextCount": 0,
         "metricTableRelocatedCount": 0,
         "metricTableSuppressedCount": 0,
         "metricTableFallbackBoxCount": 0,
         "insetCount": 0,
+        "insetRaincloudCount": 0,
+        "insetPieCount": 0,
         "referenceLineCount": 0,
         "densityHaloCount": 0,
         "sampleEncodingCount": 0,
         "significanceStarLayerCount": 0,
+        "correlationBubbleCount": 0,
         "dualAxisEncodingCount": 0,
         "referenceMotifCount": 0,
         "templateMotifCount": 0,
@@ -382,6 +386,134 @@ def infer_template_motifs(charts, dataProfile=None):
     role_values = [str(v).lower() for v in roles.values()]
     tokens = " ".join(cols + role_values)
     chart_keys = {str(chart or "").replace("+", "_").lower() for chart in charts if chart}
+    has_path_model_signal = (
+        bool(patterns & {"pls_pm_path_model", "sem_path_model", "path_model_total_effects", "pls_pm", "sem"})
+        or (
+            "mediation_path" in chart_keys
+            and any(token in tokens for token in ("source", "target", "coefficient", "path_coef", "total_effect"))
+        )
+        or (
+            ("source" in roles or "from" in roles)
+            and ("target" in roles or "to" in roles)
+            and any(role in roles for role in ("coefficient", "coef", "path_coef", "effect", "edge_weight"))
+        )
+    )
+    has_density_parity_signal = (
+        bool(patterns & {"density_parity_matrix", "kde_parity_matrix", "density_parity_plot", "kde_parity_plot"})
+        or (
+            "scatter_regression" in chart_keys
+            and ("actual" in roles or "observed" in roles or "measured" in roles)
+            and ("predicted" in roles or "prediction" in roles or "fitted" in roles)
+            and any(role in roles for role in ("panel", "facet", "task", "target", "property"))
+            and any(token in tokens for token in ("density", "kde", "flux", "separation"))
+        )
+    )
+    has_time_series_pi_signal = (
+        bool(patterns & {"time_series_pi", "time_series_prediction_interval", "prediction_interval", "train_test_prediction_interval"})
+        or (
+            {"scatter_regression", "line", "line_ci"} & chart_keys
+            and ("actual" in roles or "observed" in roles or "measured" in roles or "true" in roles)
+            and ("predicted" in roles or "prediction" in roles or "fitted" in roles)
+            and any(role in roles for role in ("time", "x", "sample", "sample_index", "index"))
+            and (
+                ("pi_low" in roles and "pi_high" in roles)
+                or ("lower" in roles and "upper" in roles)
+                or ("y_lower" in roles and "y_upper" in roles)
+                or any(token in tokens for token in ("prediction_interval", "interval", "training", "testing"))
+            )
+        )
+    )
+    has_shap_dependence_background_signal = (
+        bool(patterns & {"shap_dependence_background_grid", "shap_background_grid", "shap_dependence_grid", "shap_dependence"})
+        or (
+            ("scatter_regression" in chart_keys or "shap_composite" in chart_keys)
+            and any(role in roles for role in ("feature_id", "feature", "feature_name", "term"))
+            and any(role in roles for role in ("feature_value", "feature_val", "feature_numeric", "x"))
+            and any(role in roles for role in ("shap_value", "shap", "shap_impact", "y"))
+            and any(token in tokens for token in ("shap", "dependence", "background", "positive", "negative"))
+        )
+    )
+    has_shap_interaction_grid_signal = (
+        bool(patterns & {"shap_interaction_dependence_grid", "shap_interaction_grid", "interaction_effect"})
+        or (
+            ("scatter_regression" in chart_keys or "shap_composite" in chart_keys)
+            and any(role in roles for role in ("feature_id", "feature", "feature_name", "term"))
+            and any(role in roles for role in ("feature_value", "feature_val", "feature_numeric", "x"))
+            and any(role in roles for role in ("shap_value", "shap", "shap_impact", "y"))
+            and any(role in roles for role in ("interaction_value", "interaction", "feature_color", "color", "hue"))
+            and any(token in tokens for token in ("shap", "dependence", "interaction", "secondary", "coolwarm"))
+        )
+    )
+    has_dual_axis_hist_cumfreq_signal = (
+        bool(patterns & {"dual_axis_hist_cumfreq_grid", "hist_cumfreq_grid", "cumulative_frequency_grid"})
+        or (
+            "dual_axis" in chart_keys
+            and any(token in tokens for token in ("cumulative", "cumfreq", "frequency", "histogram", "hist", "hpc", "cement", "fly ash", "age", "strength"))
+            and not any(role in roles for role in ("x", "bar", "left_y", "line", "right_y"))
+        )
+    )
+    has_nature_comms_dual_axis_signal = (
+        bool(patterns & {"nature_comms_dual_axis_bar_line", "count_proportion_dual_axis", "dual_axis_color_linked"})
+        or (
+            "dual_axis" in chart_keys
+            and any(role in roles for role in ("x", "bar", "left_y", "line", "right_y"))
+            and any(token in tokens for token in ("count", "counts", "number", "proportion", "ratio", "percentage", "genome", "lysogen"))
+        )
+    )
+    has_inset_heatmap_rank_signal = (
+        bool(patterns & {"inset_heatmap_bar_rank", "ranked_bar_inset_heatmap", "bar_rank_heatmap_inset"})
+        or (
+            ("grouped_bar" in chart_keys or "bar" in chart_keys or "bar_chart" in chart_keys)
+            and any(role in roles for role in ("group", "x", "category"))
+            and any(role in roles for role in ("value", "y", "score", "metric"))
+            and any(token in tokens for token in ("rank", "ranking", "heatmap", "correlation", "pearson", "inset", "画中画"))
+        )
+    )
+    has_lollipop_shap_beeswarm_signal = (
+        bool(patterns & {"lollipop_shap_beeswarm_board", "xgboost_lollipop_shap", "importance_lollipop_shap"})
+        or (
+            "lollipop" in chart_keys
+            and ("shap_composite" in patterns or "shap_value" in roles or any(token in tokens for token in ("shap", "beeswarm")))
+            and ("importance" in roles or "feature_importance" in roles or any(token in tokens for token in ("importance", "gain", "xgboost")))
+        )
+    )
+    has_bipolar_lollipop_ale_signal = (
+        bool(patterns & {"bipolar_lollipop_ale_board", "ale_bipolar_lollipop", "pfi_ale_lollipop"})
+        or (
+            ("lollipop" in chart_keys or "lollipop_horizontal" in chart_keys)
+            and ("importance" in roles or "feature_importance" in roles or "pfi" in roles)
+            and ("ale" in roles or "ale_effect" in roles or "main_effect" in roles or "effect" in roles)
+        )
+    )
+    has_mirror_radial_bar_signal = (
+        bool(patterns & {"mirror_radial_bar_board", "mirror_radial", "mirror_rose", "radial_bar_rose"})
+        or (
+            ("radar" in chart_keys or "polar" in chart_keys)
+            and ("model" in roles or "group" in roles or "label" in roles)
+            and ("original" in roles or "original_features" in roles or "baseline" in roles)
+            and ("simplified" in roles or "simplified_features" in roles or "reduced" in roles)
+            and any(token in tokens for token in ("mirror", "radial", "rose", "pressure", "polar"))
+        )
+    )
+    has_hump_threshold_regression_signal = (
+        bool(patterns & {"hump_threshold_regression", "threshold_hump_regression", "segmented_threshold_regression"})
+        or (
+            "scatter_regression" in chart_keys
+            and ("x" in roles or "feature_value" in roles or "soc" in roles)
+            and ("y" in roles or "value" in roles or "cue" in roles)
+            and any(token in tokens for token in ("hump", "threshold", "breakpoint", "changepoint", "驼峰", "阈值", "soc", "cue"))
+        )
+    )
+    has_bayesian_ridge_heatmap_signal = (
+        bool(patterns & {"bayesian_ridge_heatmap_board", "ridge_heatmap_composite", "bayesian_ridgeline_heatmap"})
+        or (
+            ("ridge" in chart_keys or "ridgeline" in chart_keys or "joyplot" in chart_keys)
+            and ("condition" in roles or "panel" in roles or "soc_group" in roles)
+            and ("factor" in roles or "feature" in roles or "group" in roles)
+            and ("correlation" in roles or "corr" in roles or "r" in roles)
+            and any(token in tokens for token in ("bayesian", "posterior", "ridge", "ridgeline", "heatmap", "soc"))
+        )
+    )
     motifs = []
 
     def add(name):
@@ -390,9 +522,50 @@ def infer_template_motifs(charts, dataProfile=None):
 
     if "prediction_diagnostic" in patterns or ("actual" in roles and "predicted" in roles):
         add("prediction_diagnostic_matrix")
-        add("joint_marginal_grid")
+        if not has_density_parity_signal and not has_time_series_pi_signal:
+            add("joint_marginal_grid")
         add("density_encoded_scatter")
         add("metric_table_in_panel")
+    if has_density_parity_signal:
+        add("density_parity_matrix")
+        add("density_encoded_scatter")
+        add("metric_table_in_panel")
+    if has_time_series_pi_signal:
+        add("time_series_prediction_interval")
+        add("interval_uncertainty_band")
+        add("train_test_diagnostic")
+    if has_shap_interaction_grid_signal:
+        add("shap_interaction_dependence_grid")
+        add("interaction_color_mapped_scatter")
+        add("shap_dependence_grid")
+    if has_shap_dependence_background_signal and not has_shap_interaction_grid_signal:
+        add("shap_dependence_background_grid")
+        add("signed_effect_background")
+        add("shap_dependence_grid")
+    if has_dual_axis_hist_cumfreq_signal:
+        add("dual_axis_hist_cumfreq_grid")
+        add("cumulative_frequency_curve")
+        add("multipanel_distribution_matrix")
+    if (
+        "gam_residual_diagnostic" in patterns
+        or ("gam" in tokens and "residual" in tokens)
+        or ("spline" in tokens and "residual" in tokens)
+    ):
+        add("gam_log_residual_diagnostic")
+    if (
+        "inset_raincloud" in patterns
+        or "inset_residual_raincloud" in patterns
+        or "main_inset_raincloud" in patterns
+        or (
+            ("raincloud" in tokens or "raincloud" in chart_keys)
+            and ("inset" in tokens or "residual" in tokens or "error" in tokens)
+        )
+        or (
+            "actual" in roles and ("predicted" in roles or "prediction" in roles)
+            and any(token in tokens for token in ("residual", "error", "raincloud", "inset"))
+        )
+    ):
+        add("inset_raincloud_residual")
     if (
         "model_performance_benchmark" in patterns
         or "ml_model_family" in patterns
@@ -406,7 +579,10 @@ def infer_template_motifs(charts, dataProfile=None):
         or "neural_architecture" in patterns
         or "pipeline_topology" in patterns
         or any(token in tokens for token in ("layer", "module", "component", "transformer", "attention", "encoder", "decoder"))
-        or (("source" in roles or "from" in roles) and ("target" in roles or "to" in roles))
+        or (
+            not has_path_model_signal
+            and (("source" in roles or "from" in roles) and ("target" in roles or "to" in roles))
+        )
     ):
         add("neural_architecture_topology")
         add("metric_table_in_panel")
@@ -431,10 +607,13 @@ def infer_template_motifs(charts, dataProfile=None):
             add("rf_classifier_report_board")
             add("explainability_importance_stack")
     if (
-        "confusion_matrix" in chart_keys
-        or "confusion_matrix" in patterns
-        or "classification_error" in patterns
-        or any(token in tokens for token in ("true_label", "actual_label", "predicted_label", "prediction_label", "y_pred"))
+        not has_time_series_pi_signal
+        and (
+            "confusion_matrix" in chart_keys
+            or "confusion_matrix" in patterns
+            or "classification_error" in patterns
+            or any(token in tokens for token in ("true_label", "actual_label", "predicted_label", "prediction_label", "y_pred"))
+        )
     ):
         add("classification_error_matrix")
         add("metric_table_in_panel")
@@ -449,9 +628,81 @@ def infer_template_motifs(charts, dataProfile=None):
         add("metric_table_in_panel")
     if "model_error_diagnostic" in patterns or any(token in tokens for token in ("rmse", "mae", "percent_error", "percentage_error", "error_pct")):
         add("dual_axis_error_sidecar")
+    if has_bipolar_lollipop_ale_signal:
+        add("bipolar_lollipop_ale_board")
+        add("shared_feature_axis")
+        add("signed_effect_axis")
+    if has_mirror_radial_bar_signal:
+        add("mirror_radial_bar_board")
+        add("mirror_radial_bar")
+        add("external_scale_bar")
+    if has_hump_threshold_regression_signal:
+        add("hump_threshold_regression")
+        add("regression_band_fillbtw")
+        add("threshold_split_line")
+    if has_bayesian_ridge_heatmap_signal:
+        add("bayesian_ridge_heatmap_board")
+        add("ridge_heatmap_composite")
+        add("inset_heatmap_colorbar")
+    if has_inset_heatmap_rank_signal:
+        add("inset_heatmap_bar_rank")
+        add("inset_heatmap_colorbar")
+    if (
+        not has_dual_axis_hist_cumfreq_signal
+        and (
+        has_nature_comms_dual_axis_signal
+        or
+        "textbook_dual_axis_bar_line" in patterns
+        or "dual_axis_bar_line" in patterns
+        or "dual_axis" in chart_keys
+        or (
+            any(token in tokens for token in ("porosity", "strength", "left_y", "right_y", "bar_value", "line_value"))
+            and any(token in tokens for token in ("error", "err", "secondary", "twin"))
+        )
+        )
+    ):
+        add("nature_comms_dual_axis_bar_line" if has_nature_comms_dual_axis_signal else "textbook_dual_axis_bar_line")
     if "ml_explainability" in patterns or "feature_importance" in patterns or "shap_value" in roles or "importance" in roles:
         add("explainability_importance_stack")
         add("signed_effect_axis")
+        if (
+            has_lollipop_shap_beeswarm_signal
+        ):
+            add("lollipop_shap_beeswarm_board")
+            add("shared_feature_axis")
+            add("shap_summary_beeswarm")
+        elif (
+            "shap_bar_pie_summary_board" in patterns
+            or "standalone_category_pie" in patterns
+            or (
+                "shap_composite" in patterns
+                and ("category" in roles or "feature_group" in roles or "class" in roles)
+                and any(token in tokens for token in ("pie", "descriptor", "category", "group"))
+            )
+        ):
+            add("shap_bar_pie_summary_board")
+        elif (
+            "shap_bar_beeswarm_inset_pie" in patterns
+            or "shap_bar_beeswarm" in patterns
+            or "shap_composite" in patterns
+            or ("dotplot" in chart_keys and "feature_id" in roles and "feature_value" in roles)
+        ):
+            add("shap_bar_beeswarm_inset_pie")
+    if (
+        "incremental_feature_selection" in patterns
+        or "feature_selection" in patterns
+        or "incremental_feature_selection_curve" in patterns
+        or (
+            "line" in chart_keys
+            and any(token in tokens for token in ("n_features", "top_k", "feature_count", "ablation"))
+            and any(token in tokens for token in ("auc", "accuracy", "f1", "score"))
+        )
+    ):
+        add("incremental_feature_selection_curve")
+    if (
+        has_path_model_signal
+    ):
+        add("pls_pm_path_model")
     if "prediction_interval" in patterns or ("pi_low" in roles and "pi_high" in roles):
         add("interval_uncertainty_band")
     if ("ci_low" in roles and "ci_high" in roles) or "effect_interval" in patterns:
@@ -459,6 +710,16 @@ def infer_template_motifs(charts, dataProfile=None):
     if any(token in tokens for token in ("pvalue", "p_value", "padj", "fdr", "qvalue")) and any(
         chart in chart_keys for chart in ("heatmap_annotated", "heatmap_triangular", "heatmap_symmetric", "correlation", "bubble_matrix")
     ):
+        add("correlation_evidence_matrix")
+    if (
+        "bubble_correlation_matrix" in patterns
+        or "red_blue_bubble_correlation" in patterns
+        or (
+            any(chart in chart_keys for chart in ("dotplot", "bubble_matrix", "correlation", "heatmap_symmetric"))
+            and any(token in tokens for token in ("correlation", "corr", "pearson", "spearman"))
+        )
+    ):
+        add("bubble_correlation_matrix")
         add("correlation_evidence_matrix")
     if "optimization_tradeoff" in patterns or "pareto_flag" in roles or "pareto_chart" in chart_keys:
         add("pareto_tradeoff_board")
@@ -510,10 +771,184 @@ def build_visual_content_plan(primaryChart, secondaryCharts=None, dataProfile=No
     plan["minTemplateMotifsPerFigure"] = min(2, len(existing_template_motifs)) if existing_template_motifs else 0
     if "joint_marginal_grid" in existing_template_motifs:
         plan["useMarginalAxes"] = True
+        plan.setdefault("reserveMarginalTitleGap", False)
+        plan.setdefault("marginalTopGap", 0.008)
+        plan.setdefault("marginalSideGap", 0.008)
+        plan.setdefault("marginalColor", "#69b3a2")
+        plan.setdefault("densityColormap", "GnBu_r")
+        plan.setdefault("densityColorMethod", "kde")
+    if "gam_log_residual_diagnostic" in existing_template_motifs:
+        plan.setdefault("useLogLogRelationship", True)
+        plan.setdefault("useResidualDiagnosticPanel", True)
+        plan.setdefault("gamResidualPalette", {"Non": "#B0B0B0", "Adj": "#5FA896", "In": "#FBC15E"})
+    if "inset_raincloud_residual" in existing_template_motifs:
+        plan.setdefault("useInsetAxes", True)
+        plan.setdefault("useInsetRaincloud", True)
+        plan.setdefault("insetRaincloudRect", [0.55, 0.35, 0.40, 0.35])
+        plan.setdefault("insetRaincloudColor", "#008000")
+        plan.setdefault("truePredPalette", {"true": "#FFA500", "predicted": "#008000"})
+    if "shap_bar_beeswarm_inset_pie" in existing_template_motifs:
+        plan.setdefault("useShapCompositeBoard", True)
+        plan.setdefault("useInsetPie", True)
+        plan.setdefault("shapCompositeWidthRatios", [1.15, 0.05, 1.20, 0.05])
+        plan.setdefault("shapInsetPieBbox", [0.50, 0.20, 0.45, 0.45])
+        plan.setdefault("shapTopN", 15)
+    if "shap_bar_pie_summary_board" in existing_template_motifs:
+        plan.setdefault("useShapBarPieSummaryBoard", True)
+        plan.setdefault("useStandalonePie", True)
+        plan.setdefault("shapBarPieWidthRatios", [1.2, 0.8, 1.5])
+        plan.setdefault("shapBarPieHeightRatios", [1.0, 1.0])
+        plan.setdefault("shapTopN", 15)
+    if "lollipop_shap_beeswarm_board" in existing_template_motifs:
+        plan.setdefault("useLollipopShapBeeswarmBoard", True)
+        plan.setdefault("lollipopShapWidthRatios", [1.0, 2.5])
+        plan.setdefault("lollipopShapFigsize", [12.0, 6.0])
+        plan.setdefault("lollipopShapWspace", 0.05)
+        plan.setdefault("lollipopShapSubplotsAdjust", {"left": 0.15, "right": 0.90, "top": 0.90, "bottom": 0.15})
+        plan.setdefault("lollipopStemColor", "grey")
+        plan.setdefault("lollipopPointColor", "teal")
+        plan.setdefault("lollipopShapColormap", "coolwarm")
+        plan.setdefault("shapTopN", 15)
+    if "bipolar_lollipop_ale_board" in existing_template_motifs:
+        plan.setdefault("useBipolarLollipopAleBoard", True)
+        plan.setdefault("bipolarLollipopFigsize", [10.0, 6.0])
+        plan.setdefault("bipolarLollipopWspace", 0.15)
+        plan.setdefault("bipolarImportanceColor", "#4A6B8A")
+        plan.setdefault("bipolarPositiveColor", "#C0504D")
+        plan.setdefault("bipolarNegativeColor", "#4F81BD")
+        plan.setdefault("bipolarStemWidth", 2.5)
+        plan.setdefault("bipolarMarkerSize", 80)
+        plan.setdefault("lollipopTopN", 15)
+    if "mirror_radial_bar_board" in existing_template_motifs:
+        plan.setdefault("useMirrorRadialBarBoard", True)
+        plan.setdefault("mirrorRadialFigsize", [7.0, 7.0])
+        plan.setdefault("mirrorRadialOriginalColor", "#33CCFF")
+        plan.setdefault("mirrorRadialSimplifiedColor", "#FFFF99")
+        plan.setdefault("mirrorRadialBarWidth", 0.45)
+        plan.setdefault("mirrorRadialScaleRect", [0.05, 0.40, 0.02, 0.40])
+        plan.setdefault("mirrorRadialConditionLabels", ["Low pressure", "High pressure"])
+    if "hump_threshold_regression" in existing_template_motifs:
+        plan.setdefault("useHumpThresholdRegression", True)
+        plan.setdefault("humpThresholdFigsize", [7.0, 5.0])
+        plan.setdefault("humpThresholdPolynomialDegree", 3)
+        plan.setdefault("humpThresholdBootstraps", 200)
+        plan.setdefault("humpThresholdCIColor", "#D9D9D9")
+        plan.setdefault("humpThresholdCIAlpha", 0.60)
+        plan.setdefault("humpThresholdScatterColor", "#E87A6E")
+        plan.setdefault("humpThresholdGlobalLineColor", "#404040")
+        plan.setdefault("humpThresholdColor", "#E63946")
+        plan.setdefault("humpThresholdLowSegmentColor", "#2AB7CA")
+        plan.setdefault("humpThresholdHighSegmentColor", "#1E847F")
+    if "bayesian_ridge_heatmap_board" in existing_template_motifs:
+        plan.setdefault("useBayesianRidgeHeatmapBoard", True)
+        plan.setdefault("bayesianRidgeHeatmapFigsize", [16.0, 10.0])
+        plan.setdefault("bayesianRidgeHeatmapWidthRatios", [4.2, 0.35, 0.6, 4.2, 0.35])
+        plan.setdefault("bayesianRidgePositiveColor", "#D95F5F")
+        plan.setdefault("bayesianRidgeNegativeColor", "#4C78A8")
+        plan.setdefault("bayesianHeatmapCmap", "RdBu_r")
+        plan.setdefault("bayesianHeatmapVlim", 0.6)
+    if "bubble_correlation_matrix" in existing_template_motifs:
+        plan.setdefault("useBubbleCorrelationMatrix", True)
+        plan.setdefault("bubbleCorrelationPalette", ["#8ECFC9", "#FFFFFF", "#FA7F6F"])
+        plan.setdefault("bubbleCorrelationSizeScale", 2000)
+        plan.setdefault("bubbleCorrelationAnnotate", True)
     if "density_encoded_scatter" in existing_template_motifs:
         plan["useDensityColorEncoding"] = True
+    if "density_parity_matrix" in existing_template_motifs:
+        plan.setdefault("useDensityParityMatrix", True)
+        plan.setdefault("useMarginalAxes", False)
+        plan.setdefault("densityParityColormap", "jet")
+        plan.setdefault("densityParityScatterSize", 20)
+        plan.setdefault("densityParityAlpha", 0.90)
+        plan.setdefault("densityParityReferenceColor", "#D62728")
+        plan.setdefault("densityParityColorbarLabel", "Density")
+        plan.setdefault("densityParityMaxPanels", 2)
+        plan.setdefault("densityParityFigsize", [12.0, 5.0])
+        plan.setdefault("densityParityWspace", 0.30)
+    if "time_series_prediction_interval" in existing_template_motifs or "interval_uncertainty_band" in existing_template_motifs:
+        plan.setdefault("useTimeSeriesPredictionInterval", True)
+        plan.setdefault("useMarginalAxes", False)
+        plan.setdefault("timeSeriesPIFigsize", [10.0, 5.0])
+        plan.setdefault("timeSeriesPIBandColor", "skyblue")
+        plan.setdefault("timeSeriesPIAlpha", 0.40)
+        plan.setdefault("timeSeriesObservedColor", "black")
+        plan.setdefault("timeSeriesPredictedColor", "red")
+        plan.setdefault("timeSeriesDividerColor", "gray")
+        plan.setdefault("timeSeriesObservedSize", 15)
+        plan.setdefault("timeSeriesObservedAlpha", 0.70)
+        plan.setdefault("timeSeriesPredictedLinewidth", 1.5)
+        plan.setdefault("timeSeriesTopLegend", True)
+        plan.setdefault("timeSeriesRegionLabels", True)
+    if "shap_dependence_background_grid" in existing_template_motifs or "shap_dependence_grid" in existing_template_motifs:
+        plan.setdefault("useShapDependenceBackgroundGrid", True)
+        plan.setdefault("shapDependenceMaxFeatures", 6)
+        plan.setdefault("shapDependenceNcols", 3)
+        plan.setdefault("shapDependenceFigsize", [12.0, 7.0])
+        plan.setdefault("shapDependenceYLimits", [-2.5, 2.5])
+        plan.setdefault("shapPositiveBackgroundColor", "#ffcccc")
+        plan.setdefault("shapNegativeBackgroundColor", "#cce5ff")
+        plan.setdefault("shapBackgroundAlpha", 0.40)
+        plan.setdefault("shapDependenceScatterColor", "black")
+        plan.setdefault("shapDependenceScatterSize", 15)
+        plan.setdefault("shapDependenceScatterAlpha", 0.70)
+        plan.setdefault("shapZeroLineColor", "gray")
+    if "shap_interaction_dependence_grid" in existing_template_motifs or "interaction_color_mapped_scatter" in existing_template_motifs:
+        plan.setdefault("useShapInteractionDependenceGrid", True)
+        plan.setdefault("shapInteractionMaxFeatures", 6)
+        plan.setdefault("shapInteractionNcols", 3)
+        plan.setdefault("shapInteractionFigsize", [14.0, 8.0])
+        plan.setdefault("shapInteractionColormap", "coolwarm")
+        plan.setdefault("shapInteractionScatterSize", 15)
+        plan.setdefault("shapInteractionScatterAlpha", 0.80)
+        plan.setdefault("shapInteractionZeroLineColor", "gray")
+        plan.setdefault("shapInteractionColorbarLabel", "Interaction Feature")
     if "dual_axis_error_sidecar" in existing_template_motifs:
         plan["requiresMultiAxisEncoding"] = True
+    if "dual_axis_hist_cumfreq_grid" in existing_template_motifs:
+        plan.setdefault("useDualAxisHistCumfreqGrid", True)
+        plan.setdefault("dualAxisDistributionGridShape", [3, 3])
+        plan.setdefault("dualAxisDistributionBins", 15)
+        plan.setdefault("dualAxisDistributionFigsize", [12.0, 10.0])
+        plan.setdefault("dualAxisDistributionWspace", 0.40)
+        plan.setdefault("dualAxisDistributionHspace", 0.35)
+        plan.setdefault("dualAxisHistColor", "gray")
+        plan.setdefault("dualAxisHistEdgeColor", "black")
+        plan.setdefault("dualAxisHistAlpha", 0.70)
+        plan.setdefault("dualAxisCumulativeColor", "blue")
+        plan.setdefault("dualAxisCumulativeMarker", "o")
+        plan.setdefault("dualAxisCumulativeMarkerSize", 4.0)
+        plan.setdefault("dualAxisCumulativeLinewidth", 1.5)
+        plan.setdefault("requiresMultiAxisEncoding", True)
+    if "textbook_dual_axis_bar_line" in existing_template_motifs:
+        plan.setdefault("useTextbookDualAxisBarLine", True)
+        plan.setdefault("dualAxisPalette", ["#CFE2F3", "#9BC2E6", "#F48E66"])
+        plan.setdefault("dualAxisSplinePoints", 300)
+        plan.setdefault("dualAxisXtickRotation", 90)
+    if "nature_comms_dual_axis_bar_line" in existing_template_motifs:
+        plan.setdefault("useTextbookDualAxisBarLine", True)
+        plan.setdefault("dualAxisPalette", ["#D7E6F5", "#2D2D2D", "#E6553A"])
+        plan.setdefault("dualAxisLineSmoothing", False)
+        plan.setdefault("dualAxisShowMeanLine", True)
+        plan.setdefault("dualAxisMeanLineLabel", "Mean proportion")
+        plan.setdefault("dualAxisBarWidth", 0.78)
+        plan.setdefault("dualAxisLineWidth", 2.1)
+        plan.setdefault("dualAxisMarkerSize", 6.5)
+        plan.setdefault("dualAxisXtickRotation", 45)
+    if "incremental_feature_selection_curve" in existing_template_motifs:
+        plan.setdefault("useIncrementalFeatureSelectionCurve", True)
+        plan.setdefault("featureSelectionPalette", ["#E64B35", "#4DBBD5", "#00A087", "#3C5488", "#F39B7F", "#8491B4", "#91D1C2", "#DC0000", "#7E6148"])
+        plan.setdefault("featureSelectionMarkers", ["o", "v", "^", "s", "D", "p", "*", "h", "X"])
+        plan.setdefault("featureSelectionDecisionX", 6)
+        plan.setdefault("featureSelectionLegendOutside", True)
+    if "pls_pm_path_model" in existing_template_motifs:
+        plan.setdefault("usePlsPmPathModel", True)
+        plan.setdefault("plsPositiveColor", "#D73027")
+        plan.setdefault("plsNegativeColor", "#2B6CB0")
+        plan.setdefault("plsInsetRect", [0.70, 0.65, 0.25, 0.30])
+        plan.setdefault("pathLinewidthBase", 1.0)
+        plan.setdefault("pathLinewidthScale", 8.0)
+        plan.setdefault("pathLinewidthEncodesAbsCoefficient", True)
+        plan.setdefault("signedPathColorEncoding", True)
     panel_count = max(1, len(charts))
     template_density_bonus = min(2, len(existing_template_motifs))
     plan["minTotalEnhancements"] = max(
@@ -535,19 +970,26 @@ def build_visual_content_plan(primaryChart, secondaryCharts=None, dataProfile=No
     plan.setdefault("templateMotifsApplied", [])
     plan.setdefault("metricBoxCount", 0)
     plan.setdefault("metricTableCount", 0)
+    plan.setdefault("metricTextCount", 0)
     plan.setdefault("insetCount", 0)
+    plan.setdefault("insetPieCount", 0)
     plan.setdefault("referenceLineCount", 0)
     plan.setdefault("densityHaloCount", 0)
     plan.setdefault("sampleEncodingCount", 0)
     plan.setdefault("significanceStarLayerCount", 0)
+    plan.setdefault("correlationBubbleCount", 0)
     plan.setdefault("dualAxisEncodingCount", 0)
     plan.setdefault("referenceMotifCount", 0)
     plan.setdefault("templateMotifCount", 0)
     plan.setdefault("marginalAxesCount", 0)
+    plan.setdefault("insetRaincloudCount", 0)
     plan.setdefault("densityColorEncodingCount", 0)
     plan.setdefault("subAxesCount", 0)
     plan.setdefault("colorbarSlotCount", 0)
     plan.setdefault("multiAxisEncodingCount", 0)
+    plan.setdefault("groupDividerCount", 0)
+    plan.setdefault("errorBarLayerCount", 0)
+    plan.setdefault("featureSelectionModelCount", 0)
     plan.setdefault("inPlotExplanatoryLabelCount", 0)
     return plan
 
@@ -665,7 +1107,7 @@ def _add_interval_template_summary(ax, dataProfile, visualPlan):
     return None
 
 
-def _density_color_values(x, y, bins=32):
+def _density_color_values(x, y, bins=32, method="kde"):
     x = np.asarray(x, dtype=float)
     y = np.asarray(y, dtype=float)
     mask = np.isfinite(x) & np.isfinite(y)
@@ -673,6 +1115,14 @@ def _density_color_values(x, y, bins=32):
         return np.array([])
     x_valid = x[mask]
     y_valid = y[mask]
+    if method != "bin" and np.nanstd(x_valid) > 0 and np.nanstd(y_valid) > 0:
+        try:
+            from scipy.stats import gaussian_kde
+            density = gaussian_kde(np.vstack([x_valid, y_valid]))(np.vstack([x_valid, y_valid]))
+            if density.size == len(x_valid) and np.isfinite(density).all():
+                return density
+        except Exception:
+            pass
     hist, x_edges, y_edges = np.histogram2d(x_valid, y_valid, bins=bins)
     x_idx = np.clip(np.searchsorted(x_edges, x_valid, side="right") - 1, 0, hist.shape[0] - 1)
     y_idx = np.clip(np.searchsorted(y_edges, y_valid, side="right") - 1, 0, hist.shape[1] - 1)
@@ -702,10 +1152,10 @@ def _style_template_marginal_axis(axis):
     axis.set_xticks([])
     axis.set_yticks([])
     axis.set_gid("scifig_marginal_axis")
+    axis.set_axis_off()
     axis.patch.set_alpha(0.0)
     for spine in axis.spines.values():
-        spine.set_linewidth(0.35)
-        spine.set_edgecolor("#A8A8A8")
+        spine.set_visible(False)
 
 
 def _draw_template_marginal_distribution(axis, values, *, orientation, color, bins):
@@ -719,9 +1169,9 @@ def _draw_template_marginal_distribution(axis, values, *, orientation, color, bi
         density=True,
         orientation=orientation,
         color=color,
-        alpha=0.26,
-        edgecolor="white",
-        linewidth=0.25,
+        alpha=0.62,
+        edgecolor="none",
+        linewidth=0.0,
         zorder=1,
     )
     grid = np.linspace(np.nanmin(values), np.nanmax(values), 160)
@@ -748,15 +1198,25 @@ def _overlay_density_colored_points(ax, x, y, visualPlan):
         return None
     x_valid = x[mask]
     y_valid = y[mask]
-    density = _density_color_values(x_valid, y_valid, bins=min(40, max(12, int(np.sqrt(mask.sum())))))
+    density = _density_color_values(
+        x_valid,
+        y_valid,
+        bins=min(40, max(12, int(np.sqrt(mask.sum())))),
+        method=visualPlan.get("densityColorMethod", "kde"),
+    )
     if density.size != len(x_valid):
         return None
+    order = np.argsort(density)
+    x_valid = x_valid[order]
+    y_valid = y_valid[order]
+    density = density[order]
+    default_size = 8 if visualPlan.get("useMarginalAxes", False) else 18
     scatter = ax.scatter(
         x_valid,
         y_valid,
         c=density,
-        cmap="viridis",
-        s=18,
+        cmap=visualPlan.get("densityColormap", "GnBu_r"),
+        s=visualPlan.get("densityScatterSize", default_size),
         edgecolors="white",
         linewidths=0.18,
         alpha=0.86,
@@ -777,6 +1237,7 @@ def _add_marginal_distribution_axes(ax, x, y, visualPlan, color="#4C78A8"):
     mask = np.isfinite(x) & np.isfinite(y)
     if mask.sum() < 12:
         return None
+    color = visualPlan.get("marginalColor", color)
     x_valid = x[mask]
     y_valid = y[mask]
     fig = ax.figure
@@ -784,8 +1245,9 @@ def _add_marginal_distribution_axes(ax, x, y, visualPlan, color="#4C78A8"):
     pos = ax.get_position()
     top_h = min(0.115, max(0.075, pos.height * 0.24))
     right_w = min(0.105, max(0.07, pos.width * 0.22))
-    side_gap = 0.008
-    top_gap = 0.085 if visualPlan.get("reserveMarginalTitleGap", True) else 0.008
+    side_gap = float(visualPlan.get("marginalSideGap", 0.008))
+    default_top_gap = 0.085 if visualPlan.get("reserveMarginalTitleGap", True) else 0.008
+    top_gap = float(visualPlan.get("marginalTopGap", default_top_gap))
     if pos.y1 + top_gap + top_h >= 0.985 or pos.x1 + side_gap + right_w >= 0.985:
         new_pos = [
             pos.x0,
@@ -918,7 +1380,7 @@ def _pvalue_to_stars(p_value):
 
 
 def apply_template_triangular_heatmap_signature(ax, row_labels=None, col_labels=None, pvalue_lookup=None, visualPlan=None):
-    """Apply template/articles triangular heatmap polish and real p-value stars."""
+    """Apply template-corpus triangular heatmap polish and real p-value stars."""
     row_labels = list(row_labels or [])
     col_labels = list(col_labels or [])
     n_rows = len(row_labels)

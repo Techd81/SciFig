@@ -13,18 +13,18 @@ Pipeline: preference gates -> Phase 1 `dataProfile` -> Phase 2 `chartPlan` -> Ph
 
 ## Package Integration (v0.1.5+)
 
-Users who `pip install scifig` can import the **canonical legend-contract finalizer** directly instead of relying on the skill's embedded `helpers.py` source:
+Prefer the package finalizer when `scifig` is installed:
 
 ```python
 from scifig.polish import enforce, sanitize_columns, apply_chart_polish
 
 df, col_map = sanitize_columns(df)
 # ... draw chart ...
-report = enforce(fig)   # promote per-axes legends to single bottom-center figure legend
+report = enforce(fig)
 fig.savefig("output.svg")
 ```
 
-`scifig.polish` is the single source of truth for the finalizer pipeline. The skill's `phases/code-gen/helpers.py` continues to provide the same functions inline (for environments without the package), but new code should prefer the package import. Function parity for the broader crowding-management and visual-density pipelines (`apply_visual_content_pass`, `audit_figure_layout_contract`, etc.) lands progressively over the v0.1.5 -> v0.2.0 milestone window.
+`scifig.polish` is the canonical finalizer. The skill's `phases/code-gen/helpers.py` remains the inline fallback for generated scripts, and must stay behavior-compatible for legend, layout, crowding, and visual-density contracts.
 
 ## Key Design Principles
 
@@ -37,7 +37,7 @@ fig.savefig("output.svg")
 7. **Policy-driven defaults**: Thresholds for scale, crowding, visual density, render retries, and export QA come from shared workflow policies rather than ad-hoc literals.
 8. **Agent-assisted quality gates**: Use read-only Agents for complex schema review, chart/stat planning, layout/palette audit, generated-code review, and rendered QA.
 9. **Reproducibility-first**: Every figure should be exportable as code plus metadata, source-data manifests, render-QA evidence, and methods-ready statistical descriptions.
-10. **Template-mining grounded**: All "顶刊感" choices (rcParams kernel, sandwich layering, palette, GridSpec recipes, in-axes idioms, narrative arcs) trace back to the 77 reference cases under `template/articles/`, distilled into the 7-module knowledge base under `template-mining/`. Operational helpers live in `phases/code-gen/template_mining_helpers.py`.
+10. **Template-mining grounded**: All "顶刊感" choices (rcParams kernel, sandwich layering, palette, GridSpec recipes, in-axes idioms, narrative arcs) trace back to the current 94-case corpus under `template/**/*.md`, distilled into the 7-module knowledge base under `template-mining/`. Operational helpers live in `phases/code-gen/template_mining_helpers.py`.
 
 ## Template-Mining Knowledge Base
 
@@ -50,6 +50,7 @@ fig.savefig("output.svg")
    - Read `06-narrative-arcs.md` to bind the figure to one of 10 corpus arcs.
    - Read `04-grid-recipes.md` if `panel_count > 1`.
    - Lookup `case-index.json` for ≥3 cases matching `chart_families` or `narrative_arc`.
+   - Inspect each candidate's `images`, `image_evidence`, `code_blocks`, and `visual_signals`; Markdown image links are first-class evidence and must not be treated as absent just because there are no standalone PNG/JPG files under `template/`.
 3. **Phase 3** code generation:
    - Read `01-rcparams-kernel.md` for the kernel; call `apply_journal_kernel(variant, journalProfile)`.
    - Read `02-zorder-recipes.md` for the matching chart family; call `apply_zorder_recipe(family, ax, layers)`.
@@ -62,7 +63,9 @@ For finalizer-safe usage rules and ready annotation snippets, see
 `templates/finalizer-safe-template-contract.md` and
 `templates/annotation-idioms-ready.md`.
 
-**Re-extraction**: when `template/articles/` changes, run `python .claude/skills/scifig-generate/template-mining/_extraction/extract.py` then `enrich.py` to refresh `case-index.json`, `stats.md`, `narratives.md`. Then audit the "Distilled Universal Findings" section in `INDEX.md`.
+**Re-extraction**: when anything under `template/` changes, run `python .claude/skills/scifig-generate/template-mining/_extraction/extract.py` then `enrich.py` to refresh `case-index.json`, `stats.md`, `narratives.md`, including image refs, code blocks, legend, annotation, layout, and export signals. Then audit the "Distilled Universal Findings" section in `INDEX.md`.
+
+**Template-learning replication**: template Markdown is learned one file at a time. Follow `template-mining/CASE_LEARNING_PROTOCOL.md`: read one complete Markdown case, inspect its embedded image links and code blocks, make a local replica under ignored `.workflow/case_studies/`, compare gaps honestly, then promote only the reusable essence into this skill folder. Batch extraction can refresh metadata, but it cannot replace case-by-case study.
 
 **Code promotion**: when the user asks to absorb article examples into the skill, run optional Phase 5 and follow `specs/template-distillation-contract.md`. Promote reusable Matplotlib logic into helpers/generators first; update prose only after executable behavior and tests exist.
 
@@ -77,7 +80,9 @@ from template_mining_helpers import (
     add_group_dividers, add_panel_label,
     density_sort, density_color_scatter,
     add_polygon_polar_grid, draw_gradient_box,
-    add_forest_panel, add_heatmap_pairwise_panel,
+    add_forest_panel, resolve_forest_model_style_map,
+    resolve_method_style_map, resolve_parity_split_style_map,
+    add_heatmap_pairwise_panel,
     apply_scatter_regression_floor, resolve_split_palette,
     set_polar_title,
     build_grid, select_narrative_arc, arc_required_motifs,
@@ -90,65 +95,28 @@ fig, axes, palette = bootstrap_chart(arc="hero", panel_count=1,
                                      journalProfile=journalProfile)
 ```
 
-## Finalizer Auto-corrections (cycle-22 + cycle-24 + V0.1.1)
+## Finalizer Auto-corrections
 
-`enforce_figure_legend_contract(...)` runs five **zero-touch retrofit passes** before `audit_figure_layout_contract` so common occlusion modes are repaired automatically without modifying generator source. Generators do not need to call these helpers explicitly — they fire from inside the contract finalizer.
+`enforce_figure_legend_contract(...)` runs zero-touch retrofit passes before `audit_figure_layout_contract`. Generators rely on this finalizer rather than reimplementing local fixes.
 
-| Pass | What it does | Generator-visible side effect |
-|------|--------------|------------------------------|
-| `center_figure_titles` | Centers `fig.suptitle(...)` and moves left/right `ax.set_title(...)` text into the centered title slot. | Left-aligned titles are normalized; panel letters should come from `add_panel_label(...)`, not title positions. |
-| `sanitize_figure_text` | Replaces fragile label glyphs such as `R⊕`, `M⊕`, `log₁₀`, and em dashes with ASCII-safe text. | Labels render reliably on clean systems without missing-glyph boxes. |
-| `_promote_inaxes_text_safety` | Promotes every in-axes `Text` artist to `zorder>=20` and adds a rounded white bbox (alpha 0.85) when none exists. | `ax.text(... fontsize=10)` at default zorder=3 will be silently lifted to zorder=20 with a white background. |
-| `_shrink_heatmap_cell_labels` | Detects `QuadMesh` axes (sns.heatmap / pcolormesh) and reformats numeric cell labels to fit physical cell width via `choose_heatmap_fmt`. When fmt forced to `.0f` (very dense), applies graceful degradation: keeps only diagonal cells and `\|val\| ≥ 0.5`, removing the noise. | `sns.heatmap(annot=True, fmt=".3f")` may have its labels reformatted to `.2f` / `.1f` / `.0f` and some non-significant cells may lose their annotation entirely. |
-| `_text_data_overlap_issues` (audit) | Reports text-vs-line/scatter/patch geometric overlap > 30%. White-bbox text is treated as already-resolved and skipped. | `audit["textDataOverlapCount"]` and the `annotation_text_buried_under_data` failure flag. |
+Required finalizer behaviors:
 
-| `normalize_axes_map` (audit) | Single-panel charts with inset axes receive all non-colorbar `fig.axes`; no generator opt-in is needed. | `audit["audited_axes_count"]` includes main axes plus inset axes. |
-| `_text_text_overlap_issues` / bbox coverage (audit) | Reports label-on-label collisions and oversized white bboxes that still cover plotted data. | `audit["textTextOverlapCount"]` and `audit["bboxDataCoverageOverflowCount"]` hard-fail Phase 4. |
+- `center_figure_titles`: center figure titles; panel letters must use `add_panel_label(...)`.
+- `sanitize_figure_text`: replace fragile glyphs such as `R⊕`, `M⊕`, `log₁₀`, and em dashes with ASCII-safe text.
+- `_promote_inaxes_text_safety`: lift in-axes text to `zorder>=20` and add a white bbox unless the artist opts out.
+- `_shrink_heatmap_cell_labels`: reformat dense heatmap labels and suppress low-value noise when needed.
+- `normalize_axes_map`: include inset axes in single-panel layout audits.
+- `_text_data_overlap_issues`, `_text_text_overlap_issues`, and bbox coverage checks must hard-fail buried text, label collisions, and oversized text bboxes.
 
-### Excluded artists (never modified)
-
-- Axis chrome: title, x/y axis labels, tick labels.
-- Panel labels (single uppercase A-Z).
-- Heatmap cell labels (white bbox would erase the cell colour).
-- Anything carrying a managed `gid`:
-  `scifig_metric_box`, `scifig_metric_table`, `scifig_inplot_label`, `scifig_panel_label`.
-
-### Generator opt-outs
-
-| If you need... | Use... |
-|----------------|--------|
-| Raw text without a white bbox (LaTeX equation, decorative callout, custom-coloured background) | `ax.text(... gid="scifig_no_safety_bbox")` |
-| Scientific notation cell labels in a heatmap (`1.2e-3`) | The shrink pass auto-skips text containing `e+` / `e-` / `E+` / `E-` |
-| Significance markers in a heatmap (`*`, `**`, `ns`, `n.s.`) | The shrink pass auto-skips text containing `*`, `†`, `‡`, `§`, `ns`, `n.s.` |
-
-### What the finalizer does NOT auto-invoke
-
-The finalizer does not run expensive annotation relocation. Call these helpers
-explicitly when dense annotation layouts require them.
-
-### Handcrafted helpers (manual invocation)
-
-Helpers in `template_mining_helpers.py` Section 10 that are **available but not auto-invoked**:
-
-- `safe_annotate(ax, text, xy, ...)` — drop-in replacement for `ax.annotate` / `ax.text` that pre-applies the same zorder + bbox guards as the retrofit. Use when you want explicit control instead of relying on the retrofit.
-- `auto_relocate_annotations(ax, ...)` — heavyweight collision-avoidance relocator (probes 12 candidate offsets in display coords). Use only when annotation density is high enough that bbox alone is not enough; the default retrofit covers most cases.
-
-### Source lint
+Never modify axis chrome, panel labels, heatmap cell labels, or managed `gid` artists (`scifig_metric_box`, `scifig_metric_table`, `scifig_inplot_label`, `scifig_panel_label`). Use `gid="scifig_no_safety_bbox"` for raw text that must not receive a white bbox. The finalizer does not run `auto_relocate_annotations(...)`; call `safe_annotate(...)` or `auto_relocate_annotations(...)` explicitly only for dense annotation layouts.
 
 Generator source files must not contain `ax.legend(...)` with `bbox_to_anchor=(1.02, 1)` or `(0.5, -X)`. `phases/code-gen/source-lint.py` blocks these reverse examples before generated code is finalized.
 
 ## Bundled Fonts (assets/fonts/)
 
-Templates anchor `font.family` to commercial typefaces (Arial / Helvetica / Times New Roman / SimHei) that the skill **cannot legally redistribute**. On Linux servers, Docker containers, and clean macOS installs these fonts are typically absent, so matplotlib falls back to DejaVu Sans, prints a `findfont` warning, and produces figures whose metrics no longer match the journal profile.
+Templates reference Arial / Helvetica / Times New Roman / SimHei, but the repo ships no commercial fonts. Users may place legally obtained `*.ttf`, `*.otf`, or `*.ttc` files in [`assets/fonts/`](assets/fonts/README.md). `apply_journal_kernel(...)` registers them idempotently, resolving the directory in this order: `SCIFIG_FONTS_DIR` -> injected `__SCIFIG_SKILL_ROOT__` -> skill-root `assets/fonts/` -> cwd-relative.
 
-**Resolution**: drop legally-obtained `*.ttf` / `*.otf` / `*.ttc` files into [`assets/fonts/`](assets/fonts/README.md). The first call to `apply_journal_kernel(...)` scans that directory and registers every font with matplotlib's `font_manager` (idempotent across calls; safe under Phase 3's `exec()` runtime embed).
-
-- **What to drop in**: `Arial.ttf`, `Times-New-Roman.ttf`, `Helvetica.ttf`, `SimHei.ttf` — or their open metric-compatible replacements (Liberation Sans, Liberation Serif, Noto Sans SC, Carlito).
-- **Resolution priority** for finding the directory: `SCIFIG_FONTS_DIR` env var → injected `__SCIFIG_SKILL_ROOT__` global (set by Phase 3 runtime) → `__file__`-relative (skill_root/assets/fonts/) → cwd-relative.
-- **Fallback discipline**: every `font.family` chain in the skill ends in `DejaVu Sans` (matplotlib's bundled default) so figures still render even when no user fonts are present — only the *visual fidelity* to the journal profile is degraded.
-- **Licensing**: `*.ttf` / `*.otf` / `*.ttc` files are gitignored at the project root. The skill ships zero font payloads to keep the repo license-clean.
-
-See `assets/fonts/README.md` for licensing notes, troubleshooting (clearing matplotlib's font cache, CJK glyph fallback), and the full list of metric-compatible open replacements.
+Every `font.family` chain must end in `DejaVu Sans` so output still renders when user fonts are absent. Keep font payloads gitignored.
 
 ## Interactive Preference Collection
 
@@ -276,10 +244,11 @@ Blocking agent findings must route back to the owning phase before advancing. Ne
 12. Use ASCII-safe scientific labels (`Earth radii`, `Earth masses`, `log10`, `-`) instead of fragile glyphs (`⊕`, subscript digits, em dashes) unless the user explicitly requires symbol typography and supplied fonts cover it.
 13. For implemented single-panel charts, increase Nature/Cell-style information density through data-derived summaries, in-plot explanatory labels, reference lines, callouts, insets, sample-size labels, metric tables, prediction diagnostics, marginal distributions, density-colored points, density halos, matrix labels, and effect-size context before adding new chart types.
 14. Treat `specs/template-visual-motifs.md` as the grammar for learning from reference examples. Add motifs to `visualContentPlan.templateMotifs` and render them through existing generators/helpers; do not register a new chart key until a real generator exists and passes QA.
-15. When learning from `template/articles`, promote reusable code into `helpers.py`, `template_mining_helpers.py`, or split generator files before expanding coordinator prose.
-16. Do not invent statistics for visual impact. Every p-value, AUC, effect size, threshold count, or fitted parameter must come from the supplied data or a documented upstream result.
-17. Prefer vector export and generate source-data friendly artifacts for quantitative panels.
-18. If domain inference is weak, fall back to general rules instead of overfitting to a guessed specialty; however, explicit AI/ML/computer-science signals (`model`, `algorithm`, RF, XGBoost, SHAP, train/test metrics, AUC/F1/RMSE/R2, residuals) are strong domain evidence and must route to the `computer_ai_ml` template packages before biomedical defaults.
+15. When learning from `template/**/*.md`, process one Markdown file per learning cycle: full read -> visual/code evidence ledger -> replica -> gap comparison -> distilled promotion. Promote reusable code into `helpers.py`, `template_mining_helpers.py`, or split generator files before expanding coordinator prose.
+16. Keep template sources and temporary replicas out of the submitted skill surface. Committable SciFig skill work must stay under `.claude/skills/scifig-generate`; `.workflow/`, `template/`, root `examples/`, root `scripts/`, and root `docs/` are supporting local evidence only unless the user explicitly widens scope.
+17. Do not invent statistics for visual impact. Every p-value, AUC, effect size, threshold count, or fitted parameter must come from the supplied data or a documented upstream result.
+18. Prefer vector export and generate source-data friendly artifacts for quantitative panels.
+19. If domain inference is weak, fall back to general rules instead of overfitting to a guessed specialty; however, explicit AI/ML/computer-science signals (`model`, `algorithm`, RF, XGBoost, SHAP, train/test metrics, AUC/F1/RMSE/R2, residuals) are strong domain evidence and must route to the `computer_ai_ml` template packages before biomedical defaults.
 19. If statistical assumptions are uncertain, downgrade to a conservative or descriptive choice and explain why.
 20. If rendered QA reports overlap, cross-panel title/table/text collision, colorbar overlap with any panel layout box, metric-table overlap with bar/rectangle data marks, negative axes text without a reserved slot, poster-scale font sizes, blank/tiny output, missing `legendContractEnforced`, missing `layoutContractEnforced`, any remaining in-axes legend, too few visual enhancements, missing template/reference visual grammar motifs, missing in-plot explanatory labels, non-editable vector text, or missing formats, return to Phase 3 or Phase 2 before declaring completion.
 21. Use `specs/workflow-policies.md` for thresholds and budgets; do not add new magic numbers in phase logic without naming the policy.

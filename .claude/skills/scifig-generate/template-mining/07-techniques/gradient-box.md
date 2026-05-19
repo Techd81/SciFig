@@ -1,8 +1,11 @@
 # Technique: Gradient Box
 
-1/77 corpus case (distinctive technique). Vertical-gradient fill inside box-plot rectangles via `imshow` overlay.
+1/94 corpus case (distinctive technique). Vertical-gradient fill inside box-plot rectangles via `imshow` overlay.
 
 **Anchor case:** `顶刊审美 _ 用 Python 绘制带"垂直渐变特效"的组合箱线图_1777451428`.
+
+Case-076 evidence lives in
+`.workflow/case_studies/case_076_gradient_box_metric_dashboard/comparison_report.json`.
 
 ## Hallmark elements
 
@@ -103,9 +106,28 @@ plt.savefig('gradient_box.pdf', dpi=600, bbox_inches='tight')
 - Y-grid `axisbelow=True` so it sits below all artists
 - Gradient `alpha_lo=0.15, alpha_hi=0.95` — bottom translucent, top opaque
 
+## Metric dashboard variant
+
+The JBE geopolymer article is a 2x2 dashboard, not only a standalone boxplot:
+
+- Three active panels carry incompatible metrics (`R2`, `MAE`, `RMSE`) with
+  independent y-axis limits.
+- The fourth cell is intentionally reserved for a hand-drawn abbreviation /
+  marker legend, avoiding repeated per-panel legends.
+- Algorithm colors remain stable across every metric panel.
+- Every box repeats the same z-order sandwich: y-grid, hollow jitter points,
+  `draw_gradient_box(...)`, whiskers, median line, then square mean marker.
+
+Route this as `gradient_box_metric_dashboard` when data has algorithm/model
+groups plus two or more repeated metric columns.  The full 2x2 board is a
+composition gap for current runtime box generators; the per-box gradient idiom
+is already covered by `draw_gradient_box`.
+
 ## QA contract
 
 - `gradientBoxImshow`: True (`imshow` call inside box rectangle)
 - `medianLineCount`: 1 per group
 - `meanMarkerCount`: 1 per group
 - `boxLayerCount`: ≥4 (jitter, gradient, whiskers, median, mean)
+- dashboard variant: `metricPanelCount >= 3`, `legendPanelCount == 1`,
+  `independentYAxis == true`, and stable group color mapping across panels.

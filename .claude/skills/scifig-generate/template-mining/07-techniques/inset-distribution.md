@@ -1,6 +1,6 @@
 # Technique: Inset Distribution / 画中画
 
-8/77 corpus cases. The "main panel + small inset" pattern that conveys both the trend and the underlying distribution in a single axes.
+8/94 corpus cases. The "main panel + small inset" pattern that conveys both the trend and the underlying distribution in a single axes.
 
 **Anchor cases:**
 - `复现顶刊 _ Python绘制"主图+嵌入雨云图"组合，完美展示模型泛化能力_1777452243`
@@ -158,6 +158,55 @@ for i, (cond, color) in enumerate(zip(conditions, colors)):
 ```
 
 Anchor: `期刊配图：云雨图结合半小提琴与抖动散点展示不同城市化水平的通量差异`.
+
+## Executable mapping: Case 009 main + residual raincloud inset
+
+Anchor: `复现顶刊 _ Python绘制“主图+嵌入雨云图”组合，完美展示模型泛化能力`.
+
+`gen_scatter_regression` enters `inset_raincloud_residual` mode when
+`visualContentPlan.templateMotifs` contains `inset_raincloud_residual` or
+`specialPatterns` contains `inset_raincloud` / `inset_residual_raincloud`.
+It renders a `1×2` board for up to two system/material panels, draws the true
+trajectory as orange square markers (`#FFA500`) and the predicted trajectory as
+green circle markers (`#008000`), keeps the main legend upper-left and frameoff,
+and places unboxed MSE/MAE/MedAE/Difference text in the lower-left of each
+main axes.
+
+The inset itself is delegated to `draw_inset_raincloud`, which owns the white
+floating axes, thin dark border, half-KDE residual density, compact box, jittered
+residual points, and zero-residual reference line. Residuals are always
+`predicted - true`; do not use absolute error for the raincloud because sign is
+part of the stability story.
+
+Runtime QA signals:
+
+- `templateMotifsApplied` includes `inset_raincloud_residual`
+- `insetCount` and `insetRaincloudCount` increment once per panel
+- each inset axes has `gid="scifig_inset_raincloud"`
+- `metricTextCount` and `panelLabelCount` increment once per main panel
+
+Case-074 duplicate-audit note:
+
+- `复现顶刊 _ Python绘制“主图+嵌入雨云图”组合，完美展示模型泛化能力_1777452243`
+  reappears later in the markdown-learning order, but it is the same source
+  already learned in Case-009. Keep the existing
+  `inset_raincloud_residual` motif and `scatter_regression` executable branch
+  rather than minting another inset-raincloud template.
+- The closure evidence lives in
+  `.workflow/case_studies/case_074_main_inset_raincloud_audit/comparison_report.json`.
+  It verifies that Case-009 already captured four reference screenshots, the
+  replica, comparison report, runtime probe, and runtime QA for two embedded
+  residual raincloud insets.
+
+Case-092 duplicate-audit note:
+
+- `期刊复现：Nature Nanotechnology 经典“画中画”组合图（附 Python 完整代_1777450514`
+  reappears later in the markdown-learning order, but it is the same source
+  already learned in Case-027. Keep the `inset_heatmap_bar_rank` motif, the
+  ranked-bar + hollow-jitter main layer stack, and the inset-local colorbar
+  rather than treating it as a generic scatter/zoom inset.
+- The closure evidence lives in
+  `.workflow/case_studies/case_092_inset_heatmap_bar_rank_audit/comparison_report.json`.
 
 ## Discipline rules
 

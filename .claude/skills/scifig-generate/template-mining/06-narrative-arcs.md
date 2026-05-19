@@ -1,6 +1,6 @@
 # 科学叙事弧 (Narrative Arcs)
 
-Phase 2 chooses a **narrative arc** before picking individual chart families. The arc encodes the story shape — how panels relate, which is the hero, what role each support panel plays. All 77 reference cases in the corpus map to one of 10 arcs.
+Phase 2 chooses a **narrative arc** before picking individual chart families. The arc encodes the story shape — how panels relate, which is the hero, what role each support panel plays. All 94 reference cases in the corpus map to one of 10 arcs.
 
 ## Arc selection (Phase 2 entry point)
 
@@ -20,20 +20,20 @@ Read the `dataProfile` and ask:
 
 3. **Apply the arc-specific motif requirements** (each arc has 2-4 mandatory motifs).
 
-## Frequency in corpus (n=77)
+## Frequency in corpus (n=94)
 
 | Arc | Cases | % | Hallmark |
 |---|---|---|---|
-| `multipanel_grid` | 26 | 34% | dense scaffolding, 4-9 panels of one family |
-| `single_focus` | 18 | 23% | one panel, one strong claim |
-| `global_local` | 5 | 6% | global summary + local interpretation |
-| `n×n_pairwise` | 5 | 6% | exhaustive cross-comparison |
-| `marginal_joint` | 4 | 5% | center scatter + top/right marginals |
-| `train_test_diagnostic` | 4 | 5% | training fold vs holdout |
-| `composite_two_lane` | 4 | 5% | left/right complementary lanes |
-| `mirror_compare` | 4 | 5% | bipolar / two-condition mirror |
-| `hero` | 4 | 5% | headline single-panel with heavy styling |
-| `inset_overlay` | 3 | 4% | main + zoom-in inset |
+| `single_focus` | 31 | 33% | one panel, one strong claim |
+| `multipanel_grid` | 27 | 29% | dense scaffolding, 4-9 panels of one family |
+| `marginal_joint` | 5 | 5% | center scatter + top/right marginals |
+| `composite_two_lane` | 5 | 5% | left/right complementary lanes |
+| `global_local` | 5 | 5% | global summary + local interpretation |
+| `hero` | 5 | 5% | headline single-panel with heavy styling |
+| `n×n_pairwise` | 5 | 5% | exhaustive cross-comparison |
+| `train_test_diagnostic` | 4 | 4% | training fold vs holdout |
+| `mirror_compare` | 4 | 4% | bipolar / two-condition mirror |
+| `inset_overlay` | 3 | 3% | main + zoom-in inset |
 
 ---
 
@@ -102,6 +102,11 @@ Global summary panel **plus** local-explanation panel. Nearly always SHAP-flavor
 - Coupled palette (low→high feature value)
 
 **Grid:** `R10_asymmetric_top_wide` for hero global + 2 local; `R1_two_panel_horizontal` (1×2) for global+local pair.
+
+Case-046 exception: a target-wise SHAP mean-importance triptych is global-only
+explanation across several targets, not a global+local composite. Use `R4d`
+and `shap_mean_importance_triptych`; do not invent SHAP sign, beeswarm, or
+feature-value direction when the Markdown only provides mean `|SHAP|`.
 
 **Anchor cases:**
 - `期刊配图复现 _ 手把手教你用 Python 绘制 SHAP 全局与局部解释组合图`

@@ -1,10 +1,14 @@
 # Technique: Time Series with Prediction Interval
 
-3/77 corpus cases. Time-series with PI band, train/test split, and observed vs predicted overlay.
+4/94 corpus cases. Time-series with PI band, train/test split, and observed vs predicted overlay.
 
 **Anchor cases:**
 - `期刊图表复现：基于预测区间与训练_测试划分的时序拟合效果对比_1777454854`
 - `期刊配图复现 _ Python绘制"趋势+分布"时序混合图_1777451814`
+
+Case-081 audit note: the later queue pass over the same prediction-interval
+Markdown was treated as `duplicate_markdown_covered_by_case_016`; it reuses the
+Case-016 `time_series_prediction_interval` helper and QA contract.
 
 ## Hallmark elements
 
@@ -13,8 +17,22 @@
 3. **Predicted line**: red, thin (lw 1.5), `zorder=3`
 4. **Train/test divider**: dashed gray vertical line at split index
 5. **Train/test palette**: `#4C78A8` (train) / `#E45756` (test)
-6. **In-plot metric box** with R² + RMSE per fold
-7. **Optional inset** with residual distribution
+6. **Top legend**: horizontal `ncol=3`, outside the axes top edge
+7. **Optional metric box** with R² + RMSE per fold when supplied or requested
+
+## Phase-3 Binding
+
+Use `scatter_regression` as the chart key; do not add a new registry key.
+
+`gen_scatter_regression` enters `time_series_prediction_interval` mode when:
+
+- the generator is standalone;
+- `time` / `x` / `sample_index` resolves to a column;
+- actual/observed/true and predicted/fitted columns resolve;
+- PI lower/upper columns resolve or the profile contains `prediction_interval` / `time_series_pi`; and
+- `templateMotifs` / `specialPatterns` includes `time_series_prediction_interval`, `time_series_pi`, `interval_uncertainty_band`, or equivalent train/test interval cues.
+
+The branch delegates drawing to `draw_time_series_prediction_interval` and returns the main axis to preserve the existing generator contract.
 
 ## Reference
 
@@ -108,9 +126,63 @@ ax.fill_between(x, pi_lo, pi_hi, color='skyblue', alpha=0.4, zorder=1)
 ax.plot(x, y_pred, color='#E45756', linewidth=2.0, zorder=3)
 ```
 
+## Variant: Prediction + residual vertical stack
+
+Anchor: `期刊复现：多面板回归预测散点图对比不同模型真实与预测偏差_1777455897`.
+
+Use this when a sample-index prediction series needs a separate residual panel:
+
+- Layout is `GridSpec(2, 1, height_ratios=[2.5, 1], hspace=0.10)` with a shared
+  x-axis.
+- Top panel: experimental/observed values are a black solid line with circular
+  markers; predicted values are a red dashed line with square markers.
+- Bottom panel: residuals are blue scatter points with a gray zero-residual
+  reference line.
+- Repeat the train/test split line in both panels so the model phase stays
+  vertically aligned.
+- Hide the upper panel x tick labels. Put the legend in the upper-left of the
+  top panel.
+- Do not compare residual amplitude visually to target magnitude; the panels
+  intentionally use different y scales.
+- Runtime status: current `residual_vs_fitted` validates only the residual
+  diagnostic layer, not the shared-x prediction/residual stack.
+
+Case-044 evidence lives in
+`.workflow/case_studies/case_044_prediction_residual_stack/comparison_report.json`.
+
+## Variant: Trend + terminal distribution hybrid
+
+Use this when the user wants a future trend and the endpoint scenario
+distribution in the same panel. The main x-axis remains continuous time, but
+reserve artificial x positions just beyond the forecast horizon for boxplots.
+
+```python
+box_pos = {'SSP1-2.6': 2064, 'SSP2-4.5': 2066, 'SSP5-8.5': 2068}
+ax.fill_between(year, lower, upper, color=c, alpha=0.25, zorder=1)
+ax.plot(year, mean, color=c, marker='o', markersize=5, zorder=2)
+ax.boxplot(
+    [terminal_draws],
+    positions=[box_pos[scenario]],
+    widths=1.8,
+    patch_artist=True,
+    boxprops=dict(facecolor=c, alpha=0.8),
+    medianprops=dict(color='black'),
+    showfliers=False,
+)
+ax.set_xlim(2028, 2072)
+ax.set_xticks([2030, 2040, 2050, 2060, 2070])
+```
+
+Pair this with layout recipe `R13_seven_panel_top_four_bottom_three` when the
+panel set is seven pollutants or indicators. Keep only one scenario legend in
+the board, usually the first panel of the bottom row.
+
 ## QA contract
 
 - `intervalBandCount`: ≥1 (`fill_between` with alpha 0.30–0.50)
-- `trainTestDividerPresent`: True if train/test split detected in data
-- `metricBoxPerFold`: ≥2 metric rows (train + test)
+- `timeSeriesTrainTestDividerPresent`: True if train/test split detected in data or supplied in the visual plan
+- `observedScatterCount`: ≥1
+- `predictedLineCount`: ≥1
 - `referenceLineCount`: ≥1 (the divider)
+- `sampleEncodingCount`: ≥1
+- `terminalBoxplotCount`: ≥ number of scenario groups when trend + terminal distribution is planned
