@@ -14,12 +14,6 @@
       "prediction_diagnostic_matrix"
     ],
     "learning_status": "learned_model_accuracy_stability_board",
-    "learned_case": "case_081_model_accuracy_stability_board",
-    "case_study_dir": ".workflow/case_studies/case_081_model_accuracy_stability_board",
-    "case_study_report": ".workflow/case_studies/case_081_model_accuracy_stability_board/comparison_report.json",
-    "reference_used": ".workflow/case_studies/case_081_model_accuracy_stability_board/references/ref_01.png",
-    "replica": ".workflow/case_studies/case_081_model_accuracy_stability_board/case_081_replica_model_accuracy_stability_board.png",
-    "comparison": ".workflow/case_studies/case_081_model_accuracy_stability_board/case_081_reference_vs_replica.png",
     "journals": [],
     "chart_families": [
       "forest",
@@ -248,12 +242,6 @@
       "sandwich_zorder_layers"
     ],
     "learning_status": "learned_adsorption_isotherm_multipanel",
-    "learned_case": "case_082_adsorption_isotherm_multipanel",
-    "case_study_dir": ".workflow/case_studies/case_082_adsorption_isotherm_multipanel",
-    "case_study_report": ".workflow/case_studies/case_082_adsorption_isotherm_multipanel/comparison_report.json",
-    "reference_used": ".workflow/case_studies/case_082_adsorption_isotherm_multipanel/references/ref_01.png",
-    "replica": ".workflow/case_studies/case_082_adsorption_isotherm_multipanel/case_082_replica_adsorption_isotherm_multipanel.png",
-    "comparison": ".workflow/case_studies/case_082_adsorption_isotherm_multipanel/case_082_reference_vs_replica.png",
     "journals": [
       "CEJ"
     ],
@@ -679,10 +667,7 @@
       "metric_table_in_panel",
       "prediction_diagnostic_matrix"
     ],
-    "learned_case": "case_015_density_parity_matrix",
-    "audit_case": "case_080_density_parity_matrix_audit",
-    "learning_status": "duplicate_markdown_covered_by_case_015",
-    "case_study_report": ".workflow/case_studies/case_080_density_parity_matrix_audit/comparison_report.json"
+    "learning_status": "duplicate_markdown_covered_by_case_015"
   },
   {
     "id": "Python科研绘图：一行代码实现 R² + 95% 置信区间的高级散点图_1777452391",
@@ -699,12 +684,6 @@
       "hollow_train_test_markers"
     ],
     "learning_status": "learned_parity_ci_matrix",
-    "learned_case": "case_083_parity_ci_matrix",
-    "case_study_dir": ".workflow/case_studies/case_083_parity_ci_matrix",
-    "case_study_report": ".workflow/case_studies/case_083_parity_ci_matrix/comparison_report.json",
-    "reference_used": ".workflow/case_studies/case_083_parity_ci_matrix/references/ref_01.png",
-    "replica": ".workflow/case_studies/case_083_parity_ci_matrix/case_083_replica_parity_ci_matrix.png",
-    "comparison": ".workflow/case_studies/case_083_parity_ci_matrix/case_083_reference_vs_replica.png",
     "journals": [],
     "chart_families": [
       "scatter_regression"
@@ -902,12 +881,6 @@
       "shared_train_test_encoding"
     ],
     "learning_status": "learned_nested_marginal_joint_matrix",
-    "learned_case": "case_084_nested_marginal_joint_matrix",
-    "case_study_dir": ".workflow/case_studies/case_084_nested_marginal_joint_matrix",
-    "case_study_report": ".workflow/case_studies/case_084_nested_marginal_joint_matrix/comparison_report.json",
-    "reference_used": ".workflow/case_studies/case_084_nested_marginal_joint_matrix/references/ref_01.png",
-    "replica": ".workflow/case_studies/case_084_nested_marginal_joint_matrix/case_084_replica_nested_marginal_joint_matrix.png",
-    "comparison": ".workflow/case_studies/case_084_nested_marginal_joint_matrix/case_084_reference_vs_replica.png",
     "journals": [],
     "chart_families": [
       "scatter_regression",
@@ -1255,10 +1228,7 @@
     "template_motifs": [
       "pso_shap_optimization_framework"
     ],
-    "learned_case": "case_006_pso_shap_optimization_framework",
-    "audit_case": "case_071_pso_shap_framework_audit",
-    "learning_status": "duplicate_markdown_covered_by_case_006",
-    "case_study_report": ".workflow/case_studies/case_071_pso_shap_framework_audit/comparison_report.json"
+    "learning_status": "duplicate_markdown_covered_by_case_006"
   },
   {
     "id": "复现 CEJ 顶刊神图 _ Python 绘制“密度散点+边缘直方图”多面板组合图_1777452838",
@@ -1485,10 +1455,7 @@
       "joint_marginal_grid",
       "density_encoded_scatter"
     ],
-    "learned_case": "case_007_cej_density_marginal_joint",
-    "audit_case": "case_072_cej_density_marginal_audit",
-    "learning_status": "duplicate_markdown_covered_by_case_007",
-    "case_study_report": ".workflow/case_studies/case_072_cej_density_marginal_audit/comparison_report.json"
+    "learning_status": "duplicate_markdown_covered_by_case_007"
   },
   {
     "id": "复现 Nature _ Python 绘制广义相加模型 (GAM) 拟合与残差诊断组合图_1777452515",
@@ -1729,10 +1696,7 @@
     "template_motifs": [
       "gam_log_residual_diagnostic"
     ],
-    "learned_case": "case_008_nature_gam_residual_diagnostic",
-    "audit_case": "case_073_nature_gam_residual_audit",
-    "learning_status": "duplicate_markdown_covered_by_case_008",
-    "case_study_report": ".workflow/case_studies/case_073_nature_gam_residual_audit/comparison_report.json"
+    "learning_status": "duplicate_markdown_covered_by_case_008"
   },
   {
     "id": "复现顶刊 _ Python绘制“主图+嵌入雨云图”组合，完美展示模型泛化能力_1777452243",
@@ -1951,10 +1915,7 @@
     "template_motifs": [
       "inset_raincloud_residual"
     ],
-    "learned_case": "case_009_main_inset_raincloud",
-    "audit_case": "case_074_main_inset_raincloud_audit",
-    "learning_status": "duplicate_markdown_covered_by_case_009",
-    "case_study_report": ".workflow/case_studies/case_074_main_inset_raincloud_audit/comparison_report.json"
+    "learning_status": "duplicate_markdown_covered_by_case_009"
   },
   {
     "id": "复现顶刊 _ 拒绝千篇一律的SHAP图，用Matplotlib手绘一张“蜂群+条形”组合图_1777452577",
@@ -2188,10 +2149,7 @@
     "template_motifs": [
       "shap_bar_beeswarm_inset_pie"
     ],
-    "learned_case": "case_010_shap_beeswarm_bar_inset_pie",
-    "audit_case": "case_075_shap_bar_beeswarm_inset_pie_audit",
-    "learning_status": "duplicate_markdown_covered_by_case_010",
-    "case_study_report": ".workflow/case_studies/case_075_shap_bar_beeswarm_inset_pie_audit/comparison_report.json"
+    "learning_status": "duplicate_markdown_covered_by_case_010"
   },
   {
     "id": "如何用 Python 完美复刻一张“红蓝气泡”相关性分析图_1777451587",
@@ -2410,10 +2368,7 @@
       "bubble_correlation_matrix",
       "correlation_evidence_matrix"
     ],
-    "learned_case": "case_011_red_blue_bubble_correlation",
-    "audit_case": "case_076_red_blue_bubble_correlation_audit",
-    "learning_status": "duplicate_markdown_covered_by_case_011",
-    "case_study_report": ".workflow/case_studies/case_076_red_blue_bubble_correlation_audit/comparison_report.json"
+    "learning_status": "duplicate_markdown_covered_by_case_011"
   },
   {
     "id": "如何用Python绘制教科书级的双Y轴组合图_1777451702",
@@ -2644,10 +2599,7 @@
     "template_motifs": [
       "textbook_dual_axis_bar_line"
     ],
-    "learned_case": "case_012_textbook_dual_y_axis",
-    "audit_case": "case_077_textbook_dual_y_axis_audit",
-    "learning_status": "duplicate_markdown_covered_by_case_012",
-    "case_study_report": ".workflow/case_studies/case_077_textbook_dual_y_axis_audit/comparison_report.json"
+    "learning_status": "duplicate_markdown_covered_by_case_012"
   },
   {
     "id": "拒绝默认配色：Python 绘制多模型性能对比图的进阶实战_1777451272",
@@ -2882,10 +2834,7 @@
     "template_motifs": [
       "incremental_feature_selection_curve"
     ],
-    "learned_case": "case_013_incremental_feature_selection_curve",
-    "audit_case": "case_078_incremental_feature_selection_audit",
-    "learning_status": "duplicate_markdown_covered_by_case_013",
-    "case_study_report": ".workflow/case_studies/case_078_incremental_feature_selection_audit/comparison_report.json"
+    "learning_status": "duplicate_markdown_covered_by_case_013"
   },
   {
     "id": "期刊图表复现：偏最小二乘路径模型揭示变量间因果与总效应_1777455232",
@@ -3100,10 +3049,7 @@
     "template_motifs": [
       "pls_pm_path_model"
     ],
-    "learned_case": "case_014_pls_pm_path_model",
-    "audit_case": "case_079_pls_pm_path_model_audit",
-    "learning_status": "duplicate_markdown_covered_by_case_014",
-    "case_study_report": ".workflow/case_studies/case_079_pls_pm_path_model_audit/comparison_report.json"
+    "learning_status": "duplicate_markdown_covered_by_case_014"
   },
   {
     "id": "期刊图表复现：叠加二维核密度的渗透汽化膜性能预测对比图_1777455816",
@@ -3120,11 +3066,6 @@
     ],
     "duplicate_of": "case_015_density_parity_matrix",
     "learning_status": "duplicate_markdown_covered_by_case_015",
-    "learned_case": "case_080_density_parity_matrix_audit",
-    "case_study_dir": ".workflow/case_studies/case_080_density_parity_matrix_audit",
-    "case_study_report": ".workflow/case_studies/case_080_density_parity_matrix_audit/comparison_report.json",
-    "reference_used": ".workflow/case_studies/case_015_density_parity_matrix/reference_01.png",
-    "replica": ".workflow/case_studies/case_015_density_parity_matrix/case_015_replica_density_parity_matrix.png",
     "journals": [],
     "chart_families": [
       "scatter_regression",
@@ -3523,10 +3464,7 @@
       "train_test_diagnostic",
       "prediction_diagnostic_matrix"
     ],
-    "learned_case": "case_016_time_series_prediction_interval",
-    "audit_case": "case_081_time_series_prediction_interval_audit",
-    "learning_status": "duplicate_markdown_covered_by_case_016",
-    "case_study_report": ".workflow/case_studies/case_081_time_series_prediction_interval_audit/comparison_report.json"
+    "learning_status": "duplicate_markdown_covered_by_case_016"
   },
   {
     "id": "期刊图表复现：多面板SHAP依赖图展示分子特征对自由基反应速率的非线性影响_1777454691",
@@ -3728,10 +3666,7 @@
       "signed_effect_background",
       "shap_dependence_grid"
     ],
-    "learned_case": "case_017_shap_dependence_background_grid",
-    "audit_case": "case_082_shap_dependence_background_grid_audit",
-    "learning_status": "duplicate_markdown_covered_by_case_017",
-    "case_study_report": ".workflow/case_studies/case_082_shap_dependence_background_grid_audit/comparison_report.json"
+    "learning_status": "duplicate_markdown_covered_by_case_017"
   },
   {
     "id": "期刊图表复现：多面板SHAP依赖图解析特征主效应与交互作用_1777454475",
@@ -3950,10 +3885,7 @@
       "interaction_color_mapped_scatter",
       "shap_dependence_grid"
     ],
-    "learned_case": "case_018_shap_interaction_dependence_grid",
-    "audit_case": "case_083_shap_interaction_dependence_grid_audit",
-    "learning_status": "duplicate_markdown_covered_by_case_018",
-    "case_study_report": ".workflow/case_studies/case_083_shap_interaction_dependence_grid_audit/comparison_report.json"
+    "learning_status": "duplicate_markdown_covered_by_case_018"
   },
   {
     "id": "期刊图表复现：组合SHAP摘要图与饼图解析分子特征对自由基反应预测的全局影响_1777454644",
@@ -4170,10 +4102,7 @@
       "standalone_category_pie",
       "shap_summary_beeswarm"
     ],
-    "learned_case": "case_019_shap_bar_pie_summary_board",
-    "audit_case": "case_084_shap_bar_pie_summary_board_audit",
-    "learning_status": "duplicate_markdown_covered_by_case_019",
-    "case_study_report": ".workflow/case_studies/case_084_shap_bar_pie_summary_board_audit/comparison_report.json"
+    "learning_status": "duplicate_markdown_covered_by_case_019"
   },
   {
     "id": "期刊图表：双Y轴直方图与累积频率曲线展示HPC数据集多变量分布特征_1777454431",
@@ -4392,10 +4321,7 @@
       "cumulative_frequency_curve",
       "multipanel_distribution_matrix"
     ],
-    "learned_case": "case_020_dual_axis_hist_cumfreq_grid",
-    "audit_case": "case_085_dual_axis_hist_cumfreq_grid_audit",
-    "learning_status": "duplicate_markdown_covered_by_case_020",
-    "case_study_report": ".workflow/case_studies/case_085_dual_axis_hist_cumfreq_grid_audit/comparison_report.json"
+    "learning_status": "duplicate_markdown_covered_by_case_020"
   },
   {
     "id": "期刊复刻：多面板结合XGBoost特征重要性棒棒糖图与SHAP蜂群图_1777454599",
@@ -4612,10 +4538,7 @@
       "shared_feature_axis",
       "shap_summary_beeswarm"
     ],
-    "learned_case": "case_021_lollipop_shap_beeswarm_board",
-    "audit_case": "case_086_lollipop_shap_beeswarm_board_audit",
-    "learning_status": "duplicate_markdown_covered_by_case_021",
-    "case_study_report": ".workflow/case_studies/case_086_lollipop_shap_beeswarm_board_audit/comparison_report.json"
+    "learning_status": "duplicate_markdown_covered_by_case_021"
   },
   {
     "id": "期刊复刻：通过双侧棒棒糖图解析特征重要性与ALE主效应方向_1777455283",
@@ -4835,10 +4758,7 @@
       "shared_feature_axis",
       "signed_effect_axis"
     ],
-    "learned_case": "case_022_bipolar_lollipop_ale_board",
-    "audit_case": "case_087_bipolar_lollipop_ale_board_audit",
-    "learning_status": "duplicate_markdown_covered_by_case_022",
-    "case_study_report": ".workflow/case_studies/case_087_bipolar_lollipop_ale_board_audit/comparison_report.json"
+    "learning_status": "duplicate_markdown_covered_by_case_022"
   },
   {
     "id": "期刊复现 _ Python绘制“镜像玫瑰”组合图，揭示多维模型性能差异_1777452890",
@@ -5047,10 +4967,7 @@
       "mirror_radial_bar",
       "external_scale_bar"
     ],
-    "learned_case": "case_023_mirror_radial_bar_board",
-    "audit_case": "case_088_mirror_radial_bar_board_audit",
-    "learning_status": "duplicate_markdown_covered_by_case_023",
-    "case_study_report": ".workflow/case_studies/case_088_mirror_radial_bar_board_audit/comparison_report.json"
+    "learning_status": "duplicate_markdown_covered_by_case_023"
   },
   {
     "id": "期刊复现：Advanced Science “驼峰”阈值回归图解剖与复刻（附Python源码）_1777450933",
@@ -5285,10 +5202,7 @@
       "regression_band_fillbtw",
       "threshold_split_line"
     ],
-    "learned_case": "case_024_hump_threshold_regression",
-    "audit_case": "case_089_hump_threshold_regression_audit",
-    "learning_status": "duplicate_markdown_covered_by_case_024",
-    "case_study_report": ".workflow/case_studies/case_089_hump_threshold_regression_audit/comparison_report.json"
+    "learning_status": "duplicate_markdown_covered_by_case_024"
   },
   {
     "id": "期刊复现：Advanced Science 贝叶斯山脊图 + 热图组合策略（附代码）_1777451123",
@@ -5523,10 +5437,7 @@
       "ridge_heatmap_composite",
       "inset_heatmap_colorbar"
     ],
-    "learned_case": "case_025_bayesian_ridge_heatmap_board",
-    "audit_case": "case_090_bayesian_ridge_heatmap_board_audit",
-    "learning_status": "duplicate_markdown_covered_by_case_025",
-    "case_study_report": ".workflow/case_studies/case_090_bayesian_ridge_heatmap_board_audit/comparison_report.json"
+    "learning_status": "duplicate_markdown_covered_by_case_025"
   },
   {
     "id": "期刊复现：Nature Comms 双Y轴组合图_1777450693",
@@ -5725,10 +5636,7 @@
       "count_proportion_dual_axis",
       "dual_axis_color_linked"
     ],
-    "learned_case": "case_026_nature_comms_dual_axis",
-    "audit_case": "case_091_nature_comms_dual_axis_bar_line_audit",
     "learning_status": "duplicate_markdown_covered_by_case_026",
-    "case_study_report": ".workflow/case_studies/case_091_nature_comms_dual_axis_bar_line_audit/comparison_report.json",
     "preamble": "前言** 在科研数据展示中，经常需要将量级完全不同的两组数据（如“样本总量”与“阳性比例”）放在同一张图中。2025 年发表于 **Nature Communications** 的研究通过优雅的“双轴设计”，完美展示了人类活动对环境中耐药基因（ARGs）的富集作用。本教程将深入解构其双轴布局与视觉对齐逻辑，解决双轴冲突导致的视觉失衡难题。 **02 原图解析** - **双 Y 轴结构 (Dual-Axis Chart)**： - **左轴 (黑)**：负责“数量（Count）”，对应背景柱状图。 - **右轴 (红)**：负责“比例（Proportion）”，对应前景折线图。 - **视觉编码策略**： - **三明治图层法**：显式指定 `zorder`，确保折线图（前景）浮于柱状图（背景）之上。 - **视觉链接 (Color Linking)**：将右侧 Y 轴及其刻度文字统一染红，与折线颜色一致，引导读者建立瞬时的视觉反射，降低认知负荷。 - **科研逻辑**：揭示了“采样量偏差”下的真相。例如，加工食品（Food）样本量虽少，但阳性比例却最高，有力证明了特定生境下的强富集效应。 [image: reference] **论文原图** **03",
     "image_evidence": {
       "image_count": 4,
@@ -5953,10 +5861,7 @@
       "ranked_bar_inset_heatmap",
       "inset_heatmap_colorbar"
     ],
-    "learned_case": "case_027_inset_heatmap_bar_rank",
-    "audit_case": "case_092_inset_heatmap_bar_rank_audit",
     "learning_status": "duplicate_markdown_covered_by_case_027",
-    "case_study_report": ".workflow/case_studies/case_092_inset_heatmap_bar_rank_audit/comparison_report.json",
     "preamble": "前言** 在科研绘图中，柱状图虽基础但常面临信息密度低的质疑。当需要展示主要趋势（如碱基堆积能排位）同时兼顾多维验证（如方法相关性）时，传统分栏布局往往显得松散。**Nature Nanotechnology** 采用了一种极具巧思的“画中画” (Inset Axes) 策略：利用主图右上角的留白悬浮展示相关性热图，实现了空间利用率与论证严密性的高度统一。 **02 原图解析** - **“画中画”非对称结构**： - **主图**：降序柱状图，通过顶部留白为插图预留“领空”。 - **插图**：利用 `ax.inset_axes()` 悬浮嵌套在主图内部，避免了多子图导致的版面松散。 - **三明治图层法**： - **底层**：杏橙色 (#ED9F78) 柱体，展示平均值。 - **中层**：黑色工字误差棒。 - **顶层**：带有随机抖动 (Jitter) 的空心圆圈，展示原始数据点分布。 - **视觉逻辑**： - **主图**：英雄榜，展示 16 种 DNA 碱基堆积能的稳定性排名。 - **插图**：照妖镜，通过 $6 \\times 6$ 相关性热图证明新方法与前人研究的共性及差异。 [image: reference] **论文原图** **03",
     "image_evidence": {
       "image_count": 4,
@@ -6173,10 +6078,7 @@
       "pairwise_correlation_matrix",
       "upper_triangle_pearson_tiles"
     ],
-    "learned_case": "case_028_nature_pearson_pairwise_matrix",
-    "audit_case": "case_093_nature_pearson_pairwise_matrix_audit",
     "learning_status": "duplicate_markdown_covered_by_case_028",
-    "case_study_report": ".workflow/case_studies/case_093_nature_pearson_pairwise_matrix_audit/comparison_report.json",
     "preamble": "前言** 在处理具有多维特征的科研数据时，简单的散点矩阵往往会因刻度杂乱、标签重叠而难以解读。顶刊中的关系矩阵图通过“视觉降噪”，在单一画布上高效整合了单变量分布、双变量相关性及原始数据形态。本节复现自 **Nature Communications** 关于 PVRL 无创筛查的研究，其成对关系矩阵图（Pairwise Matrix Plot）是多维数据可视化的教科书级范本。 **02 原图解析** - **多维信息集成结构**： - **对角线（直方图+核密度曲线）**：展示单变量的数据分布特征（如偏态或正态性）。 - **下三角（散点图）**：展示变量间的原始观测形态，通过空心圈映射揭示线性或非线性关联。 - **上三角（数值色块）**：展示 Pearson 相关系数，并辅以浅色背景突出量化结果。 - **科研价值**：用于验证核心特征间的区分度与共性。例如，通过观察相关系数是否超过 0.8 来诊断多重共线性，同时保留具有互补生物学信息的关键指标。 - **视觉控制**：通过极致的刻度清理与紧凑布局，确保在 6x6 甚至更大规模的网格中依然保持清爽。 [image: reference] **论文原图** **03",
     "image_evidence": {
       "image_count": 4,
@@ -6382,8 +6284,6 @@
       "group_divider_axvline",
       "raincloud_combo"
     ],
-    "learned_case": "case_029_shap_beeswarm_dependence",
-    "audit_case": "case_094_shap_beeswarm_dependence_audit",
     "preamble": "前言** 在基于机器学习的环境与地学研究中，SHAP 摘要图（Summary Plot / Beeswarm Plot）常用于全局特征重要性的验证与解释。通过在一个面板中展示特征的重要性排名、数值分布及其对模型预测的推拉作用，研究者可以快速诊断环境因子对目标指标（如新兴污染物 ECs 传输）的驱动方向。 **02 原图解析** - **单面板水平蜂群布局**： - **Y 轴**：特征按平均绝对贡献度降序排列。 - **X 轴**：SHAP 值，代表特征对预测结果的影响大小。 - **核心视觉编码**： - **参考线**：垂直虚线区分促进（正 SHAP）与抑制（负 SHAP）作用。 - **色彩映射**：利用蓝（Low）到红（High）的渐变色条编码特征原始数值。 - **密度表现**：散点沿 Y 轴抖动展开（Beeswarm 效果），直观反映数据在特定 SHAP 区间的分布密度。 - **科研结论**：揭示了 Parent ECs 浓度、DEM 等因子对污染物传输的显著促进或抑制效应。 [image: reference] **论文原图** **结论边界**：SHAP 摘要图展示的是全局统计关联方向，不直接代表物理因果。若需探究非线性阈值，建议辅助局部依赖图。 **03",
     "image_evidence": {
       "image_count": 3,
@@ -6413,10 +6313,6 @@
       "shap_summary_zero_reference"
     ],
     "learning_status": "duplicate_markdown_covered_by_case_029",
-    "case_study_report": ".workflow/case_studies/case_094_shap_beeswarm_dependence_audit/comparison_report.json",
-    "reference_used": ".workflow/case_studies/case_029_shap_beeswarm_dependence/references/reference_01.png",
-    "replica": ".workflow/case_studies/case_029_shap_beeswarm_dependence/case_029_replica_shap_beeswarm_summary.png",
-    "comparison": ".workflow/case_studies/case_029_shap_beeswarm_dependence/comparison_report.json",
     "known_gap": [
       "The article title says SHAP dependence, but the described and coded graphic is a global SHAP summary/beeswarm rather than local dependence panels.",
       "Runtime dotplot uses generic axis/colorbar wording."
@@ -6642,11 +6538,6 @@
       "shap_summary_beeswarm"
     ],
     "learning_status": "learned",
-    "case_study_dir": ".workflow/case_studies/case_030_shap_beeswarm_environment",
-    "case_study_report": ".workflow/case_studies/case_030_shap_beeswarm_environment/comparison_report.json",
-    "reference_used": ".workflow/case_studies/case_030_shap_beeswarm_environment/references/reference_01.png",
-    "replica": ".workflow/case_studies/case_030_shap_beeswarm_environment/case_030_replica_shap_beeswarm_environment.png",
-    "comparison": ".workflow/case_studies/case_030_shap_beeswarm_environment/comparison_report.json",
     "learned_essence": [
       "Sort environmental SHAP summary lanes by mean absolute SHAP before interpreting sign, color, or density.",
       "Use a dashed x=0 divider to separate positive and negative model contribution directions.",
@@ -6882,11 +6773,6 @@
       "bubble_matrix"
     ],
     "learning_status": "learned_public_board_gap_recorded",
-    "case_study_dir": ".workflow/case_studies/case_031_hyperparameter_stability_bubble_heatmap",
-    "case_study_report": ".workflow/case_studies/case_031_hyperparameter_stability_bubble_heatmap/comparison_report.json",
-    "reference_used": ".workflow/case_studies/case_031_hyperparameter_stability_bubble_heatmap/references/reference_03.png",
-    "replica": ".workflow/case_studies/case_031_hyperparameter_stability_bubble_heatmap/case_031_replica_hyperparameter_stability_bubble_heatmap.png",
-    "comparison": ".workflow/case_studies/case_031_hyperparameter_stability_bubble_heatmap/comparison_report.json",
     "learned_essence": [
       "Hyperparameter stability needs both mean trend and replicate spread; line-only tuning curves hide robustness.",
       "Reserve panels A-C for single-parameter sensitivity and panel D for joint grid-search evidence.",
@@ -7126,11 +7012,6 @@
       "dual_axis_color_linked"
     ],
     "learning_status": "learned_grouped_bar_gap_recorded",
-    "case_study_dir": ".workflow/case_studies/case_032_dual_axis_grouped_bar_line",
-    "case_study_report": ".workflow/case_studies/case_032_dual_axis_grouped_bar_line/comparison_report.json",
-    "reference_used": ".workflow/case_studies/case_032_dual_axis_grouped_bar_line/references/reference_01.png",
-    "replica": ".workflow/case_studies/case_032_dual_axis_grouped_bar_line/case_032_replica_dual_axis_grouped_bar_line.png",
-    "comparison": ".workflow/case_studies/case_032_dual_axis_grouped_bar_line/comparison_report.json",
     "learned_essence": [
       "Use grouped Train/Test error bars on the left axis and a right-axis R2 line only when both metrics share the same model ordering.",
       "Keep the R2 line as a trend layer above the grouped bars rather than encoding it on the same scale.",
@@ -7371,11 +7252,6 @@
       "shared_legend_dual_panel"
     ],
     "learning_status": "learned_dual_panel_nmds_gap_recorded",
-    "case_study_dir": ".workflow/case_studies/case_033_nmds_dual_panel_grouped_scatter",
-    "case_study_report": ".workflow/case_studies/case_033_nmds_dual_panel_grouped_scatter/comparison_report.json",
-    "reference_used": ".workflow/case_studies/case_033_nmds_dual_panel_grouped_scatter/references/reference_01.png",
-    "replica": ".workflow/case_studies/case_033_nmds_dual_panel_grouped_scatter/case_033_replica_nmds_dual_panel_grouped_scatter.png",
-    "comparison": ".workflow/case_studies/case_033_nmds_dual_panel_grouped_scatter/comparison_report.json",
     "learned_essence": [
       "Treat NMDS axes as ordination coordinates; the narrative is relative distance and group overlap, not axis magnitude.",
       "Use side-by-side WDP/NWDP panels to compare ecological periods without pooling samples into one ordination.",
@@ -7599,11 +7475,6 @@
       "performance_evolution_optimum"
     ],
     "learning_status": "learned_feature_selection_board_gap_recorded",
-    "case_study_dir": ".workflow/case_studies/case_034_feature_selection_weight_performance",
-    "case_study_report": ".workflow/case_studies/case_034_feature_selection_weight_performance/comparison_report.json",
-    "reference_used": ".workflow/case_studies/case_034_feature_selection_weight_performance/references/reference_02.png",
-    "replica": ".workflow/case_studies/case_034_feature_selection_weight_performance/case_034_replica_feature_selection_weight_performance.png",
-    "comparison": ".workflow/case_studies/case_034_feature_selection_weight_performance/comparison_report.json",
     "learned_essence": [
       "Align ranked feature-selection evidence and model-performance response on the same x step.",
       "Use selected/removed color blocks to make the RFE cutoff visible before the lower curve is read.",
@@ -7845,11 +7716,6 @@
       "pdp_contour_surface_matrix"
     ],
     "learning_status": "learned_h_statistic_contour_gap_recorded",
-    "case_study_dir": ".workflow/case_studies/case_035_h_statistic_contour_dependence",
-    "case_study_report": ".workflow/case_studies/case_035_h_statistic_contour_dependence/comparison_report.json",
-    "reference_used": ".workflow/case_studies/case_035_h_statistic_contour_dependence/references/reference_03.png",
-    "replica": ".workflow/case_studies/case_035_h_statistic_contour_dependence/case_035_replica_h_statistic_contour_dependence.png",
-    "comparison": ".workflow/case_studies/case_035_h_statistic_contour_dependence/comparison_report.json",
     "learned_essence": [
       "Use H-statistic bars to rank which feature pairs matter, then use 2D PDP contours to show where the interaction changes prediction.",
       "Use an asymmetric GridSpec so one ranking panel anchors multiple detailed response surfaces.",
@@ -8092,11 +7958,6 @@
       "threshold_annotation"
     ],
     "learning_status": "learned_shap_pdp_threshold_gap_recorded",
-    "case_study_dir": ".workflow/case_studies/case_036_rf_xgb_shap_pdp_threshold",
-    "case_study_report": ".workflow/case_studies/case_036_rf_xgb_shap_pdp_threshold/comparison_report.json",
-    "reference_used": ".workflow/case_studies/case_036_rf_xgb_shap_pdp_threshold/references/reference_03.png",
-    "replica": ".workflow/case_studies/case_036_rf_xgb_shap_pdp_threshold/case_036_replica_rf_xgb_shap_pdp_threshold.png",
-    "comparison": ".workflow/case_studies/case_036_rf_xgb_shap_pdp_threshold/comparison_report.json",
     "learned_essence": [
       "Use a y=0 baseline in every SHAP partial-dependence panel to separate positive and negative contribution.",
       "Use a 1xN layout so each physical variable keeps its own units while preserving a common SHAP/PDP grammar.",
@@ -8330,11 +8191,6 @@
       "prediction_diagnostic_matrix"
     ],
     "learning_status": "learned_shap_parity_board_gap_recorded",
-    "case_study_dir": ".workflow/case_studies/case_037_shap_molecule_global_local_parity",
-    "case_study_report": ".workflow/case_studies/case_037_shap_molecule_global_local_parity/comparison_report.json",
-    "reference_used": null,
-    "replica": ".workflow/case_studies/case_037_shap_molecule_global_local_parity/case_037_replica_shap_molecule_global_local_parity.png",
-    "comparison": ".workflow/case_studies/case_037_shap_molecule_global_local_parity/comparison_report.json",
     "learned_essence": [
       "Treat this SHAP composite as an evidence board linking molecular attribution with internal and external prediction evidence.",
       "Use a 2x2 grid with one job per panel: local SHAP direction, global SHAP magnitude, parity accuracy, and external robustness.",
@@ -8562,11 +8418,6 @@
       "pie_glyph_cells"
     ],
     "learning_status": "learned_upper_triangle_pie_correlation_gap_recorded",
-    "case_study_dir": ".workflow/case_studies/case_038_upper_triangle_pie_correlation",
-    "case_study_report": ".workflow/case_studies/case_038_upper_triangle_pie_correlation/comparison_report.json",
-    "reference_used": ".workflow/case_studies/case_038_upper_triangle_pie_correlation/references/reference_01.png",
-    "replica": ".workflow/case_studies/case_038_upper_triangle_pie_correlation/case_038_replica_upper_triangle_pie_correlation.png",
-    "comparison": ".workflow/case_studies/case_038_upper_triangle_pie_correlation/comparison_report.json",
     "learned_essence": [
       "Use the upper triangle to remove symmetric redundancy while preserving every unique variable-pair comparison.",
       "Encode absolute correlation strength with local pie wedge angle or area while color carries signed magnitude.",
@@ -8806,11 +8657,6 @@
       "quadratic_ci_trend"
     ],
     "learning_status": "learned_shap_dependence_grid_gap_recorded",
-    "case_study_dir": ".workflow/case_studies/case_039_shap_dependence_interaction_grid",
-    "case_study_report": ".workflow/case_studies/case_039_shap_dependence_interaction_grid/comparison_report.json",
-    "reference_used": ".workflow/case_studies/case_039_shap_dependence_interaction_grid/references/reference_01.png",
-    "replica": ".workflow/case_studies/case_039_shap_dependence_interaction_grid/case_039_replica_shap_dependence_interaction_grid.png",
-    "comparison": ".workflow/case_studies/case_039_shap_dependence_interaction_grid/comparison_report.json",
     "learned_essence": [
       "Use a 3x2 SHAP dependence grid to decompose model behavior feature by feature while keeping one consistent visual grammar.",
       "Encode interaction feature values with one global color scale so the same color has the same meaning across all panels.",
@@ -9017,11 +8863,6 @@
       "boxplot_raw_point_overlay"
     ],
     "learning_status": "learned_gbdt_triptych_gap_recorded",
-    "case_study_dir": ".workflow/case_studies/case_040_gbdt_prediction_error_triptych",
-    "case_study_report": ".workflow/case_studies/case_040_gbdt_prediction_error_triptych/comparison_report.json",
-    "reference_used": ".workflow/case_studies/case_040_gbdt_prediction_error_triptych/references/reference_01.png",
-    "replica": ".workflow/case_studies/case_040_gbdt_prediction_error_triptych/case_040_replica_gbdt_prediction_error_triptych.png",
-    "comparison": ".workflow/case_studies/case_040_gbdt_prediction_error_triptych/comparison_report.json",
     "learned_essence": [
       "Use a horizontal triptych to move from material-level signal, to sample-level prediction match, to global error distribution.",
       "Use a secondary y-axis only for relative error because observed/predicted magnitudes and percent error are different quantities.",
@@ -9238,11 +9079,6 @@
       "zero_residual_bias_check"
     ],
     "learning_status": "learned_rf_triptych_gap_recorded",
-    "case_study_dir": ".workflow/case_studies/case_041_rf_model_performance_triptych",
-    "case_study_report": ".workflow/case_studies/case_041_rf_model_performance_triptych/comparison_report.json",
-    "reference_used": ".workflow/case_studies/case_041_rf_model_performance_triptych/references/reference_01.png",
-    "replica": ".workflow/case_studies/case_041_rf_model_performance_triptych/case_041_replica_rf_model_performance_triptych.png",
-    "comparison": ".workflow/case_studies/case_041_rf_model_performance_triptych/comparison_report.json",
     "learned_essence": [
       "Use the RF diagnostic triptych to select the algorithm, validate the chosen model's predictions, and check residual symmetry.",
       "Sort the top horizontal grouped bars by test performance so the selected RFR model is visually justified.",
@@ -9481,11 +9317,6 @@
       "alpha_layered_scatter"
     ],
     "learning_status": "learned_multivariable_isp_matrix_gap_recorded",
-    "case_study_dir": ".workflow/case_studies/case_042_multivariable_isp_scatter_matrix",
-    "case_study_report": ".workflow/case_studies/case_042_multivariable_isp_scatter_matrix/comparison_report.json",
-    "reference_used": ".workflow/case_studies/case_042_multivariable_isp_scatter_matrix/references/reference_01.png",
-    "replica": ".workflow/case_studies/case_042_multivariable_isp_scatter_matrix/case_042_replica_multivariable_isp_scatter_matrix.png",
-    "comparison": ".workflow/case_studies/case_042_multivariable_isp_scatter_matrix/comparison_report.json",
     "learned_essence": [
       "Use a target-aligned descriptor matrix rather than a full pairplot when every panel compares one descriptor against the same response.",
       "Keep descriptor x-axes independent because composition percentages, density, enthalpy, and molecular weight have incompatible units.",
@@ -9725,11 +9556,6 @@
       "alpha_layered_scatter"
     ],
     "learning_status": "learned_multimodel_parity_grid_gap_recorded",
-    "case_study_dir": ".workflow/case_studies/case_043_multimodel_parity_grid",
-    "case_study_report": ".workflow/case_studies/case_043_multimodel_parity_grid/comparison_report.json",
-    "reference_used": ".workflow/case_studies/case_043_multimodel_parity_grid/references/reference_01.png",
-    "replica": ".workflow/case_studies/case_043_multimodel_parity_grid/case_043_replica_multimodel_parity_grid.png",
-    "comparison": ".workflow/case_studies/case_043_multimodel_parity_grid/comparison_report.json",
     "learned_essence": [
       "Use a shared-scale multi-model parity grid only when every panel has identical x/y limits and equal aspect.",
       "Treat the solid y=x line as the absolute accuracy reference and the red +/- tolerance lines as fixed acceptance bounds, not fitted uncertainty.",
@@ -9997,11 +9823,6 @@
       "alpha_layered_scatter"
     ],
     "learning_status": "learned_prediction_residual_stack_gap_recorded",
-    "case_study_dir": ".workflow/case_studies/case_044_prediction_residual_stack",
-    "case_study_report": ".workflow/case_studies/case_044_prediction_residual_stack/comparison_report.json",
-    "reference_used": ".workflow/case_studies/case_044_prediction_residual_stack/references/reference_01.png",
-    "replica": ".workflow/case_studies/case_044_prediction_residual_stack/case_044_replica_prediction_residual_stack.png",
-    "comparison": ".workflow/case_studies/case_044_prediction_residual_stack/comparison_report.json",
     "learned_essence": [
       "Use a shared sample index so the prediction trajectory and residual error can be read vertically.",
       "Keep target magnitude in the top panel and residual magnitude in the lower panel because the y scales intentionally differ.",
@@ -10241,11 +10062,6 @@
       "multimetric_model_boxplot"
     ],
     "learning_status": "learned_multimetric_model_boxplot_gap_recorded",
-    "case_study_dir": ".workflow/case_studies/case_045_multimetric_model_boxplot",
-    "case_study_report": ".workflow/case_studies/case_045_multimetric_model_boxplot/comparison_report.json",
-    "reference_used": ".workflow/case_studies/case_045_multimetric_model_boxplot/references/reference_01.png",
-    "replica": ".workflow/case_studies/case_045_multimetric_model_boxplot/case_045_replica_multimetric_model_boxplot.png",
-    "comparison": ".workflow/case_studies/case_045_multimetric_model_boxplot/comparison_report.json",
     "learned_essence": [
       "Compare model robustness across repeated folds or resampling values, not only mean metric values.",
       "Keep MAE, RMSE, and R2 in separate horizontal panels because their units and optimization directions differ.",
@@ -10477,11 +10293,6 @@
       "shap_mean_importance_triptych"
     ],
     "learning_status": "learned_shap_mean_importance_triptych_gap_recorded",
-    "case_study_dir": ".workflow/case_studies/case_046_shap_mean_importance_triptych",
-    "case_study_report": ".workflow/case_studies/case_046_shap_mean_importance_triptych/comparison_report.json",
-    "reference_used": ".workflow/case_studies/case_046_shap_mean_importance_triptych/references/reference_01.png",
-    "replica": ".workflow/case_studies/case_046_shap_mean_importance_triptych/case_046_replica_shap_mean_importance_triptych.png",
-    "comparison": ".workflow/case_studies/case_046_shap_mean_importance_triptych/comparison_report.json",
     "learned_essence": [
       "Compare global mean absolute SHAP magnitude across targets, not SHAP direction or feature-value effects.",
       "Keep each target panel on an independent x-axis because SSA, Vt, and NC SHAP magnitudes live on different scales.",
@@ -10717,11 +10528,6 @@
       "shap_bar_beeswarm_inset_pie"
     ],
     "learning_status": "learned_shap_bar_beeswarm_inset_pie_gap_recorded",
-    "case_study_dir": ".workflow/case_studies/case_047_shap_bar_beeswarm_inset_pie",
-    "case_study_report": ".workflow/case_studies/case_047_shap_bar_beeswarm_inset_pie/comparison_report.json",
-    "reference_used": ".workflow/case_studies/case_047_shap_bar_beeswarm_inset_pie/references/reference_02.png",
-    "replica": ".workflow/case_studies/case_047_shap_bar_beeswarm_inset_pie/case_047_replica_shap_bar_beeswarm_inset_pie.png",
-    "comparison": ".workflow/case_studies/case_047_shap_bar_beeswarm_inset_pie/comparison_report.json",
     "learned_essence": [
       "Link global importance magnitude to per-sample SHAP direction by enforcing one shared feature order.",
       "Treat the inset pie as a category summary of the same colored importance bars, not as a separate unsupported claim.",
@@ -10960,11 +10766,6 @@
       "joint_marginal_grid"
     ],
     "learning_status": "learned_contour_marginal_validation_gap_recorded",
-    "case_study_dir": ".workflow/case_studies/case_048_contour_marginal_validation",
-    "case_study_report": ".workflow/case_studies/case_048_contour_marginal_validation/comparison_report.json",
-    "reference_used": "reference fetch failed; replica compared against Markdown code and visual constraints",
-    "replica": ".workflow/case_studies/case_048_contour_marginal_validation/case_048_replica_contour_marginal_validation.png",
-    "comparison": ".workflow/case_studies/case_048_contour_marginal_validation/comparison_report.json",
     "learned_essence": [
       "Link hyperparameter search confidence to final observed-vs-predicted validation in one composite figure.",
       "Keep optimum claims bounded by the plotted and searched parameter grid.",
@@ -11201,11 +11002,6 @@
       "urban_gradient_flux_boxplots"
     ],
     "learning_status": "learned_urban_gradient_flux_boxplots_gap_recorded",
-    "case_study_dir": ".workflow/case_studies/case_049_urban_gradient_flux_boxplots",
-    "case_study_report": ".workflow/case_studies/case_049_urban_gradient_flux_boxplots/comparison_report.json",
-    "reference_used": "reference fetch failed; replica compared against Markdown code and visual constraints",
-    "replica": ".workflow/case_studies/case_049_urban_gradient_flux_boxplots/case_049_replica_urban_gradient_flux_boxplots.png",
-    "comparison": ".workflow/case_studies/case_049_urban_gradient_flux_boxplots/comparison_report.json",
     "learned_essence": [
       "Nest season hue inside each urbanization-gradient category so seasonal change can be compared within every gradient level.",
       "Use log y-axes as a structural requirement for positive flux values spanning multiple orders of magnitude.",
@@ -11444,11 +11240,6 @@
       "shap_dependence_conversion_matrix"
     ],
     "learning_status": "learned_shap_dependence_conversion_matrix_gap_recorded",
-    "case_study_dir": ".workflow/case_studies/case_050_shap_dependence_conversion_matrix",
-    "case_study_report": ".workflow/case_studies/case_050_shap_dependence_conversion_matrix/comparison_report.json",
-    "reference_used": "reference fetch failed; replica compared against Markdown code and visual constraints",
-    "replica": ".workflow/case_studies/case_050_shap_dependence_conversion_matrix/case_050_replica_shap_dependence_conversion_matrix.png",
-    "comparison": ".workflow/case_studies/case_050_shap_dependence_conversion_matrix/comparison_report.json",
     "learned_essence": [
       "Cross prediction target rows by main-feature columns so target-specific and feature-specific SHAP comparisons remain explicit.",
       "Draw y=0 in every panel because it separates positive and negative model contribution, not absolute conversion.",
@@ -11690,11 +11481,6 @@
       "joint_residual_marginal_performance"
     ],
     "learning_status": "learned_joint_residual_marginal_performance_gap_recorded",
-    "case_study_dir": ".workflow/case_studies/case_051_joint_residual_marginal_performance",
-    "case_study_report": ".workflow/case_studies/case_051_joint_residual_marginal_performance/comparison_report.json",
-    "reference_used": "reference fetch failed; replica compared against Markdown code and visual constraints",
-    "replica": ".workflow/case_studies/case_051_joint_residual_marginal_performance/case_051_replica_joint_residual_marginal_performance.png",
-    "comparison": ".workflow/case_studies/case_051_joint_residual_marginal_performance/comparison_report.json",
     "learned_essence": [
       "The central parity panel and bottom residual panel must share the same actual-value x-scale so error structure is not visually reinterpreted.",
       "Top and right marginal density sidecars show whether train/test distributions occupy the same value range as the parity cloud.",
@@ -11925,11 +11711,6 @@
       "rf_efi_shap_donut"
     ],
     "learning_status": "learned_rf_efi_shap_donut_gap_recorded",
-    "case_study_dir": ".workflow/case_studies/case_052_rf_efi_shap_donut",
-    "case_study_report": ".workflow/case_studies/case_052_rf_efi_shap_donut/comparison_report.json",
-    "reference_used": "reference fetch failed; replica compared against Markdown code and visual constraints",
-    "replica": ".workflow/case_studies/case_052_rf_efi_shap_donut/case_052_replica_rf_efi_shap_donut.png",
-    "comparison": ".workflow/case_studies/case_052_rf_efi_shap_donut/comparison_report.json",
     "learned_essence": [
       "Compare feature rankings from model-internal EFI and perturbation-based SHAP without implying shared units.",
       "Use sequential blue bars plus red terminal labels so the EFI lane remains numerically readable and magnitude ordered.",
@@ -12137,11 +11918,6 @@
       "pca_score_dual_panel"
     ],
     "learning_status": "learned_pca_score_dual_panel_gap_recorded",
-    "case_study_dir": ".workflow/case_studies/case_053_pca_score_dual_panel",
-    "case_study_report": ".workflow/case_studies/case_053_pca_score_dual_panel/comparison_report.json",
-    "reference_used": ".workflow/case_studies/case_053_pca_score_dual_panel/references/reference_02.png",
-    "replica": ".workflow/case_studies/case_053_pca_score_dual_panel/case_053_replica_pca_score_dual_panel.png",
-    "comparison": ".workflow/case_studies/case_053_pca_score_dual_panel/comparison_report.json",
     "learned_essence": [
       "Positive and negative PCA components require separate bottom accumulators so stacked blocks never cross-contaminate the zero baseline.",
       "Pair component decomposition with a total-score ranking panel so the PCA analysis closes with an optimization decision.",
@@ -12386,11 +12162,6 @@
       "triple_y_mechanical_grid"
     ],
     "learning_status": "learned_triple_y_mechanical_grid_gap_recorded",
-    "case_study_dir": ".workflow/case_studies/case_054_triple_y_mechanical_grid",
-    "case_study_report": ".workflow/case_studies/case_054_triple_y_mechanical_grid/comparison_report.json",
-    "reference_used": ".workflow/case_studies/case_054_triple_y_mechanical_grid/references/reference_01.png",
-    "replica": ".workflow/case_studies/case_054_triple_y_mechanical_grid/case_054_replica_triple_y_mechanical_grid.png",
-    "comparison": ".workflow/case_studies/case_054_triple_y_mechanical_grid/comparison_report.json",
     "learned_essence": [
       "Use a 2x6 GridSpec to build a balanced five-panel board with three panels on the top row and two centered panels on the bottom row.",
       "Within each mechanical panel, use one main left axis and two twinx right axes so CS, FS, and STS keep separate units.",
@@ -12620,11 +12391,6 @@
       "layered_heatmap_matrix"
     ],
     "learning_status": "learned_layered_heatmap_matrix_gap_recorded",
-    "case_study_dir": ".workflow/case_studies/case_055_layered_heatmap_matrix",
-    "case_study_report": ".workflow/case_studies/case_055_layered_heatmap_matrix/comparison_report.json",
-    "reference_used": ".workflow/case_studies/case_055_layered_heatmap_matrix/references/reference_01.png",
-    "replica": ".workflow/case_studies/case_055_layered_heatmap_matrix/case_055_replica_layered_heatmap_matrix.png",
-    "comparison": ".workflow/case_studies/case_055_layered_heatmap_matrix/comparison_report.json",
     "learned_essence": [
       "Use a 4x3 GridSpec with width ratios 1:1:0.05 when each row needs two equally scaled heatmaps plus a dedicated colorbar slot.",
       "Compute one symmetric absolute limit across all row panels so zero remains the shared center and cross-station colors are comparable.",
@@ -12866,11 +12632,6 @@
       "trend_distribution_hybrid"
     ],
     "learning_status": "learned_trend_distribution_hybrid_gap_recorded",
-    "case_study_dir": ".workflow/case_studies/case_056_trend_distribution_hybrid",
-    "case_study_report": ".workflow/case_studies/case_056_trend_distribution_hybrid/comparison_report.json",
-    "reference_used": ".workflow/case_studies/case_056_trend_distribution_hybrid/references/reference_01.png",
-    "replica": ".workflow/case_studies/case_056_trend_distribution_hybrid/case_056_replica_trend_distribution_hybrid.png",
-    "comparison": ".workflow/case_studies/case_056_trend_distribution_hybrid/comparison_report.json",
     "learned_essence": [
       "A 2x4 GridSpec can support a top-four bottom-three pollutant board by leaving the final bottom-right cell inactive.",
       "Trend-plus-distribution panels reserve x-axis space beyond the forecast horizon and draw terminal boxplots at artificial future positions.",
@@ -13119,11 +12880,6 @@
       "multipanel_shap_beeswarm_matrix"
     ],
     "learning_status": "learned_multipanel_shap_beeswarm_matrix_gap_recorded",
-    "case_study_dir": ".workflow/case_studies/case_057_multipanel_shap_beeswarm_matrix",
-    "case_study_report": ".workflow/case_studies/case_057_multipanel_shap_beeswarm_matrix/comparison_report.json",
-    "reference_used": "remote reference fetch failed; article code constraints used",
-    "replica": ".workflow/case_studies/case_057_multipanel_shap_beeswarm_matrix/case_057_replica_multipanel_shap_beeswarm_matrix.png",
-    "comparison": ".workflow/case_studies/case_057_multipanel_shap_beeswarm_matrix/comparison_report.json",
     "learned_essence": [
       "The 2x6 layout can center a five-panel SHAP board by spanning two columns per panel and shifting the bottom row inward.",
       "Layering mean absolute SHAP bars behind signed beeswarm points lets global importance and per-sample direction share one y-order.",
@@ -13336,11 +13092,6 @@
       "prediction_experiment_external_stats"
     ],
     "learning_status": "learned_prediction_experiment_external_stats_gap_recorded",
-    "case_study_dir": ".workflow/case_studies/case_058_prediction_experiment_external_stats",
-    "case_study_report": ".workflow/case_studies/case_058_prediction_experiment_external_stats/comparison_report.json",
-    "reference_used": ".workflow/case_studies/case_058_prediction_experiment_external_stats/references/reference_02.png",
-    "replica": ".workflow/case_studies/case_058_prediction_experiment_external_stats/case_058_replica_prediction_experiment_external_stats.png",
-    "comparison": ".workflow/case_studies/case_058_prediction_experiment_external_stats/comparison_report.json",
     "learned_essence": [
       "For sample-index prediction diagnostics, Actual and Predicted should be overlaid on the same index axis, not forced into parity geometry.",
       "Manual proxy legends are useful when legend placement is part of the composition rather than a direct data-label dump.",
@@ -13568,11 +13319,6 @@
       "shap_global_local_bar_beeswarm"
     ],
     "learning_status": "learned_shap_global_local_bar_beeswarm_gap_recorded",
-    "case_study_dir": ".workflow/case_studies/case_059_shap_global_local_bar_beeswarm",
-    "case_study_report": ".workflow/case_studies/case_059_shap_global_local_bar_beeswarm/comparison_report.json",
-    "reference_used": ".workflow/case_studies/case_059_shap_global_local_bar_beeswarm/references/reference_01.png",
-    "replica": ".workflow/case_studies/case_059_shap_global_local_bar_beeswarm/case_059_replica_shap_global_local_bar_beeswarm.png",
-    "comparison": ".workflow/case_studies/case_059_shap_global_local_bar_beeswarm/comparison_report.json",
     "learned_essence": [
       "Global importance and local SHAP direction must share one feature order; otherwise the left/right comparison becomes misleading.",
       "A narrow dedicated colorbar slot is preferable to an in-axis colorbar for dense beeswarm rows.",
@@ -13825,11 +13571,6 @@
       "density_parity_matrix"
     ],
     "learning_status": "learned_density_scatter_model_region_matrix_gap_recorded",
-    "case_study_dir": ".workflow/case_studies/case_060_density_scatter_model_region_matrix",
-    "case_study_report": ".workflow/case_studies/case_060_density_scatter_model_region_matrix/comparison_report.json",
-    "reference_used": ".workflow/case_studies/case_060_density_scatter_model_region_matrix/references/reference_03.png",
-    "replica": ".workflow/case_studies/case_060_density_scatter_model_region_matrix/case_060_replica_density_scatter_model_region_matrix.png",
-    "comparison": ".workflow/case_studies/case_060_density_scatter_model_region_matrix/comparison_report.json",
     "learned_essence": [
       "A 3x6 GridSpec with five equal data columns and a 0.08 colorbar column supports a 3x5 model-by-region density scatter matrix.",
       "KDE density values should be sorted ascending before scatter drawing so dense cores are painted last and remain visible.",
@@ -14069,11 +13810,6 @@
       "greenhouse_flux_raincloud"
     ],
     "learning_status": "learned_greenhouse_flux_raincloud_gap_recorded",
-    "case_study_dir": ".workflow/case_studies/case_061_greenhouse_flux_raincloud",
-    "case_study_report": ".workflow/case_studies/case_061_greenhouse_flux_raincloud/comparison_report.json",
-    "reference_used": ".workflow/case_studies/case_061_greenhouse_flux_raincloud/references/reference_01.png",
-    "replica": ".workflow/case_studies/case_061_greenhouse_flux_raincloud/case_061_replica_greenhouse_flux_raincloud.png",
-    "comparison": ".workflow/case_studies/case_061_greenhouse_flux_raincloud/comparison_report.json",
     "learned_essence": [
       "Raincloud panels should layer the density cloud below jittered raw observations and a narrow boxplot above both.",
       "Half-violin density should be offset to one side of the category center so jittered points can occupy the opposite side.",
@@ -14311,11 +14047,6 @@
       "pdp_interaction_contour_matrix"
     ],
     "learning_status": "learned_2d_pdp_interaction_contours_gap_recorded",
-    "case_study_dir": ".workflow/case_studies/case_062_2d_pdp_interaction_contours",
-    "case_study_report": ".workflow/case_studies/case_062_2d_pdp_interaction_contours/comparison_report.json",
-    "reference_used": ".workflow/case_studies/case_062_2d_pdp_interaction_contours/references/reference_01.png",
-    "replica": ".workflow/case_studies/case_062_2d_pdp_interaction_contours/case_062_replica_2d_pdp_interaction_contours.png",
-    "comparison": ".workflow/case_studies/case_062_2d_pdp_interaction_contours/comparison_report.json",
     "learned_essence": [
       "2D-PDP interaction matrices should use a shared color scale across panels before comparing high-response regions.",
       "Filled contour backgrounds communicate the response surface, while Q1/median/Q3 contour lines encode control boundaries.",
@@ -14526,11 +14257,6 @@
       "gs_xgboost_shap_grouped_bar_beeswarm"
     ],
     "learning_status": "learned_gs_xgboost_grouped_shap_composite_gap_recorded",
-    "case_study_dir": ".workflow/case_studies/case_063_gs_xgboost_shap_grouped_bar_beeswarm",
-    "case_study_report": ".workflow/case_studies/case_063_gs_xgboost_shap_grouped_bar_beeswarm/comparison_report.json",
-    "reference_used": ".workflow/case_studies/case_063_gs_xgboost_shap_grouped_bar_beeswarm/references/reference_01.png",
-    "replica": ".workflow/case_studies/case_063_gs_xgboost_shap_grouped_bar_beeswarm/case_063_replica_gs_xgboost_shap_grouped_bar_beeswarm.png",
-    "comparison": ".workflow/case_studies/case_063_gs_xgboost_shap_grouped_bar_beeswarm/comparison_report.json",
     "learned_essence": [
       "GS-XGBoost SHAP composites can merge many binary structure descriptors into one grouped feature before ranking.",
       "Feature-group brackets on the importance lane explain physical categories without repeating category labels in the beeswarm.",
@@ -14765,11 +14491,6 @@
       "nsga2_3d_pareto_front"
     ],
     "learning_status": "learned_nsga2_3d_pareto_front_gap_recorded",
-    "case_study_dir": ".workflow/case_studies/case_064_nsga2_3d_pareto_front",
-    "case_study_report": ".workflow/case_studies/case_064_nsga2_3d_pareto_front/comparison_report.json",
-    "reference_used": ".workflow/case_studies/case_064_nsga2_3d_pareto_front/references/reference_02.png",
-    "replica": ".workflow/case_studies/case_064_nsga2_3d_pareto_front/case_064_replica_nsga2_3d_pareto_front.png",
-    "comparison": ".workflow/case_studies/case_064_nsga2_3d_pareto_front/comparison_report.json",
     "learned_essence": [
       "3D Pareto front boards need shared axis limits and a shared view angle before comparing optimization groups.",
       "Dense semi-transparent Pareto points should form the front surface while optimal selections use high-zorder red star markers.",
@@ -14974,11 +14695,6 @@
       "spearman_ml_evaluation_board"
     ],
     "learning_status": "learned_spearman_ml_evaluation_board_gap_recorded",
-    "case_study_dir": ".workflow/case_studies/case_065_spearman_ml_evaluation_board",
-    "case_study_report": ".workflow/case_studies/case_065_spearman_ml_evaluation_board/comparison_report.json",
-    "reference_used": ".workflow/case_studies/case_065_spearman_ml_evaluation_board/references/reference_01.png",
-    "replica": ".workflow/case_studies/case_065_spearman_ml_evaluation_board/case_065_replica_spearman_ml_evaluation_board.png",
-    "comparison": ".workflow/case_studies/case_065_spearman_ml_evaluation_board/comparison_report.json",
     "learned_essence": [
       "A 2x2 ML evaluation board can close the evidence loop: correlation structure, explanation, fit accuracy, and external robustness.",
       "Spearman heatmaps need both numeric r labels and significance stars to support multicollinearity claims.",
@@ -15217,11 +14933,6 @@
       "environment_radar_comparison"
     ],
     "learning_status": "learned_environment_radar_comparison_gap_recorded",
-    "case_study_dir": ".workflow/case_studies/case_066_environment_radar_comparison",
-    "case_study_report": ".workflow/case_studies/case_066_environment_radar_comparison/comparison_report.json",
-    "reference_used": ".workflow/case_studies/case_066_environment_radar_comparison/references/reference_01.png",
-    "replica": ".workflow/case_studies/case_066_environment_radar_comparison/case_066_replica_environment_radar_comparison.png",
-    "comparison": ".workflow/case_studies/case_066_environment_radar_comparison/comparison_report.json",
     "learned_essence": [
       "Environmental radar comparisons need a closed-loop angle array so the polygon shape carries the evidence.",
       "Wet/dry or condition pairs share the same 0-1 radial scale and identical axis order across every panel.",
@@ -15463,11 +15174,6 @@
       "distance_decay_grouped_regression"
     ],
     "learning_status": "learned_distance_decay_grouped_regression_gap_recorded",
-    "case_study_dir": ".workflow/case_studies/case_067_distance_decay_regression",
-    "case_study_report": ".workflow/case_studies/case_067_distance_decay_regression/comparison_report.json",
-    "reference_used": ".workflow/case_studies/case_067_distance_decay_regression/references/reference_01.png",
-    "replica": ".workflow/case_studies/case_067_distance_decay_regression/case_067_replica_distance_decay_regression.png",
-    "comparison": ".workflow/case_studies/case_067_distance_decay_regression/comparison_report.json",
     "learned_essence": [
       "Distance-decay plots are slope-comparison figures: the key evidence is the difference between group regression slopes.",
       "Low-alpha scatter keeps dense pairwise-distance points subordinate to the fitted decay trends.",
@@ -15710,11 +15416,6 @@
       "feature_importance_bar_board"
     ],
     "learning_status": "learned_feature_importance_bar_board_gap_recorded",
-    "case_study_dir": ".workflow/case_studies/case_068_feature_importance_bar_board",
-    "case_study_report": ".workflow/case_studies/case_068_feature_importance_bar_board/comparison_report.json",
-    "reference_used": ".workflow/case_studies/case_068_feature_importance_bar_board/references/reference_01.png",
-    "replica": ".workflow/case_studies/case_068_feature_importance_bar_board/case_068_replica_feature_importance_bar_board.png",
-    "comparison": ".workflow/case_studies/case_068_feature_importance_bar_board/comparison_report.json",
     "learned_essence": [
       "Feature-importance boards can pair absolute horizontal MDA rankings with condition-wise stacked percentage bars.",
       "Stacked percentage panels need explicit grouping gaps when one axis contains multiple physical environments.",
@@ -15944,11 +15645,6 @@
       "hydrology_density_parity_matrix"
     ],
     "learning_status": "learned_hydrology_density_parity_matrix_gap_recorded",
-    "case_study_dir": ".workflow/case_studies/case_069_hydrology_density_parity_matrix",
-    "case_study_report": ".workflow/case_studies/case_069_hydrology_density_parity_matrix/comparison_report.json",
-    "reference_used": ".workflow/case_studies/case_069_hydrology_density_parity_matrix/references/reference_01.png",
-    "replica": ".workflow/case_studies/case_069_hydrology_density_parity_matrix/case_069_replica_hydrology_density_parity_matrix.png",
-    "comparison": ".workflow/case_studies/case_069_hydrology_density_parity_matrix/comparison_report.json",
     "learned_essence": [
       "Hydrology density parity matrices compare basin rows against model-mechanism columns under shared observed/simulated axes.",
       "KDE density sorting is essential in each cell so dense prediction cores remain visible over sparse points.",
@@ -16192,11 +15888,6 @@
       "prediction_shap_pdp_board"
     ],
     "learning_status": "learned_prediction_shap_pdp_board_gap_recorded",
-    "case_study_dir": ".workflow/case_studies/case_070_prediction_shap_pdp_board",
-    "case_study_report": ".workflow/case_studies/case_070_prediction_shap_pdp_board/comparison_report.json",
-    "reference_used": ".workflow/case_studies/case_070_prediction_shap_pdp_board/references/reference_01.png",
-    "replica": ".workflow/case_studies/case_070_prediction_shap_pdp_board/case_070_replica_prediction_shap_pdp_board.png",
-    "comparison": ".workflow/case_studies/case_070_prediction_shap_pdp_board/comparison_report.json",
     "learned_essence": [
       "Prediction-plus-explanation boards should move from model validity to model attribution in one 2x2 layout.",
       "Parity panels need an equal-aspect y=x reference and an in-axes metric box before residual or SHAP interpretation.",
@@ -16413,10 +16104,6 @@
       "pso_shap_optimization_framework"
     ],
     "learning_status": "duplicate_markdown_covered_by_case_006",
-    "learned_case": "case_006_pso_shap_optimization_framework",
-    "case_study_dir": ".workflow/case_studies/case_071_pso_shap_framework_audit",
-    "case_study_report": ".workflow/case_studies/case_071_pso_shap_framework_audit/comparison_report.json",
-    "covered_by": ".workflow/case_studies/case_006_pso_shap_optimization_framework/case_006_report.json",
     "learned_essence": [
       "This markdown is a framework bundle rather than a new chart family.",
       "The required user-facing story is prediction -> optimization -> explanation -> decision.",
@@ -16656,11 +16343,6 @@
       "polar_comparison_signature"
     ],
     "learning_status": "learned_nature_radar_canonical_gap_recorded",
-    "case_study_dir": ".workflow/case_studies/case_072_nature_radar_canonical",
-    "case_study_report": ".workflow/case_studies/case_072_nature_radar_canonical/comparison_report.json",
-    "reference_used": "markdown remote image evidence, first figure at line 11",
-    "replica": ".claude/skills/scifig-generate/template-mining/07-techniques/radar.md#full-reference-implementation",
-    "comparison": ".workflow/case_studies/case_072_nature_radar_canonical/comparison_report.json",
     "learned_essence": [
       "Nature-style radar charts must replace circular polar grids with hand-drawn polygon rings and spokes.",
       "Different physical units belong on normalized spokes, but the original physical limits should stay visible as max-limit annotations.",
@@ -16910,11 +16592,6 @@
       "triangular_correlation_heatmap"
     ],
     "learning_status": "learned_triangular_correlation_heatmap_gap_recorded",
-    "case_study_dir": ".workflow/case_studies/case_073_triangular_correlation_heatmap",
-    "case_study_report": ".workflow/case_studies/case_073_triangular_correlation_heatmap/comparison_report.json",
-    "reference_used": "markdown remote image evidence, first figure at line 17",
-    "replica": "markdown code blocks plus promoted triangular heatmap contract",
-    "comparison": ".workflow/case_studies/case_073_triangular_correlation_heatmap/comparison_report.json",
     "learned_essence": [
       "Triangular correlation heatmaps solve matrix redundancy by masking the upper triangle and using the freed space for grouping structure.",
       "P-value stars belong inside cells only when they come from supplied p-values or raw data.",
@@ -17169,11 +16846,6 @@
       "stacked_violin_metric_board"
     ],
     "learning_status": "learned_stacked_violin_metric_board_gap_recorded",
-    "case_study_dir": ".workflow/case_studies/case_074_stacked_violin_metric_board",
-    "case_study_report": ".workflow/case_studies/case_074_stacked_violin_metric_board/comparison_report.json",
-    "reference_used": "markdown remote image evidence, first figure at line 19",
-    "replica": "markdown code blocks plus promoted stacked violin contract",
-    "comparison": ".workflow/case_studies/case_074_stacked_violin_metric_board/comparison_report.json",
     "learned_essence": [
       "Stacked violin metric boards compare model stability across incompatible metrics by sharing x positions while keeping metric-specific y scales.",
       "The layer order is full violin first, narrow white boxplot second, red median point third.",
@@ -17389,13 +17061,7 @@
       "polar_spoke_tick_labels"
     ],
     "learning_status": "duplicate_markdown_covered_by_case_001",
-    "learned_case": "case_075_hollow_highlight_radar_duplicate",
-    "case_study_dir": ".workflow/case_studies/case_075_hollow_highlight_radar_duplicate",
-    "case_study_report": ".workflow/case_studies/case_075_hollow_highlight_radar_duplicate/comparison_report.json",
     "duplicate_of": "case_001_hollow_highlight_radar",
-    "reference_used": "markdown remote image evidence, first figure at line 18; original replica evidence from case 001",
-    "replica": ".workflow/case_studies/case_001_hollow_highlight_radar/case_001_replica_hollow_highlight_radar.png",
-    "comparison": ".workflow/case_studies/case_001_hollow_highlight_radar/case_001_reference_vs_replica.png",
     "learned_essence": [
       "Same Markdown as Case 001, so treat this queue pass as a duplicate audit rather than a new motif.",
       "Use the hollow-center radar route: metric-specific center subtraction, polygon polar grid, spoke tick labels, and glass marker stack.",
@@ -17634,12 +17300,6 @@
       "hollow_jitter_boxplot"
     ],
     "learning_status": "learned_gradient_box_metric_dashboard_gap_recorded",
-    "learned_case": "case_076_gradient_box_metric_dashboard",
-    "case_study_dir": ".workflow/case_studies/case_076_gradient_box_metric_dashboard",
-    "case_study_report": ".workflow/case_studies/case_076_gradient_box_metric_dashboard/comparison_report.json",
-    "reference_used": ".workflow/case_studies/case_076_gradient_box_metric_dashboard/references/ref_01.png",
-    "replica": ".workflow/case_studies/case_076_gradient_box_metric_dashboard/case_076_replica_gradient_box_metric_dashboard.png",
-    "comparison": ".workflow/case_studies/case_076_gradient_box_metric_dashboard/case_076_reference_vs_replica.png",
     "learned_essence": [
       "2x2 metric dashboard with three active metric panels and a lower-right manual legend cell.",
       "Each algorithm repeats a stable color across R2, MAE, and RMSE while each metric keeps an independent y-axis scale.",
@@ -17886,12 +17546,6 @@
       "top_group_rule_labels"
     ],
     "learning_status": "learned_cell_marker_bar_scatter_gap_recorded",
-    "learned_case": "case_077_cell_marker_bar_scatter",
-    "case_study_dir": ".workflow/case_studies/case_077_cell_marker_bar_scatter",
-    "case_study_report": ".workflow/case_studies/case_077_cell_marker_bar_scatter/comparison_report.json",
-    "reference_used": ".workflow/case_studies/case_077_cell_marker_bar_scatter/references/ref_01.png",
-    "replica": ".workflow/case_studies/case_077_cell_marker_bar_scatter/case_077_replica_cell_marker_bar_scatter.png",
-    "comparison": ".workflow/case_studies/case_077_cell_marker_bar_scatter/case_077_reference_vs_replica.png",
     "learned_essence": [
       "Single-panel Cell-style marker composition chart with semantic dorsal/ventral spacing created by non-uniform x positions.",
       "Layer order is mean bar, black error bar, then jittered raw samples on top with black marker edges.",
@@ -18207,12 +17861,6 @@
       "quartile_contour_boundaries"
     ],
     "learning_status": "learned_xgboost_pdp_contour_matrix_variant",
-    "learned_case": "case_078_xgboost_pdp_contour_matrix",
-    "case_study_dir": ".workflow/case_studies/case_078_xgboost_pdp_contour_matrix",
-    "case_study_report": ".workflow/case_studies/case_078_xgboost_pdp_contour_matrix/comparison_report.json",
-    "reference_used": ".workflow/case_studies/case_078_xgboost_pdp_contour_matrix/references/ref_01.png",
-    "replica": ".workflow/case_studies/case_078_xgboost_pdp_contour_matrix/case_078_replica_xgboost_pdp_contour_matrix.png",
-    "comparison": ".workflow/case_studies/case_078_xgboost_pdp_contour_matrix/case_078_reference_vs_replica.png",
     "learned_essence": [
       "Same 2D-PDP contour family as Case 062, but this article adds an XGBoost partial_dependence data-flow variant.",
       "Panel count follows the supplied feature-pair list; three feature pairs render as a 1x3 matrix instead of a padded 2x2 board.",
@@ -18555,12 +18203,6 @@
       "stage_boxplot_summary"
     ],
     "learning_status": "learned_biodegradation_kinetics_validation_gap_recorded",
-    "learned_case": "case_079_biodegradation_kinetics_validation",
-    "case_study_dir": ".workflow/case_studies/case_079_biodegradation_kinetics_validation",
-    "case_study_report": ".workflow/case_studies/case_079_biodegradation_kinetics_validation/comparison_report.json",
-    "reference_used": ".workflow/case_studies/case_079_biodegradation_kinetics_validation/references/ref_01.png",
-    "replica": ".workflow/case_studies/case_079_biodegradation_kinetics_validation/case_079_replica_biodegradation_kinetics_validation.png",
-    "comparison": ".workflow/case_studies/case_079_biodegradation_kinetics_validation/case_079_reference_vs_replica.png",
     "learned_essence": [
       "2x2 microcosm validation board links model-derived mechanism claims to long-term operation and short-term kinetics.",
       "Panel A uses twinx to bind influent concentration scatter and removal-efficiency lines on the same day axis.",
@@ -18587,12 +18229,6 @@
       "upper_triangle_correlation_tiles"
     ],
     "learning_status": "learned_spearman_kde_pairplot_matrix_variant",
-    "learned_case": "case_080_spearman_kde_pairplot_matrix",
-    "case_study_dir": ".workflow/case_studies/case_080_spearman_kde_pairplot_matrix",
-    "case_study_report": ".workflow/case_studies/case_080_spearman_kde_pairplot_matrix/comparison_report.json",
-    "reference_used": ".workflow/case_studies/case_080_spearman_kde_pairplot_matrix/references/ref_01.png",
-    "replica": ".workflow/case_studies/case_080_spearman_kde_pairplot_matrix/case_080_replica_spearman_kde_pairplot_matrix.png",
-    "comparison": ".workflow/case_studies/case_080_spearman_kde_pairplot_matrix/case_080_reference_vs_replica.png",
     "journals": [],
     "chart_families": [
       "heatmap_pairwise",
@@ -18894,12 +18530,6 @@
       "polygon_polar_grid"
     ],
     "learning_status": "learned_polar_waffle_feature_importance",
-    "learned_case": "case_086_polar_waffle_feature_importance",
-    "case_study_dir": ".workflow/case_studies/case_086_polar_waffle_feature_importance",
-    "case_study_report": ".workflow/case_studies/case_086_polar_waffle_feature_importance/comparison_report.json",
-    "reference_used": ".workflow/case_studies/case_086_polar_waffle_feature_importance/references/ref_01.png",
-    "replica": ".workflow/case_studies/case_086_polar_waffle_feature_importance/case_086_replica_polar_waffle_feature_importance.png",
-    "comparison": ".workflow/case_studies/case_086_polar_waffle_feature_importance/case_086_reference_vs_replica.png",
     "journals": [],
     "chart_families": [
       "radar",
@@ -19578,12 +19208,6 @@
       "transparent_3d_panes"
     ],
     "learning_status": "learned_pdp_3d_surface_panel",
-    "learned_case": "case_087_pdp_3d_surface_panel",
-    "evidence_dir": ".workflow/case_studies/case_087_pdp_3d_surface_panel",
-    "reference_image": ".workflow/case_studies/case_087_pdp_3d_surface_panel/references/ref_01.png",
-    "replica_image": ".workflow/case_studies/case_087_pdp_3d_surface_panel/case_087_replica_pdp_3d_surface_panel.png",
-    "comparison_image": ".workflow/case_studies/case_087_pdp_3d_surface_panel/case_087_reference_vs_replica.png",
-    "comparison_report": ".workflow/case_studies/case_087_pdp_3d_surface_panel/comparison_report.json",
     "visual_qa": {
       "surface_count": 1,
       "contour_projection_count": 1,
@@ -19718,9 +19342,6 @@
       "random_forest_pdp_mechanism"
     ],
     "learning_status": "empty_markdown_mapped_to_existing_pdp_threshold",
-    "learned_case": "case_088_empty_markdown_pdp_threshold_audit",
-    "evidence_dir": ".workflow/case_studies/case_088_empty_markdown_pdp_threshold_audit",
-    "comparison_report": ".workflow/case_studies/case_088_empty_markdown_pdp_threshold_audit/comparison_report.json",
     "known_gap": "source Markdown is 0 bytes; audit closure only, no visual replication possible",
     "visual_qa": {
       "empty_source_file": true,
@@ -19904,12 +19525,6 @@
       "random_forest_pdp_mechanism"
     ],
     "learning_status": "learned_pdp_ice_threshold_grid",
-    "learned_case": "case_089_pdp_ice_threshold_grid",
-    "evidence_dir": ".workflow/case_studies/case_089_pdp_ice_threshold_grid",
-    "reference_used": "no embedded image links; visual contract extracted from article text and code fences",
-    "replica_image": ".workflow/case_studies/case_089_pdp_ice_threshold_grid/case_089_replica_pdp_ice_threshold_grid.png",
-    "comparison_image": ".workflow/case_studies/case_089_pdp_ice_threshold_grid/case_089_reference_constraints_vs_replica.png",
-    "comparison_report": ".workflow/case_studies/case_089_pdp_ice_threshold_grid/comparison_report.json",
     "visual_qa": {
       "panel_count": 6,
       "ice_line_count": 240,
@@ -20103,12 +19718,6 @@
       "nodata_class_legend"
     ],
     "learning_status": "learned_ttop_permafrost_raster_map",
-    "learned_case": "case_090_ttop_permafrost_raster_map",
-    "evidence_dir": ".workflow/case_studies/case_090_ttop_permafrost_raster_map",
-    "reference_used": "no embedded image links; visual contract extracted from rasterio/numpy TTOP code and article title",
-    "replica_image": ".workflow/case_studies/case_090_ttop_permafrost_raster_map/case_090_replica_ttop_permafrost_raster_map.png",
-    "comparison_image": ".workflow/case_studies/case_090_ttop_permafrost_raster_map/case_090_reference_constraints_vs_replica.png",
-    "comparison_report": ".workflow/case_studies/case_090_ttop_permafrost_raster_map/comparison_report.json",
     "visual_qa": {
       "panel_count": 2,
       "continuous_raster_panel_count": 1,
@@ -20279,12 +19888,6 @@
       "local_parameter_colorbars"
     ],
     "learning_status": "learned_freeze_thaw_raster_parameter_atlas",
-    "learned_case": "case_091_freeze_thaw_raster_parameters",
-    "evidence_dir": ".workflow/case_studies/case_091_freeze_thaw_raster_parameters",
-    "reference_used": "no embedded image links; visual contract extracted from rasterio/numpy daily raster-stack code",
-    "replica_image": ".workflow/case_studies/case_091_freeze_thaw_raster_parameters/case_091_replica_freeze_thaw_raster_parameters.png",
-    "comparison_image": ".workflow/case_studies/case_091_freeze_thaw_raster_parameters/case_091_reference_constraints_vs_replica.png",
-    "comparison_report": ".workflow/case_studies/case_091_freeze_thaw_raster_parameters/comparison_report.json",
     "visual_qa": {
       "parameter_panel_count": 4,
       "freeze_time_panel": true,
@@ -20508,12 +20111,6 @@
       "hml_density_colorbar"
     ],
     "learning_status": "learned_density_linear_regression_fit",
-    "learned_case": "case_092_density_linear_regression_fit",
-    "evidence_paths": {
-      "replica": ".workflow/case_studies/case_092_density_linear_regression_fit/case_092_replica_density_linear_regression_fit.png",
-      "comparison": ".workflow/case_studies/case_092_density_linear_regression_fit/case_092_reference_constraints_vs_replica.png",
-      "report": ".workflow/case_studies/case_092_density_linear_regression_fit/comparison_report.json"
-    },
     "visual_qa": {
       "density_scatter_count": 1,
       "point_count": 370,
@@ -20538,12 +20135,7 @@
       "reference_image_available": false,
       "replica_size_bytes": 326004,
       "comparison_size_bytes": 428390
-    },
-    "case_study_report": ".workflow/case_studies/case_092_density_linear_regression_fit/comparison_report.json",
-    "replica": ".workflow/case_studies/case_092_density_linear_regression_fit/case_092_replica_density_linear_regression_fit.png",
-    "comparison": ".workflow/case_studies/case_092_density_linear_regression_fit/case_092_reference_constraints_vs_replica.png",
-    "case_study_dir": ".workflow/case_studies/case_092_density_linear_regression_fit",
-    "reference_used": "reference constraints extracted from source Markdown images/code"
+    }
   },
   {
     "id": "Python绘制箱型图与回归线，一眼看穿数据趋势！_1778682795",
@@ -20763,12 +20355,6 @@
       "series_colored_kr_annotations"
     ],
     "learning_status": "learned_grouped_box_median_regression",
-    "learned_case": "case_093_grouped_box_median_regression",
-    "evidence_paths": {
-      "replica": ".workflow/case_studies/case_093_grouped_box_median_regression/case_093_replica_grouped_box_median_regression.png",
-      "comparison": ".workflow/case_studies/case_093_grouped_box_median_regression/case_093_reference_constraints_vs_replica.png",
-      "report": ".workflow/case_studies/case_093_grouped_box_median_regression/comparison_report.json"
-    },
     "visual_qa": {
       "interval_count": 7,
       "box_series_count": 2,
@@ -20790,12 +20376,7 @@
       "slope_ta": -0.17295569235741143,
       "abs_r_ts": 0.9983972102670322,
       "abs_r_ta": 0.9040332298478587
-    },
-    "case_study_report": ".workflow/case_studies/case_093_grouped_box_median_regression/comparison_report.json",
-    "replica": ".workflow/case_studies/case_093_grouped_box_median_regression/case_093_replica_grouped_box_median_regression.png",
-    "comparison": ".workflow/case_studies/case_093_grouped_box_median_regression/case_093_reference_constraints_vs_replica.png",
-    "case_study_dir": ".workflow/case_studies/case_093_grouped_box_median_regression",
-    "reference_used": "reference constraints extracted from source Markdown images/code"
+    }
   },
   {
     "id": "Python脚本批量分析栅格数据(最大值、最小值、平均值、标准差，检查是否存在缺失值)，结果直达Ex_1778682066",
@@ -20959,13 +20540,6 @@
       "excel_source_data_export"
     ],
     "learning_status": "learned_raster_zonal_statistics_export",
-    "learned_case": "case_094_raster_zonal_statistics_export",
-    "evidence_paths": {
-      "replica": ".workflow/case_studies/case_094_raster_zonal_statistics_export/case_094_replica_raster_statistics_excel_preview.png",
-      "comparison": ".workflow/case_studies/case_094_raster_zonal_statistics_export/case_094_reference_constraints_vs_replica.png",
-      "report": ".workflow/case_studies/case_094_raster_zonal_statistics_export/comparison_report.json",
-      "excel_preview": ".workflow/case_studies/case_094_raster_zonal_statistics_export/case_094_raster_statistics_preview.xlsx"
-    },
     "visual_qa": {
       "reference_image_available": false,
       "visual_chart_present": false,
@@ -20987,12 +20561,7 @@
       "replica_size_bytes": 99960,
       "comparison_size_bytes": 159510,
       "excel_size_bytes": 5276
-    },
-    "case_study_report": ".workflow/case_studies/case_094_raster_zonal_statistics_export/comparison_report.json",
-    "replica": ".workflow/case_studies/case_094_raster_zonal_statistics_export/case_094_replica_raster_statistics_excel_preview.png",
-    "comparison": ".workflow/case_studies/case_094_raster_zonal_statistics_export/case_094_reference_constraints_vs_replica.png",
-    "case_study_dir": ".workflow/case_studies/case_094_raster_zonal_statistics_export",
-    "reference_used": "reference constraints extracted from source Markdown images/code"
+    }
   },
   {
     "id": "Python：一键生成专业级雷达图！_1778682717",
@@ -21197,12 +20766,6 @@
       "figure_side_legend"
     ],
     "learning_status": "learned_manual_cartesian_model_metric_radar",
-    "learned_case": "case_095_manual_cartesian_model_metric_radar",
-    "evidence_paths": {
-      "replica": ".workflow/case_studies/case_095_manual_cartesian_model_metric_radar/case_095_replica_manual_cartesian_model_metric_radar.png",
-      "comparison": ".workflow/case_studies/case_095_manual_cartesian_model_metric_radar/case_095_reference_constraints_vs_replica.png",
-      "report": ".workflow/case_studies/case_095_manual_cartesian_model_metric_radar/comparison_report.json"
-    },
     "visual_qa": {
       "manual_cartesian_axes": true,
       "polar_axes_used": false,
@@ -21221,12 +20784,7 @@
       "reference_image_available": false,
       "replica_size_bytes": 345304,
       "comparison_size_bytes": 267638
-    },
-    "case_study_report": ".workflow/case_studies/case_095_manual_cartesian_model_metric_radar/comparison_report.json",
-    "replica": ".workflow/case_studies/case_095_manual_cartesian_model_metric_radar/case_095_replica_manual_cartesian_model_metric_radar.png",
-    "comparison": ".workflow/case_studies/case_095_manual_cartesian_model_metric_radar/case_095_reference_constraints_vs_replica.png",
-    "case_study_dir": ".workflow/case_studies/case_095_manual_cartesian_model_metric_radar",
-    "reference_used": "reference constraints extracted from source Markdown images/code"
+    }
   },
   {
     "id": "【Python绘图！用Matplotlib+Statsmodels打造带边缘直方图的炫酷散点回归分析_1778682541",
@@ -21461,12 +21019,6 @@
       "metric_text_box"
     ],
     "learning_status": "learned_train_val_marginal_ols_ci",
-    "learned_case": "case_096_train_val_marginal_ols_ci",
-    "evidence_paths": {
-      "replica": ".workflow/case_studies/case_096_train_val_marginal_ols_ci/case_096_replica_train_val_marginal_ols_ci.png",
-      "comparison": ".workflow/case_studies/case_096_train_val_marginal_ols_ci/case_096_reference_constraints_vs_replica.png",
-      "report": ".workflow/case_studies/case_096_train_val_marginal_ols_ci/comparison_report.json"
-    },
     "visual_qa": {
       "grid_shape": "2x2",
       "main_scatter_count": 2,
@@ -21485,12 +21037,7 @@
       "statsmodels_used": true,
       "replica_size_bytes": 292727,
       "comparison_size_bytes": 334284
-    },
-    "case_study_report": ".workflow/case_studies/case_096_train_val_marginal_ols_ci/comparison_report.json",
-    "replica": ".workflow/case_studies/case_096_train_val_marginal_ols_ci/case_096_replica_train_val_marginal_ols_ci.png",
-    "comparison": ".workflow/case_studies/case_096_train_val_marginal_ols_ci/case_096_reference_constraints_vs_replica.png",
-    "case_study_dir": ".workflow/case_studies/case_096_train_val_marginal_ols_ci",
-    "reference_used": "reference constraints extracted from source Markdown images/code"
+    }
   },
   {
     "id": "告别枯燥表格！Python绘制超吸睛的相关性气泡图_1778681959",
@@ -21677,12 +21224,6 @@
       "external_correlation_legends"
     ],
     "learning_status": "learned_upper_sig_lower_bubble_correlation",
-    "learned_case": "case_097_upper_sig_lower_bubble_correlation",
-    "evidence_paths": {
-      "replica": ".workflow/case_studies/case_097_upper_sig_lower_bubble_correlation/case_097_replica_upper_sig_lower_bubble_correlation.png",
-      "comparison": ".workflow/case_studies/case_097_upper_sig_lower_bubble_correlation/case_097_reference_constraints_vs_replica.png",
-      "report": ".workflow/case_studies/case_097_upper_sig_lower_bubble_correlation/comparison_report.json"
-    },
     "visual_qa": {
       "correlation_method": "spearman",
       "matrix_size": 8,
@@ -21698,12 +21239,7 @@
       "reference_image_available": false,
       "replica_size_bytes": 171752,
       "comparison_size_bytes": 203415
-    },
-    "case_study_report": ".workflow/case_studies/case_097_upper_sig_lower_bubble_correlation/comparison_report.json",
-    "replica": ".workflow/case_studies/case_097_upper_sig_lower_bubble_correlation/case_097_replica_upper_sig_lower_bubble_correlation.png",
-    "comparison": ".workflow/case_studies/case_097_upper_sig_lower_bubble_correlation/case_097_reference_constraints_vs_replica.png",
-    "case_study_dir": ".workflow/case_studies/case_097_upper_sig_lower_bubble_correlation",
-    "reference_used": "reference constraints extracted from source Markdown images/code"
+    }
   },
   {
     "id": "精准复现顶刊插图：Python实战零售食品环境与肥胖率关联气泡图！_1778682618",
@@ -21903,12 +21439,6 @@
       "spearman_r_annotation"
     ],
     "learning_status": "learned_association_bubble_scatter",
-    "learned_case": "case_098_food_environment_obesity_bubble_scatter",
-    "evidence_paths": {
-      "replica": ".workflow/case_studies/case_098_food_environment_obesity_bubble_scatter/case_098_replica_food_environment_obesity_bubble_scatter.png",
-      "comparison": ".workflow/case_studies/case_098_food_environment_obesity_bubble_scatter/case_098_reference_constraints_vs_replica.png",
-      "report": ".workflow/case_studies/case_098_food_environment_obesity_bubble_scatter/comparison_report.json"
-    },
     "visual_qa": {
       "bubble_scatter_count": 1,
       "category_count": 3,
@@ -21925,12 +21455,7 @@
       "reference_image_available": false,
       "replica_size_bytes": 316505,
       "comparison_size_bytes": 269115
-    },
-    "case_study_report": ".workflow/case_studies/case_098_food_environment_obesity_bubble_scatter/comparison_report.json",
-    "replica": ".workflow/case_studies/case_098_food_environment_obesity_bubble_scatter/case_098_replica_food_environment_obesity_bubble_scatter.png",
-    "comparison": ".workflow/case_studies/case_098_food_environment_obesity_bubble_scatter/case_098_reference_constraints_vs_replica.png",
-    "case_study_dir": ".workflow/case_studies/case_098_food_environment_obesity_bubble_scatter",
-    "reference_used": "reference constraints extracted from source Markdown images/code"
+    }
   },
   {
     "id": "轻松修复遥感影像的缺失！使用历史同期数据来填补！_1778682387",
@@ -22094,12 +21619,6 @@
       "metadata_preserving_geotiff_export"
     ],
     "learning_status": "learned_raster_temporal_nodata_fill",
-    "learned_case": "case_099_raster_temporal_nodata_fill",
-    "case_study_dir": ".workflow/case_studies/case_099_raster_temporal_nodata_fill",
-    "case_study_report": ".workflow/case_studies/case_099_raster_temporal_nodata_fill/comparison_report.json",
-    "reference_used": null,
-    "replica": ".workflow/case_studies/case_099_raster_temporal_nodata_fill/case_099_replica_raster_temporal_nodata_fill.png",
-    "comparison": ".workflow/case_studies/case_099_raster_temporal_nodata_fill/case_099_constraints_vs_replica.png",
     "visual_qa": {
       "reference_image_available": false,
       "visual_chart_present": false,

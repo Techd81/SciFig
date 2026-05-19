@@ -2,9 +2,6 @@
 
 Anchor case: `期刊配图：基于极坐标条形图与华夫饼图拆解机器学习特征重要性（附完整代码）_1778680326`.
 
-Case-086 evidence lives in
-`.workflow/case_studies/case_086_polar_waffle_feature_importance/comparison_report.json`.
-
 ## Learned Essence
 
 This case is an asymmetric explainability board, not a generic radar chart.

@@ -1,7 +1,5 @@
 # Technique: Distance-Decay Regression
 
-Anchor: `期刊配图：基于线性拟合与误差带的距离衰减散点图解析群落空间演变_1777454120`.
-
 Use this when the prompt/data compares community similarity, beta diversity,
 Bray-Curtis similarity, or other ecological similarity metrics against
 geographic distance, especially when periods or treatments such as WDP/NWDP
@@ -42,4 +40,3 @@ bands, and fit-only legend pruning.
 - `exportDpi >= 600`
 
 Evidence path:
-`.workflow/case_studies/case_067_distance_decay_regression/comparison_report.json`.

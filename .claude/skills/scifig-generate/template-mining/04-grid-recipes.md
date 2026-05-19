@@ -119,19 +119,18 @@ ax_left  = fig.add_subplot(gs[0, 0])
 ax_right = fig.add_subplot(gs[0, 1])
 ```
 
-**When to choose asymmetric:** the hero panel carries the headline (scatter+regression); the right panel carries supporting metric/distribution. Anchor: `期刊配图：基于线性拟合与误差带的距离衰减散点图`.
+**When to choose asymmetric:** the hero panel carries the headline (scatter+regression); the right panel carries supporting metric/distribution.
 
 **Nature GAM diagnostic variant:** `GridSpec(1, 2, width_ratios=[1,1], wspace=0.25)`
 with the left panel as log-log smooth relationship and the right panel as residual
-outlier diagnosis. Anchor: `复现 Nature _ Python 绘制广义相加模型 (GAM) 拟合与残差诊断组合图`.
+outlier diagnosis.
 
 **Urban gradient flux boxplot variant:** Case-049 uses
 `plt.subplots(nrows=1, ncols=2, figsize=(10, 4.5), gridspec_kw={"wspace": 0.25})`
 for parallel CH4 and CO2 flux panels. Keep urbanization categories on each
 x-axis, nest season hue inside every category, set a log y-axis on both panels,
 and allow independent gas-specific y scales. Use one shared season legend only
-when both panels reuse the same Cool-dry / Warm-wet palette. Anchor:
-`期刊复现：通过多子图布局对比城市化梯度对气体排放量的非线性影响`.
+when both panels reuse the same Cool-dry / Warm-wet palette.
 Case-061 is the raincloud form of the same environmental flux comparison:
 `plt.subplots(nrows=1, ncols=2, figsize=(12, 5), dpi=300)` plus
 `subplots_adjust(wspace=0.25, bottom=0.15, left=0.08, right=0.95)`. Use it when
@@ -190,20 +189,18 @@ instead of consuming a full GridSpec slot.
 
 **Inset raincloud prediction variant:** `fig.add_gridspec(1, 2, wspace=0.25)`
 with each panel as a true-vs-predicted trajectory and a white residual raincloud
-inset at `[0.55, 0.35, 0.40, 0.35]`. Anchor: `复现顶刊 _ Python绘制“主图+嵌入雨云图”组合，完美展示模型泛化能力`.
+inset at `[0.55, 0.35, 0.40, 0.35]`.
 
 **RF EFI + SHAP donut variant:** Case-052 uses
 `fig.add_gridspec(1, 2, width_ratios=[1.2, 1.6], wspace=0.25)` with
 `figsize=(15, 6)`. The left lane is a horizontal RF EFI importance bar chart;
 the right lane is wider because hollow SHAP donut labels and grey leader lines
-need outside breathing room. Anchor:
-`期刊复现：随机森林(RF)模型驱动的EFI特征重要度条形图与SHAP圆环图可视化`.
+need outside breathing room.
 
 **PCA score decomposition variant:** Case-053 uses a 1x2 horizontal board where
 the left panel is signed PC1-PC3 stacked decomposition and the right panel is
 total-score ranking. Both panels need a visible zero baseline; keep enough
-horizontal room for rotated bar labels. Anchor:
-`期刊配图优化：Python绘制“双面板PCA得分图”，优雅展示多配方综合评价`.
+horizontal room for rotated bar labels.
 
 **Spacing:** `wspace=0.25` for separated panels, `wspace=0.10` when sharing y-axis.
 
@@ -272,7 +269,6 @@ fig, axes = plt.subplots(2, 2, figsize=(11, 9))
 (ax_a, ax_b), (ax_c, ax_d) = axes
 ```
 
-Anchor: `期刊复现：双面板组合图展示特征重要性权重与模型性能演变`, `期刊复现：双Y轴分组柱状与折线组合图`,
 `Python科研绘图：一行代码实现 R² + 95% 置信区间的高级散点图`.
 
 **Panel naming convention** (corpus-consistent):
@@ -342,8 +338,7 @@ Do not compare the right-column percentages as absolute importance values.
 targets such as CH4 and CO2 conversion, and columns for main features such as
 surface area and reaction temperature. Each cell keeps its own secondary-feature
 colorbar; do not normalize color across panels when the secondary feature
-changes. Anchor:
-`期刊复现：通过多面板SHAP依赖图解析特征对转化率的主效应与交互作用`.
+changes.
 
 **Rotated 3x2 SHAP-dependence variant:** Case-039 uses
 `plt.subplots(nrows=3, ncols=2, figsize=(12, 14))` with
@@ -398,12 +393,11 @@ supplied, reduce the grid to the number of real PDP/ICE panels.
 - For target-aligned descriptor scatter matrices: use
   `plt.subplots(2, 3, figsize=(14, 8), sharey=True)` with `wspace=0.10`,
   `hspace=0.30`. Keep every descriptor on its native x-scale and label the
-  shared target y-axis only on the left column. Anchor: `期刊复现：多变量散点图矩阵解析特征与比冲的相关性`.
+  shared target y-axis only on the left column.
 - For multi-model parity grids: use `plt.subplots(2, 3, figsize=(12, 8),
   sharex=True, sharey=True)` with `wspace=0.10`, `hspace=0.15`; add
   figure-level Experimental / Predicted labels, not repeated axis labels in
   every panel. Every panel must keep equal aspect and identical limits.
-  Anchor: `期刊复现：多面板回归预测散点图对比不同模型真实与预测偏差`.
 - For model accuracy + stability boards: Case-081 uses
   `GridSpec(2, 3, figure=fig, wspace=0.35, hspace=0.45)` where each top-row
   cell owns a nested `subgridspec(2, 2, width_ratios=[6, 1],
@@ -422,8 +416,6 @@ fig, axes = plt.subplots(1, 3, figsize=(15, 5), sharey=True)
 ```
 
 `sharey=True` is the default in this layout because the 3 panels usually compare the **same** y-quantity across conditions.
-
-Anchor: `期刊复现：通过多子图布局对比城市化梯度对气体排放量的非线性影响`.
 
 ---
 
@@ -448,8 +440,6 @@ Case-045 `multimetric_model_boxplot` variant:
 - Remove per-axis legends and use a single top-center figure legend when the
   split semantics are identical.
 
-Anchor: `期刊复现：多面板箱线图对比多模型不同评估指标的误差分布`.
-
 ---
 
 ## R4d — Target-wise SHAP importance triptych
@@ -473,8 +463,6 @@ Case-046 `shap_mean_importance_triptych` variant:
   within-target emphasis cue, not a globally comparable magnitude scale.
 - Numeric labels on every bar are mandatory when close-ranked features need
   exact mean `|SHAP|` values.
-
-Anchor: `期刊复现：子图平铺展示比表面积与孔容的全局SHAP值与关键特征排行`.
 
 ---
 
@@ -521,7 +509,7 @@ for i in range(n):
     for j in range(n):
         ax = axes[i][j]
         if i == j:        # diagonal: hist + KDE
-            ax.hist(...); ax.plot(kde(...), zorder=3)
+            ax.hist(..); ax.plot(kde(..), zorder=3)
         elif i < j:       # upper triangle: correlation number on tinted bg
             ax.set_facecolor(BG_FROM_CORR(corr[i,j]))
             ax.text(0.5, 0.5, f"{corr[i,j]:.2f}", ha='center', va='center', transform=ax.transAxes)
@@ -557,7 +545,7 @@ triangle for filled 2D KDE contours rather than scatter/regression cells.
 
 **Hydrology 3x3 density-parity variant:** Case-069 uses
 `fig, axes = plt.subplots(3, 3, figsize=(14, 10), sharex=True, sharey=True)`,
-a figure-level vertical y-label via `fig.text(...)`, and
+a figure-level vertical y-label via `fig.text(..)`, and
 `subplots_adjust(left=0.08, right=0.96, top=0.96, bottom=0.08, wspace=0.35,
 hspace=0.15)`. Rows are basin/region groups, columns are hydrology
 model/mechanism variants, every cell keeps a common observed/simulated axis
@@ -612,8 +600,6 @@ axes = [
 ]
 ```
 
-Anchor: `期刊配图复现 _ Matplotlib 挑战"多面板+三Y轴"组合图`.
-
 **Five-panel SHAP beeswarm matrix variant:** Case-057 uses
 `GridSpec(2, 6, figure=fig, wspace=1.2, hspace=0.4)` with figsize `(24, 12)`.
 The top row spans `[0:2]`, `[2:4]`, and `[4:6]`; the bottom row spans `[1:3]`
@@ -632,8 +618,6 @@ regions_map = {
     "East": (1, slice(3, 5), "e"),
 }
 ```
-
-Anchor: `期刊配图复现 _ Python绘制多面板SHAP蜂群图`.
 
 ---
 
@@ -690,8 +674,6 @@ ax_right = fig.add_subplot(inner[1:, -1], sharey=ax_main)
 ax_top.axis("off"); ax_right.axis("off")
 ```
 
-Anchor: `复现 CEJ 顶刊神图 _ Python 绘制“密度散点+边缘直方图”多面板组合图`.
-
 ### Variant D — nested 2x3 model matrix
 
 Use when: six model/algorithm prediction diagnostics each need their own
@@ -705,8 +687,6 @@ inner = GridSpecFromSubplotSpec(
     wspace=0.05, hspace=0.05,
 )
 ```
-
-Anchor: `Python绘图实战：基于GridSpec构建多面板回归预测与边缘分布组合图`.
 
 ### Variant E — joint residual marginal performance
 
@@ -727,8 +707,6 @@ ax_marg_x = fig.add_subplot(gs[0, 0], sharex=ax_joint)
 ax_marg_y = fig.add_subplot(gs[1, 1], sharey=ax_joint)
 ax_resid = fig.add_subplot(gs[2, 0], sharex=ax_joint)
 ```
-
-Anchor: `期刊复现：通过带边缘密度的联合残差图全面评估预测模型性能`.
 
 The bottom residual axis must share x with the main parity axis; independent
 x-limits can hide or invent heteroscedasticity. Top/right KDE sidecars are split
@@ -780,8 +758,6 @@ ax_br     = fig.add_subplot(gs[1, 1])
 
 Use when: hero overview on top, two comparison panels below.
 
-Anchor: SHAP composite cases — top = global importance bar, bottom-left = beeswarm, bottom-right = local force/dependence.
-
 ---
 
 ## R11 — Triple Y-axis (rare; single panel with 3 axes)
@@ -799,8 +775,6 @@ ax1.spines['left'].set_color("#9BC2E6"); ax1.spines['left'].set_linewidth(2)
 ax2.spines['right'].set_color("#F48E66"); ax2.spines['right'].set_linewidth(2)
 ax3.spines['right'].set_color("#4C956C"); ax3.spines['right'].set_linewidth(2)
 ```
-
-Anchor: `期刊配图复现 _ Matplotlib 挑战"多面板+三Y轴"组合图`.
 
 ---
 
@@ -825,8 +799,6 @@ comparable heatmaps and a narrow row-local colorbar. Use a shared symmetric
 limit across all rows when the values are increments or deltas, so the zero
 point stays visually comparable across the board.
 
-Anchor: `期刊配图复现：Python 绘制多面板分层热力图矩阵`.
-
 ---
 
 ## R13 — Seven-panel top-four bottom-three board
@@ -846,8 +818,6 @@ for label, row, col in subplots_config:
 Use when: seven small multiples need even panel sizes without forcing a blank
 eighth panel to carry data. Keep the bottom-right GridSpec cell inactive and
 avoid spanning the bottom row unless the final panel is meant to be a summary.
-
-Anchor: `期刊配图复现：Python 绘制"趋势+分布"时序混合图`.
 
 ---
 
@@ -871,8 +841,6 @@ Use when: model rows cross region/target columns and every cell is an
 observed-vs-predicted density parity panel. The sixth column is a narrow
 per-row colorbar slot, not a data panel. Keep equal x/y limits and equal aspect
 inside every data cell so model comparisons are not visually distorted.
-
-Anchor: `期刊配图复现：如何用Python绘制多模型评估密度散点图矩阵`.
 
 ---
 
@@ -902,8 +870,6 @@ Case-048 `contour_marginal_validation` rules:
 - Keep the y=x parity reference and metric box in the scatter panel; the
   marginal panels qualify, but do not replace, the accuracy evidence.
 - The RMSE colorbar belongs to the contour panel, not the parity scatter.
-
-Anchor: `期刊复现：联合等高线热图与边缘分布图验证模型预测精度与参数寻优`.
 
 ---
 

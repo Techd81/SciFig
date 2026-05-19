@@ -2,9 +2,6 @@
 
 Anchor case: `Python科研绘图：一行代码实现 R² + 95% 置信区间的高级散点图_1777452391`.
 
-Case-083 evidence lives in
-`.workflow/case_studies/case_083_parity_ci_matrix/comparison_report.json`.
-
 ## Learned Essence
 
 1. Use a 2x2 GridSpec board for multiple prediction tasks.
@@ -50,8 +47,6 @@ axis for compatibility with the existing generator contract.
 
 ## Variant: Multi-model parity grid
 
-Anchor: `期刊复现：多面板回归预测散点图对比不同模型真实与预测偏差_1777455863`.
-
 Use this when the same experimental/predicted target is compared across several
 algorithms or model families:
 
@@ -66,6 +61,3 @@ algorithms or model families:
 - Put model name, R2, and RMSE in a compact in-panel metric box.
 - Runtime status: current `scatter_regression` validates only one parity panel;
   no public generator yet composes the full shared-scale multi-model grid.
-
-Case-043 evidence lives in
-`.workflow/case_studies/case_043_multimodel_parity_grid/comparison_report.json`.

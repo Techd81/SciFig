@@ -2,9 +2,6 @@
 
 Anchor case: `Python绘制箱型图与回归线，一眼看穿数据趋势！_1778682795`.
 
-Case-093 evidence lives in
-`.workflow/case_studies/case_093_grouped_box_median_regression/comparison_report.json`.
-
 ## Hallmark Elements
 
 1. One categorical or ordinal interval axis with repeated samples per interval.

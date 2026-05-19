@@ -5,8 +5,6 @@ Source anchor: Case 015, `template/articles/期刊图表复现：叠加二维核
 Duplicate audit note: a later queue pass over the same Markdown was treated as
 `duplicate_markdown_covered_by_case_015`; no new chart key or renderer is
 required beyond this Case-015 `density_parity_matrix` contract. The closure
-evidence lives in
-`.workflow/case_studies/case_080_density_parity_matrix_audit/comparison_report.json`.
 
 ## Visual Grammar
 
@@ -40,14 +38,7 @@ Rendering contract:
 - Use one row-local density colorbar per model row and one bottom-center global
   legend for the reference and regression lines.
 
-Anchor: `期刊配图复现：如何用Python绘制多模型评估密度散点图矩阵`.
-
-Case-060 evidence lives in
-`.workflow/case_studies/case_060_density_scatter_model_region_matrix/comparison_report.json`.
-
 ## Variant: Hydrology 3x3 density parity matrix
-
-Anchor: `期刊配图：基于高斯核密度的3x3多面板散点图评估混合水文模型模拟性能_1777453582`.
 
 Use this when basin/region rows are crossed with hydrology model or coupling
 mechanism columns, and each cell compares simulated values against MODIS or
@@ -70,9 +61,6 @@ Rendering contract:
 QA signals: `densityParityPanelCount == 9`, `densitySortedPoints == true`,
 `referenceLineCount == 9`, `fitLineCount == 9`, `metricTextCount == 9`,
 `localColorbarCount == 9`, `sharedAxisLimits` is present, and `cmap == "RdBu_r"`.
-
-Case-069 evidence lives in
-`.workflow/case_studies/case_069_hydrology_density_parity_matrix/comparison_report.json`.
 
 ## Phase-3 Binding
 
@@ -100,8 +88,6 @@ Runtime metadata must record:
 
 ## Variant: Single-Panel Density Linear Regression Fit
 
-Anchor: `python绘制分布密度线性回归拟合图_1778682475`.
-
 Use this when the source is a single true-vs-predicted or observed-vs-estimated
 scatter rather than a panel matrix, but the visual contract still depends on
 KDE density coloring.
@@ -125,8 +111,6 @@ Rendering contract:
 - Use inward major/minor ticks on all four sides and keep the black frame
   around the plot.
 
-Case-092 evidence lives in
-`.workflow/case_studies/case_092_density_linear_regression_fit/comparison_report.json`.
 QA signals: `density_scatter_count == 1`, `point_count >= 300`,
 `density_sorted_points` is true, `fit_line_count == 1`,
 `one_to_one_line_count == 1`, `metric_text_count == 1`, `colorbar_count == 1`,

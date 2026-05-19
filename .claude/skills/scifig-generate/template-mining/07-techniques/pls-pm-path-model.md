@@ -52,8 +52,6 @@ Runtime metadata must record:
   already learned in Case-014. Keep the existing `pls_pm_path_model` motif and
   `mediation_path` executable branch rather than minting another path-model
   template.
-- The closure evidence lives in
-  `.workflow/case_studies/case_079_pls_pm_path_model_audit/comparison_report.json`.
   It verifies that Case-014 already captured the reference images, replica,
   comparison report, runtime probe, and runtime QA for directed paths, signed
   coefficient color/linewidth encoding, significance labels, total-effect

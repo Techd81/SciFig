@@ -21,8 +21,6 @@ skew, or sample clustering matters.
 
 ## Two-Panel Flux Board
 
-Anchor: `期刊配图：云雨图结合半小提琴与抖动散点展示不同城市化水平的通量差异`.
-
 ```python
 fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2, figsize=(12, 5), dpi=300)
 plt.subplots_adjust(wspace=0.25, bottom=0.15, left=0.08, right=0.95)
@@ -37,17 +35,12 @@ for ax, value_col, ylabel in [
     ax.set_ylabel(ylabel, fontweight="bold")
 ```
 
-Case-061 evidence lives in
-`.workflow/case_studies/case_061_greenhouse_flux_raincloud/comparison_report.json`.
-
 Use the Case-061 `greenhouse_flux_raincloud` motif when the data has two gas or
 flux metrics that share the same categorical grouping but need independent
 y-axis units or tick formatters. This is a two-panel board, not a faceted
 single-axis raincloud.
 
 ## Stacked Violin Metric Board
-
-Anchor: `顶刊同款！Python绘制堆叠小提琴图_1777452180`.
 
 Use this when model-comparison data contains repeated resampling values for
 several incompatible metrics such as `R2`, `MAE`, and `RMSE`, and the story is
@@ -66,9 +59,6 @@ Required rendering contract:
 - Hide upper-panel x tick labels and make separator spines dashed; emphasize
   the bottom spine on the final metric row.
 - Place color-matched median value labels just beside the corresponding violin.
-
-Case-074 evidence lives in
-`.workflow/case_studies/case_074_stacked_violin_metric_board/comparison_report.json`.
 
 ## QA Counters
 

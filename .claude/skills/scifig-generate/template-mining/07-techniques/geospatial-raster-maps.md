@@ -5,11 +5,6 @@ index, and renders continuous plus classified map outputs.
 
 ## TTOP Permafrost Raster Map
 
-Anchor: `Python 实战  _ 基于土地类型、DDF、DDT 计算 TTOP 并绘制冻土分布图_1778682195`.
-
-Case-090 evidence lives in
-`.workflow/case_studies/case_090_ttop_permafrost_raster_map/comparison_report.json`.
-
 ## Hallmark Elements
 
 1. Read and align landtype, DDF, and DDT rasters before applying any formula.
@@ -54,11 +49,6 @@ should add explicit raster dependency handling and NoData QA before exposing it
 as a generator.
 
 ## Freeze-Thaw Raster Parameter Atlas
-
-Anchor: `Python玩转时序栅格 _ 从每日地温图到冻融关键参数提取_1778682290`.
-
-Case-091 evidence lives in
-`.workflow/case_studies/case_091_freeze_thaw_raster_parameters/comparison_report.json`.
 
 Use this when daily or regular-interval ground-temperature GeoTIFFs are stacked
 by date and converted into freeze-thaw cycle parameters.
@@ -106,11 +96,6 @@ for ax, (arr, title, label) in zip(axes.flat, panels):
 
 ## Raster Zonal Statistics Export
 
-Anchor: `Python脚本批量分析栅格数据(最大值、最小值、平均值、标准差，检查是否存在缺失值)，结果直达Ex_1778682066`.
-
-Case-094 evidence lives in
-`.workflow/case_studies/case_094_raster_zonal_statistics_export/comparison_report.json`.
-
 Use this when the article or user request is not a map figure but a geospatial
 source-data preparation step that batch-computes statistics for many GeoTIFFs
 inside one vector boundary and exports the result table.
@@ -145,11 +130,6 @@ inside one vector boundary and exports the result table.
 - `excel_export_required == true` when the source specifically asks for Excel
 
 ## Temporal NoData Raster Fill
-
-Anchor: `轻松修复遥感影像的缺失！使用历史同期数据来填补！_1778682387`.
-
-Case-099 evidence lives in
-`.workflow/case_studies/case_099_raster_temporal_nodata_fill/comparison_report.json`.
 
 Use this when the article or user request repairs a damaged GeoTIFF by filling
 NoData pixels from a complete historical same-period raster, then writes a new

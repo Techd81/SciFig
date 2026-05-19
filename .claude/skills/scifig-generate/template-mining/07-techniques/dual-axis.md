@@ -131,11 +131,7 @@ ax2.set_ylabel('Cumulative %', color='#B5403A')
 ax2.set_ylim(0, 105)
 ```
 
-Anchor: `期刊图表：双Y轴直方图与累积频率曲线展示HPC数据集多变量分布特征`.
-
 ## Executable mapping: 3x3 histogram + cumulative-frequency grid
-
-Anchor: `期刊图表：双Y轴直方图与累积频率曲线展示HPC数据集多变量分布特征`.
 
 Use this for wide numeric materials / dataset-description tables where the
 task asks for independent variable distributions rather than a single
@@ -180,8 +176,6 @@ from categorical textbook dual-axis bar-line templates.
 
 ## Executable mapping: textbook bar + spline dual axis
 
-Anchor: `如何用Python绘制教科书级的双Y轴组合图`.
-
 Use this for categorical x data with one context quantity on the left axis and
 one focal quantity on the right axis, especially porosity/strength,
 bar/line, or explicit dual-axis/twin-axis prompts.
@@ -223,15 +217,11 @@ Case-077 duplicate-audit note:
   already learned in Case-012. Keep the existing
   `textbook_dual_axis_bar_line` motif and `dual_axis` executable branch rather
   than minting another dual-axis template.
-- The closure evidence lives in
-  `.workflow/case_studies/case_077_textbook_dual_y_axis_audit/comparison_report.json`.
   It verifies that Case-012 already captured four reference screenshots, the
   replica, comparison report, runtime probe, and runtime QA for twinx axes,
   bar/spline layering, group dividers, combined legend, and tinted spines.
 
 ## Executable variant: Nature Comms count + proportion dual axis
-
-Anchor: `期刊复现：Nature Comms 双Y轴组合图`.
 
 Use this when categorical habitats/groups carry a neutral count quantity on the
 left axis and a focal proportion/ratio/percentage quantity on the right axis.
@@ -276,8 +266,6 @@ Comms parameter set rather than the textbook porosity/strength spline variant.
 
 ## Variant: Biodegradation kinetics validation board
 
-Anchor: `期刊复现：基于双Y轴折线与动力学误差棒的生物降解实验效能可视化`.
-
 Use this when a microcosm or biodegradation experiment must validate a model
 mechanism across long-term operation and short-term kinetics.
 
@@ -290,9 +278,6 @@ mechanism across long-term operation and short-term kinetics.
 - Panel D is a boxplot/replicate summary and must stay separate from the dual
   axis panel because it has different time and statistical semantics.
 - Red/blue condition colors stay stable across all mechanism panels.
-
-Case-079 evidence lives in
-`.workflow/case_studies/case_079_biodegradation_kinetics_validation/comparison_report.json`.
 
 ## Variant: Triple-Y axis (rare; 1 case in corpus)
 
@@ -313,8 +298,6 @@ for axx, side, color in [(ax1, 'left', C1), (ax2, 'right', C2), (ax3, 'right', C
     axx.spines[side].set_color(color); axx.spines[side].set_linewidth(2)
     axx.tick_params(axis='y', colors=color)
 ```
-
-Anchor: `期刊配图复现 _ Matplotlib 挑战"多面板+三Y轴"组合图`.
 
 Case-054 `triple_y_mechanical_grid` expands this from one axes into a
 Materials Today-style five-panel board:
@@ -369,8 +352,6 @@ ax2.plot(xs, r2_scores, color='#1F1F1F', linewidth=2.5,
          marker='D', markersize=8, zorder=4, label='R² overall')
 ```
 
-Anchor: `期刊复现：双Y轴分组柱状与折线组合图评估多模型预测性能`.
-
 Case-032 learned note: the source pairs Train/Test error bars on the left axis
 with a right-axis R2 marker line over the same model ordering. Use the grouped
 bar variant only when the left-axis bars are separate generalization/error
@@ -378,7 +359,7 @@ metrics and the right-axis line is a score/trend metric. Merge legend handles
 from both axes, keep only the left-axis y-grid, hide the top spine, and tint
 the right spine/ticks to the line color.
 
-Current runtime status: `.workflow/case_studies/case_032_dual_axis_grouped_bar_line/comparison_report.json`
+Current runtime status: local case-study evidence
 records a complete 16-bar replica and a passing helper probe, but the public
 helper probe still validates a single left-axis bar series plus a right-axis
 line. Treat `dual_axis_grouped_bar_line` as learned with a documented grouped

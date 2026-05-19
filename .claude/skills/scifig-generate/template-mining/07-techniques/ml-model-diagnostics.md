@@ -27,12 +27,7 @@ When columns include `model` / `algorithm` plus `Training` / `Testing` / `R2` / 
 Layout intent: `ml_model_performance_triptych` uses a 2x2 grid where the benchmark bar spans the top row and parity/residual diagnostics occupy the bottom row.
 Executable fallback: `grouped_bar` renders the sorted RF-highlighted benchmark, accepts both long `metric/value` rows and wide aggregate metric columns (`AUC`, `F1`, `precision`, `recall`, etc.), folds very long model names into y-axis labels, adds a compact right-side metric table for the top model when wide metrics are present, expands left/bottom margins for dense model lists, and moves 5+ train/test/validation/external split legends to a bottom-centered figure legend. Standalone `scatter_regression` renders the train/test parity lane as a density-colored marginal joint diagnostic with 1:1 reference and R2/RMSE/MAE box, embedded `scatter_regression` keeps the compact parity lane, and `residual_vs_fitted` renders the residual lane with red zero reference plus bias/SD note.
 
-Case-041 evidence lives in
-`.workflow/case_studies/case_041_rf_model_performance_triptych/comparison_report.json`.
-
 ## Model Accuracy + Stability Board
-
-Anchor: `Python 科研绘图：如何优雅地展示“模型精度+稳定性”？顶刊可视化复盘_1777452458`.
 
 Use this when multiple models need both single-run prediction accuracy and
 repeated-run stability evidence, such as Monte Carlo `R2`, `RMSE`, and `STD`.
@@ -54,12 +49,7 @@ Required composition:
 - Put compact metric/stat boxes in `transAxes` with a translucent white bbox so
   the labels remain legible over dense points.
 
-Case-081 evidence lives in
-`.workflow/case_studies/case_081_model_accuracy_stability_board/comparison_report.json`.
-
 ### Prediction-Experiment External Stats Panel
-
-Anchor: `期刊配图复现 _ Python绘制机器学习“预测-实验”对比图_1777452713`.
 
 Use this when the evaluation table is indexed by sample/run order and contains
 paired actual/experimental and predicted/fitted values. This is not parity
@@ -80,12 +70,7 @@ Required contract:
   actual-vs-predicted parity; record a gap until a registered generator creates
   the external stats panel and dual proxy legends.
 
-Case-058 evidence lives in
-`.workflow/case_studies/case_058_prediction_experiment_external_stats/comparison_report.json`.
-
 ### GBDT Prediction-Error Triptych
-
-Anchor: `期刊复现：基于梯度提升树(GBDT)的多面板预测误差评估图_1777456338`.
 
 Use this when model evidence combines material/category response levels,
 sample-wise observed-vs-predicted comparison, and global relative-error
@@ -105,12 +90,7 @@ distribution:
   residual diagnostic panel. No public generator yet composes the full GBDT
   material/prediction/error triptych.
 
-Case-040 evidence lives in
-`.workflow/case_studies/case_040_gbdt_prediction_error_triptych/comparison_report.json`.
-
 ### Multi-Metric Model Boxplot Board
-
-Anchor: `期刊复现：多面板箱线图对比多模型不同评估指标的误差分布_1777455635`.
 
 Use when model evaluation data include repeated fold, bootstrap, or resampling
 values for several metrics such as MAE, RMSE, and R2, with a stable
@@ -130,9 +110,6 @@ Training/Testing split:
 - Runtime status: current `box_strip` validates only one metric distribution
   panel. No public generator yet composes the full independent-y MAE/RMSE/R2
   grouped boxplot board.
-
-Case-045 evidence lives in
-`.workflow/case_studies/case_045_multimetric_model_boxplot/comparison_report.json`.
 
 ## Neural Architecture Topology
 
@@ -173,16 +150,12 @@ Legacy duplicate-audit note (older queue numbering):
   already learned in Case-013. Keep the existing
   `incremental_feature_selection_curve` motif and ML model diagnostics routing
   rather than minting another multi-model performance template.
-- The closure evidence lives in
-  `.workflow/case_studies/case_078_incremental_feature_selection_audit/comparison_report.json`.
   It verifies that Case-013 already captured four reference screenshots, the
   replica, comparison report, runtime probe, and runtime QA for nine model
   curves, the `n=6` decision guide, RF highlighting, zig-zag preservation, and
   the external legend.
 
 ## Feature Selection Weight + Performance Board
-
-Anchor: `期刊复现：双面板组合图展示特征重要性权重与模型性能演变_1777456015`.
 
 Use this when recursive feature selection or feature-subset search provides
 both ranked feature weights and a validation score at each selection step:
@@ -200,9 +173,6 @@ both ranked feature weights and a validation score at each selection step:
   layer only. No public generator yet composes the lower performance curve,
   optimum marker, and feature-subset annotation.
 
-Case-034 evidence lives in
-`.workflow/case_studies/case_034_feature_selection_weight_performance/comparison_report.json`.
-
 ## Neural Training Dynamics
 
 When columns include `epoch`, `step`, `iteration`, `train_loss`, `training_loss`, `val_loss`, `validation_loss`, `accuracy`, `val_accuracy`, `learning_rate`, or early-stopping markers, clone the training-history board before generic time-series plotting:
@@ -214,8 +184,6 @@ When columns include `epoch`, `step`, `iteration`, `train_loss`, `training_loss`
 - Executable fallback: `training_curve` detects wide or long training-history tables, plots up to six loss/score traces, shades the generalization gap, marks the best epoch, and keeps legends outside the plotting area for final render QA.
 
 ## Hyperparameter Stability Bubble Heatmap
-
-Anchor: `期刊复现：利用组合式箱线折线图与气泡热力图可视化模型超参数稳定性_1777456122`.
 
 Use when model-tuning data include repeated scores across one or more
 hyperparameters and a joint grid-search table:
@@ -231,9 +199,6 @@ hyperparameters and a joint grid-search table:
   There is not yet a complete packaged 2x2 hyperparameter-stability board, so
   generated reports should disclose that gap when they use this case as a
   planning reference.
-
-Case-031 evidence lives in
-`.workflow/case_studies/case_031_hyperparameter_stability_bubble_heatmap/comparison_report.json`.
 
 ## RF Feature Importance + SHAP
 
@@ -258,12 +223,7 @@ Case-052 exact contract (`rf_efi_shap_donut`):
   fallback lane. No public generator currently composes the exact EFI gradient
   bar plus SHAP hollow-donut callout board in one call.
 
-Case-052 evidence lives in
-`.workflow/case_studies/case_052_rf_efi_shap_donut/comparison_report.json`.
-
 ## Feature Importance Bar Board
-
-Anchor: `期刊配图：基于组合多面板条形图对比多条件下的机器学习特征重要性_1777453942`.
 
 Use this when feature-importance evidence is split between absolute ranked
 importance values and condition-wise percentage composition, especially in
@@ -293,12 +253,7 @@ Current executable boundary: `stacked_bar_comp` validates one part-whole stacked
 panel only. Until a full-board generator exists, compose the 2x2 board manually
 and record the gap instead of reducing the request to a single grouped bar.
 
-Case-068 evidence lives in
-`.workflow/case_studies/case_068_feature_importance_bar_board/comparison_report.json`.
-
 ## Spearman ML Evaluation Board
-
-Anchor: `期刊配图：基于机器学习的Spearman相关性热力图与模型预测效果组合分析_1777456565`.
 
 Use this when the prompt combines Spearman/correlation screening with ML explanation, parity accuracy, and external validation. Treat it as a manuscript evidence board, not as four unrelated chart requests.
 
@@ -312,9 +267,6 @@ Required composition:
 Case-065 acceptance signals: `panelCount == 4`, `spearmanHeatmapCells > 0`, `significanceStarCount > 0` only when p-values exist, `shapBarCount > 0`, `parityPointCount > 0`, `insetTableCount == 1`, `externalTwinAxis == true`, and `externalBarCount > 0`.
 
 Current executable boundary: `heatmap_symmetric` can validate only the correlation panel. Until a registered full-board generator exists, compose the board with `GridSpec(2, 2)` and record the gap rather than degrading the request to a standalone heatmap.
-
-Case-065 evidence lives in
-`.workflow/case_studies/case_065_spearman_ml_evaluation_board/comparison_report.json`.
 
 ## PSO / Pareto Optimization + SHAP
 
@@ -345,14 +297,10 @@ Case-071 duplicate-audit note:
   already learned in Case-006. Keep the existing
   `pso_shap_optimization_framework` routing rather than minting a second
   bundle.
-- The closure evidence lives in
-  `.workflow/case_studies/case_071_pso_shap_framework_audit/comparison_report.json`.
   It verifies that Case-006 already captured the three reference screenshots,
   replica/comparison images, and runtime nonblank four-panel framework.
 
 ## 2D-PDP Interaction Contour Matrix
-
-Anchor: `期刊配图：利用多面板2D-PDP揭示机器学习模型的双变量交互与控制边界`.
 
 Use when the model diagnostic task asks for two-feature partial dependence,
 interaction surfaces, response boundaries, or control regimes.
@@ -374,9 +322,6 @@ QA signals: `pdpContourPanelCount == 4`, `contourfCount == 4`,
 `quartileContourLineCount == 12`, `sharedColorbarCount == 1`, and
 `sharedContourLevels` is true.
 
-Case-062 evidence lives in
-`.workflow/case_studies/case_062_2d_pdp_interaction_contours/comparison_report.json`.
-
 Case-078 (`期刊复现：XGBoost的双变量偏依赖(PDP)等高线可视化图`) is the
 XGBoost / `sklearn.inspection.partial_dependence` data-flow variant.  It keeps
 the same contour semantics but uses the supplied feature-pair count:
@@ -390,9 +335,6 @@ the same contour semantics but uses the supplied feature-pair count:
 - Q1 / median / Q3 contour lines remain the control-boundary overlay, even when
   the model implementation changes from Random Forest to XGBoost.
 
-Case-078 evidence lives in
-`.workflow/case_studies/case_078_xgboost_pdp_contour_matrix/comparison_report.json`.
-
 Case-088 empty-source audit note:
 
 - `机制解释图复刻：基于Random Forest与局部依赖图(PDP)揭示特征关键阈值（附完整代码）_1778680013`
@@ -401,12 +343,8 @@ Case-088 empty-source audit note:
 - Keep routing title-only RF/PDP threshold requests to the existing
   `shap_pdp_threshold_panel_array` / `threshold_annotation` motif from
   Case-036; do not mint a new template from an empty source file.
-- The closure evidence lives in
-  `.workflow/case_studies/case_088_empty_markdown_pdp_threshold_audit/comparison_report.json`.
 
 ## PDP + ICE Threshold Grid
-
-Anchor: `机制解释图复刻：基于Random Forest与局部依赖图(PDP)揭示特征关键阈值（附完整代码）_1778682927`.
 
 Use this when a Random Forest / RFR mechanism-explanation task supplies
 feature-wise PDP or ICE curves plus threshold values and source-data
@@ -431,16 +369,12 @@ Required rendering contract:
   real subsets of the same PDP/ICE mechanism; otherwise keep all panels at the
   same scale.
 
-Case-089 evidence lives in
-`.workflow/case_studies/case_089_pdp_ice_threshold_grid/comparison_report.json`.
 QA signals: `panel_count == 6`, `ice_line_count >= 240`,
 `pdp_line_count == 6`, `threshold_line_count == 6`,
 `threshold_label_count == 6`, `rug_tick_count >= 60`, and
 `zoom_panel_count == 2`.
 
 ## 3D PDP Surface Panel
-
-Anchor: `期刊配图：基于集成模型的3D部分依赖图(PDP)非线性交互效应可视化（附代码）_1778681006`.
 
 Use this when the model-diagnostic task asks for a two-feature PDP interaction
 as a perspective 3D response surface, not a flat 2D contour matrix. The data
@@ -465,15 +399,11 @@ Required rendering contract:
 - Add one colorbar labeled `Prediction Response`; do not repeat a separate
   colorbar for the bottom projection.
 
-Case-087 evidence lives in
-`.workflow/case_studies/case_087_pdp_3d_surface_panel/comparison_report.json`.
 QA signals: `surface_count == 1`, `contour_projection_count == 1`,
 `colorbar_count == 1`, `transparent_panes` is true, `view_elev == 30`,
 `view_azim == -60`, and `pdp_grid_shape == [50, 50]`.
 
 ## H-Statistic Ranking + Contour Dependence Board
-
-Anchor: `期刊复现：基于H-statistic的特征交互重要性与二维等高线依赖图解析_1777455674`.
 
 Use when interaction-ranking data and 2D response surfaces are both available:
 
@@ -490,12 +420,7 @@ Use when interaction-ranking data and 2D response surfaces are both available:
   layer. There is no public generator yet for the H-statistic ranking plus
   top-pair contour composition.
 
-Case-035 evidence lives in
-`.workflow/case_studies/case_035_h_statistic_contour_dependence/comparison_report.json`.
-
 ## NSGA-II 3D Pareto Front
-
-Anchor: `期刊配图：基于NSGA-II的三维帕累托前沿散点图可视化多目标权衡解`.
 
 Use this when three competing objectives need to be shown as a 3D Pareto front
 and the prompt asks for group/strength-grade comparison.
@@ -515,8 +440,6 @@ Required rendering contract:
 QA signals: `pareto3dPanelCount >= 2`, `shared3DView=True`,
 `shared3DAxisLimits=True`, `optimalStarCount > 0`, and `threeDimensional=True`.
 
-Case-064 evidence lives in
-`.workflow/case_studies/case_064_nsga2_3d_pareto_front/comparison_report.json`.
 Runtime status: current `scatter_regression` validates only a 2D objective
 tradeoff fallback; it does not create 3D axes, selected-optimum stars, or the
 two-panel shared-view NSGA-II board.

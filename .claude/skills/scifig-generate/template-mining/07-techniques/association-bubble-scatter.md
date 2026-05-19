@@ -2,9 +2,6 @@
 
 Anchor case: `精准复现顶刊插图：Python实战零售食品环境与肥胖率关联气泡图！_1778682618`.
 
-Case-098 evidence lives in
-`.workflow/case_studies/case_098_food_environment_obesity_bubble_scatter/comparison_report.json`.
-
 ## Hallmark Elements
 
 1. One x/y association is the primary message.

@@ -34,8 +34,6 @@ Case-073 duplicate-audit note:
   already learned in Case-008. Keep the existing
   `gam_log_residual_diagnostic` motif and `scatter_regression` executable
   branch rather than minting a second GAM/residual template.
-- The closure evidence lives in
-  `.workflow/case_studies/case_073_nature_gam_residual_audit/comparison_report.json`.
   It verifies that Case-008 already captured five reference screenshots, the
   replica, comparison report, runtime probe, and runtime QA for the log-log
   relationship plus residual diagnostic board.

@@ -133,8 +133,6 @@ for sp in ax_ins.spines.values():
 ax.indicate_inset_zoom(ax_ins, edgecolor='#222', linewidth=0.8, alpha=0.6)
 ```
 
-Anchor: `期刊复现：Nature Nanotechnology 经典"画中画"组合图`.
-
 ## Variant: Three-distribution inset (city-gradient flux)
 
 For raincloud comparing N conditions inside the inset:
@@ -157,11 +155,7 @@ for i, (cond, color) in enumerate(zip(conditions, colors)):
                    edgecolor='white', linewidth=0.2, zorder=4)
 ```
 
-Anchor: `期刊配图：云雨图结合半小提琴与抖动散点展示不同城市化水平的通量差异`.
-
 ## Executable mapping: Case 009 main + residual raincloud inset
-
-Anchor: `复现顶刊 _ Python绘制“主图+嵌入雨云图”组合，完美展示模型泛化能力`.
 
 `gen_scatter_regression` enters `inset_raincloud_residual` mode when
 `visualContentPlan.templateMotifs` contains `inset_raincloud_residual` or
@@ -192,8 +186,6 @@ Case-074 duplicate-audit note:
   already learned in Case-009. Keep the existing
   `inset_raincloud_residual` motif and `scatter_regression` executable branch
   rather than minting another inset-raincloud template.
-- The closure evidence lives in
-  `.workflow/case_studies/case_074_main_inset_raincloud_audit/comparison_report.json`.
   It verifies that Case-009 already captured four reference screenshots, the
   replica, comparison report, runtime probe, and runtime QA for two embedded
   residual raincloud insets.
@@ -205,8 +197,6 @@ Case-092 duplicate-audit note:
   already learned in Case-027. Keep the `inset_heatmap_bar_rank` motif, the
   ranked-bar + hollow-jitter main layer stack, and the inset-local colorbar
   rather than treating it as a generic scatter/zoom inset.
-- The closure evidence lives in
-  `.workflow/case_studies/case_092_inset_heatmap_bar_rank_audit/comparison_report.json`.
 
 ## Discipline rules
 

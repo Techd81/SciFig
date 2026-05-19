@@ -128,8 +128,6 @@ ax.plot(x, y_pred, color='#E45756', linewidth=2.0, zorder=3)
 
 ## Variant: Prediction + residual vertical stack
 
-Anchor: `期刊复现：多面板回归预测散点图对比不同模型真实与预测偏差_1777455897`.
-
 Use this when a sample-index prediction series needs a separate residual panel:
 
 - Layout is `GridSpec(2, 1, height_ratios=[2.5, 1], hspace=0.10)` with a shared
@@ -146,9 +144,6 @@ Use this when a sample-index prediction series needs a separate residual panel:
   intentionally use different y scales.
 - Runtime status: current `residual_vs_fitted` validates only the residual
   diagnostic layer, not the shared-x prediction/residual stack.
-
-Case-044 evidence lives in
-`.workflow/case_studies/case_044_prediction_residual_stack/comparison_report.json`.
 
 ## Variant: Trend + terminal distribution hybrid
 

@@ -4,9 +4,6 @@
 
 **Anchor case:** `顶刊审美 _ 用 Python 绘制带"垂直渐变特效"的组合箱线图_1777451428`.
 
-Case-076 evidence lives in
-`.workflow/case_studies/case_076_gradient_box_metric_dashboard/comparison_report.json`.
-
 ## Hallmark elements
 
 1. **Imshow gradient** inside each box rectangle
@@ -46,7 +43,6 @@ def draw_gradient_box(ax, x, q1, width, height, color, *, alpha_lo=0.15, alpha_h
     rect = plt.Rectangle((x, q1), width, height, fill=False,
                          edgecolor=color, linewidth=1.2, zorder=zorder + 1)
     ax.add_patch(rect)
-
 
 # Data
 np.random.seed(0)

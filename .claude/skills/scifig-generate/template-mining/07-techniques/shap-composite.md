@@ -101,11 +101,7 @@ ax_pie.pie(share, labels=labels, colors=['#E64B35', '#4DBBD5', '#00A087', '#7F7F
            startangle=90, textprops={'fontsize': 10})
 ```
 
-Anchor: `期刊复现：组合SHAP摘要图与饼图解析分子特征对自由基反应预测的全局影响`, `期刊复现：随机森林(RF)模型驱动的EFI特征重要度条形图与SHAP圆环图可视化`.
-
 ## Executable mapping: bar + beeswarm + inset pie
-
-Anchor: `复现顶刊 _ 拒绝千篇一律的SHAP图，用Matplotlib手绘一张“蜂群+条形”组合图`.
 
 `gen_dotplot` enters `shap_bar_beeswarm_inset_pie` mode when the figure is
 standalone and `visualContentPlan.templateMotifs` or `specialPatterns` contains
@@ -144,12 +140,7 @@ Case-047 compact variant:
   surface. The full compact bar + inset pie + beeswarm board is learned here as
   a template composition.
 
-Case-047 evidence lives in
-`.workflow/case_studies/case_047_shap_bar_beeswarm_inset_pie/comparison_report.json`.
-
 ## Variant: Global/local bar + beeswarm + colorbar
-
-Anchor: `期刊配图复现 _ 手把手教你用 Python 绘制 SHAP 全局与局部解释组合图_1777452973`.
 
 Use this when the figure should pair global feature importance with local
 sample-level SHAP direction without an inset pie, donut, or extra prediction
@@ -170,12 +161,7 @@ Required rendering contract:
   surface. Record a gap until a registered one-call generator composes the left
   mean-`|SHAP|` bar panel and narrow colorbar slot.
 
-Case-059 evidence lives in
-`.workflow/case_studies/case_059_shap_global_local_bar_beeswarm/comparison_report.json`.
-
 ## Variant: GS-XGBoost grouped bar + beeswarm
-
-Anchor: `期刊配图：基于GS-XGBoost与SHAP特征重要性的条形图与蜂群图组合可视化_1777456159`.
 
 Use this when a GS-XGBoost / XGBoost explanation board needs to compress many
 binary structure descriptors into one interpretable row while still showing
@@ -200,12 +186,7 @@ Required rendering contract:
   surface. Record a gap until a one-call generator composes the grouped bar
   lane, brackets, and inset colorbar.
 
-Case-063 evidence lives in
-`.workflow/case_studies/case_063_gs_xgboost_shap_grouped_bar_beeswarm/comparison_report.json`.
-
 ## Variant: Multi-panel SHAP beeswarm matrix
-
-Anchor: `期刊配图复现 _ Python绘制多面板SHAP蜂群图_1777452005`.
 
 Use this when one explanation task is repeated across regions, cohorts, or
 submodels and each panel must combine global mean `|SHAP|` importance with
@@ -228,9 +209,6 @@ QA signals: `activePanelCount == 5`, `twinyAxisCount == 5`,
 `shapBarCount > 0`, `shapBeeswarmCount > 0`, `zeroReferenceLineCount == 5`,
 `colorbarSlotCount == 1`, `featureValueColorEncoded=True`.
 
-Case-057 evidence lives in
-`.workflow/case_studies/case_057_multipanel_shap_beeswarm_matrix/comparison_report.json`.
-
 Case-075 duplicate-audit note:
 
 - `复现顶刊 _ 拒绝千篇一律的SHAP图，用Matplotlib手绘一张“蜂群+条形”组合图_1777452577`
@@ -238,16 +216,11 @@ Case-075 duplicate-audit note:
   already learned in Case-010. Keep the existing
   `shap_bar_beeswarm_inset_pie` motif and dotplot/SHAP composite executable
   branch rather than minting another SHAP composite template.
-- The closure evidence lives in
-  `.workflow/case_studies/case_075_shap_bar_beeswarm_inset_pie_audit/comparison_report.json`.
   It verifies that Case-010 already captured the reference images, replica,
   comparison report, runtime probe, and runtime QA for the importance bar,
   SHAP beeswarm, feature-value colorbar, and inset pie.
 
 ## Variant: RF EFI + SHAP donut
-
-Anchor:
-`期刊复现：随机森林(RF)模型驱动的EFI特征重要度条形图与SHAP圆环图可视化_1777456510`.
 
 Use this when RF feature importance and global mean `|SHAP|` are the two
 explainability signals:
@@ -266,8 +239,6 @@ Runtime status: current SHAP fallbacks use `dotplot`/beeswarm or lollipop
 importance lanes. The hollow-donut callout layout is a learned template gap.
 
 ## Variant: GS-XGBoost grouped SHAP bar + beeswarm
-
-Anchor: `期刊配图：基于GS-XGBoost与SHAP特征重要性的条形图与蜂群图组合可视化`.
 
 Use this when many binary or structural descriptors should be merged into one
 interpretable feature group before plotting the global ranking.
@@ -290,8 +261,6 @@ QA signals: `sharedFeatureOrdering=True`, `groupBracketCount >= 1`,
 `zeroReferenceLineCount >= 1`.
 
 ## Executable mapping: lollipop + SHAP beeswarm board
-
-Anchor: `期刊复刻：多面板结合XGBoost特征重要性棒棒糖图与SHAP蜂群图`.
 
 Use this when a model-explanation table includes feature importance / gain plus
 long-form SHAP values. The source uses a 1x2 board with a compact importance
@@ -330,8 +299,6 @@ beeswarm-right contract separately from bar-based SHAP composites.
 
 ## Executable mapping: bar + standalone pie + summary beeswarm
 
-Anchor: `期刊图表复现：组合SHAP摘要图与饼图解析分子特征对自由基反应预测的全局影响`.
-
 `gen_dotplot` enters `shap_bar_pie_summary_board` mode when the visual plan or
 `specialPatterns` includes `shap_bar_pie_summary_board`. This is distinct from
 the Case-010 inset-pie board: the descriptor-category pie is its own panel, not
@@ -361,8 +328,6 @@ summary board instead of the Case-010 inset-pie variant.
 
 ## Variant: Target-wise SHAP mean-importance triptych
 
-Anchor: `期刊复现：子图平铺展示比表面积与孔容的全局SHAP值与关键特征排行_1777454297`.
-
 Use this when the input supplies precomputed mean absolute SHAP values for
 several prediction targets, and the figure's job is to compare target-specific
 driver rankings:
@@ -381,9 +346,6 @@ driver rankings:
   feature panel. No public generator yet composes the full three-target SHAP
   mean-importance triptych with local normalization and value labels.
 
-Case-046 evidence lives in
-`.workflow/case_studies/case_046_shap_mean_importance_triptych/comparison_report.json`.
-
 ## Variant: 上三下二 (top-wide + 2 below) — SHAP global+local hero
 
 ```python
@@ -394,11 +356,7 @@ ax_bl  = fig.add_subplot(gs[1, 0])   # bottom-left: beeswarm (top 10 features)
 ax_br  = fig.add_subplot(gs[1, 1])   # bottom-right: dependence plot for #1 feature
 ```
 
-Anchor: `期刊复现：基于SHAP复合图揭示高能分子特征对性能的全局与局部影响`.
-
 ## Variant: Prediction + SHAP/PDP explanation board
-
-Anchor: `期刊配图：多面板预测散点与SHAP局部依赖特征解释组合图_1777456052`.
 
 Use this when a model-report figure must connect prediction validity to
 explanation in one board. This is not a pure SHAP summary; it is a progression
@@ -424,12 +382,7 @@ QA signals: `panelCount == 4`, `perfectFitLineCount >= 1`, `metricBoxCount >= 1`
 `residualHistogramCount >= 1`, `shapBarCount > 0`, `pdpScatterCount > 0`,
 `pdpTrendLineCount >= 1`, and `exportDpi == 600`.
 
-Case-070 evidence lives in
-`.workflow/case_studies/case_070_prediction_shap_pdp_board/comparison_report.json`.
-
 ## Variant: Molecular SHAP + parity evidence board
-
-Anchor: `期刊复现：基于SHAP复合图揭示高能分子特征对性能的全局与局部影响_1777454774`.
 
 Use this when molecular descriptor attribution must be tied to prediction
 quality rather than shown as a standalone explanation:
@@ -444,9 +397,6 @@ quality rather than shown as a standalone explanation:
   or testing points if the article/prompt frames it as independent robustness.
 - Runtime status: current `dotplot` validates only the SHAP summary lane. A
   public generator does not yet compose the 2x2 SHAP plus parity board.
-
-Case-037 evidence lives in
-`.workflow/case_studies/case_037_shap_molecule_global_local_parity/comparison_report.json`.
 
 ## Variant: 6-panel SHAP dependence grid (signed-background style)
 
@@ -468,8 +418,6 @@ for k, feature in enumerate(feature_names[:6]):
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
 ```
-
-Anchor: `期刊图表复现：多面板SHAP依赖图展示分子特征对自由基反应速率的非线性影响`.
 
 Executable mapping: `scatter_regression` calls `draw_shap_dependence_background_grid` when long-form data carries `feature_id` + `feature_value` + `shap_value` for multiple features and the motif or profile indicates SHAP dependence/background signed zones. It must draw positive/negative background bands, a dashed zero contribution line, black scatter, uniform y-limits, and no colorbar for this signed-background variant.
 
@@ -512,9 +460,6 @@ not this 3x2 SHAP interaction grid or global colorbar composition.
 
 ## Variant: 2x2 SHAP conversion dependence matrix
 
-Anchor:
-`期刊复现：通过多面板SHAP依赖图解析特征对转化率的主效应与交互作用_1777454562`.
-
 Use this when SHAP dependence panels are explicitly organized as prediction
 target rows crossed with main-feature columns:
 
@@ -537,8 +482,6 @@ conversion matrix with four local colorbars.
 
 ## Variant: SHAP PDP threshold panel array
 
-Anchor: `期刊复现：基于RF-XGB的SHAP部分依赖图解析关键参数阈值_1777454077`.
-
 Use this when SHAP partial-dependence rows carry feature id, feature value,
 SHAP contribution, and optionally an interaction/context value:
 
@@ -554,9 +497,6 @@ SHAP contribution, and optionally an interaction/context value:
   OLS only. It does not yet provide the SHAP baseline, nonlinear smooth,
   interaction colorbar, threshold callout, or 1xN composition.
 
-Case-036 evidence lives in
-`.workflow/case_studies/case_036_rf_xgb_shap_pdp_threshold/comparison_report.json`.
-
 Case-094 audit note: `期刊复现：SHAP依赖图解析环境因子对目标变量的影响方向与程度_1777454034`
 was already learned as Case-029. Despite the title, the visual grammar is a
 single-panel SHAP summary/beeswarm: sorted features, vertical SHAP=0 reference,
@@ -569,8 +509,6 @@ is the explicit environmental SHAP summary variant. It reinforces the same
 single-panel contract as Case-029 but makes the global-importance ordering
 rule explicit: sort features by mean `|SHAP|`, keep the dashed x=0 contribution
 divider, color points by raw feature value, and use Low/High colorbar ticks as
-the semantic legend. The closure evidence lives in
-`.workflow/case_studies/case_030_shap_beeswarm_environment/comparison_report.json`;
 the runtime `dotplot` probe passes the structural contract, with documented
 wording/colorbar tick gaps.
 

@@ -130,15 +130,11 @@ elif i < j:
     ax.set_xticks([]); ax.set_yticks([])
 ```
 
-Anchor: `期刊复现：基于上三角局部填充饼图的相关性矩阵`.
-
 Runtime gap: current `scifig.plot chart=correlation` validates a signed
 color-mapped matrix, but does not yet render triangle-only Wedge pie-glyph
 cells or the empty lower-triangle sparse layout.
 
 ## Variant: Lower-triangle correlation heatmap with diagonal colorbar
-
-Anchor: `进阶绘图：解决“多变量拥挤”痛点——Python 绘制带显著性星号与斜向色条的三角热图_1777452320`.
 
 Use this when a dense numeric feature table needs a compact Pearson/Spearman
 correlation overview and the source asks for a triangular heatmap, significance
@@ -159,12 +155,7 @@ Required rendering contract:
 - Draw the diagonal colorbar parallel to the matrix hypotenuse using small
   polygon patches or an equivalent rotated colorbar helper.
 
-Case-073 evidence lives in
-`.workflow/case_studies/case_073_triangular_correlation_heatmap/comparison_report.json`.
-
 ## Variant: Spearman as ML evidence-board context
-
-Anchor: `期刊配图：基于机器学习的Spearman相关性热力图与模型预测效果组合分析_1777456565`.
 
 Use pairwise-heatmap rules for the correlation panel only when Spearman is one part of a broader ML evaluation board. If the same prompt/data also includes SHAP or feature importance, actual/predicted values, and external validation metrics, route the whole request through `spearman_ml_evaluation_board` in `ml-model-diagnostics.md`.
 
@@ -176,14 +167,10 @@ Correlation-panel contract:
 - Use a zero-centered diverging norm so positive and negative monotonic associations are visually comparable.
 - Keep the colorbar outside the heatmap panel when the panel is embedded in a 2x2 board.
 
-Case-065 evidence lives in
-`.workflow/case_studies/case_065_spearman_ml_evaluation_board/comparison_report.json`.
 The runtime `heatmap_symmetric` probe validates the correlation panel only; the
 full board belongs to `spearman_ml_evaluation_board`.
 
 ## Variant: Spearman KDE pairplot matrix
-
-Anchor: `期刊配图复现：基于二维核密度与相关热力图的多变量联合分布矩阵（附代码）_1778681176`.
 
 Use this when a wide numeric table needs one compact matrix that combines
 monotonic association strength with two-variable distribution shape. This is
@@ -204,12 +191,7 @@ Required rendering contract:
   its local KDE scale.
 - Use a single outside Spearman colorbar when space allows.
 
-Case-080 evidence lives in
-`.workflow/case_studies/case_080_spearman_kde_pairplot_matrix/comparison_report.json`.
-
 ## Executable mapping: red-blue bubble correlation matrix
-
-Anchor: `如何用 Python 完美复刻一张“红蓝气泡”相关性分析图`.
 
 Use this when the prompt or data profile exposes a square correlation matrix,
 a long `row` / `column` / `r` table, or a wide numeric table with
@@ -252,18 +234,11 @@ Case-076 duplicate-audit note:
   already learned in Case-011. Keep the existing `bubble_correlation_matrix`
   motif and heatmap-pairwise correlation evidence rules rather than minting a
   second bubble-matrix template.
-- The closure evidence lives in
-  `.workflow/case_studies/case_076_red_blue_bubble_correlation_audit/comparison_report.json`.
   It verifies that Case-011 already captured four reference screenshots, the
   replica, comparison report, runtime probe, and runtime QA for signed color,
   absolute-correlation bubble area, per-cell labels, and the matrix colorbar.
 
 ## Variant: upper significance / lower bubble correlation matrix
-
-Anchor: `告别枯燥表格！Python绘制超吸睛的相关性气泡图_1778681959`.
-
-Case-097 evidence lives in
-`.workflow/case_studies/case_097_upper_sig_lower_bubble_correlation/comparison_report.json`.
 
 Use this when the matrix intentionally splits semantics by triangle: lower
 triangle encodes correlation strength as bubbles, while upper triangle prints
@@ -294,8 +269,6 @@ Case-093 duplicate-audit note:
   Case-028. Keep the `nature_pearson_pairwise_matrix` bundle with diagonal
   histogram/KDE cells, upper Pearson tiles, lower hollow scatter + fit cells,
   and outer-only labels.
-- The closure evidence lives in
-  `.workflow/case_studies/case_093_nature_pearson_pairwise_matrix_audit/comparison_report.json`.
 
 ## Variant: Layered model-increment heatmap matrix
 
@@ -317,8 +290,6 @@ QA signals: `layeredHeatmapMatrix` true, `heatmapPanelCount == n_groups * 2`,
 `rowColorbarCount == n_groups`, `divergingNormCentered` true,
 `gridWidthRatios == [1, 1, 0.05]`, and `cellAnnotationCount` equals the number
 of rendered cells.
-
-Anchor: `期刊配图复现：Python 绘制多面板分层热力图矩阵`.
 
 ## Discipline rules
 

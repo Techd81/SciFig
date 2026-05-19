@@ -17,9 +17,6 @@
 5. **Closed-loop angle array** (append first angle to end so polygon closes)
 6. **Axis-by-axis normalization to [0, 1]** (different physical units)
 
-Case-072 canonical evidence lives in
-`.workflow/case_studies/case_072_nature_radar_canonical/comparison_report.json`.
-
 ## Full reference implementation
 
 ```python
@@ -142,8 +139,6 @@ ax.bar(angles_bottom, simp_bot, width=0.45 * 0.7, color='#FFFF99', zorder=10)
 ax_scale = fig.add_axes([0.05, 0.4, 0.02, 0.4])
 ```
 
-Anchor: `期刊复现 _ Python绘制"镜像玫瑰"组合图`.
-
 ### Executable mapping: mirror radial bar board
 
 Route `visualContentPlan.templateMotifs` / `specialPatterns` containing
@@ -195,8 +190,6 @@ center = plt.Circle((0, 0), 0.15, transform=ax.transData._b,
 ax.add_artist(center)
 ```
 
-Anchor: `顶刊复刻 _ "中心挖空"+"立体高光"的雷达图`.
-
 ## Multi-panel radar (subplot grid)
 
 Use `R3_two_by_three_grid` for 6-feature radar comparison or `R5_n_by_n_pairwise` for ablation panels.
@@ -208,8 +201,6 @@ for k in range(6):
     ax = fig.add_subplot(gs[k // 3, k % 3], polar=True)
     # ... apply polygon-grid + sandwich layers ...
 ```
-
-Anchor: `期刊配图：基于极坐标系的多面板雷达图对比多维环境变量与模型表现`.
 
 Case-066 boundary: the article title says multi-panel, but the executable code
 builds one polar axis. Learn it as an environment/model metric radar comparison
@@ -237,14 +228,8 @@ Case-066 acceptance signals: `axisName == "polar"`, `categoryCount == 6`,
 `legendOutside == true`, and `exportDpi == 600`.
 
 Evidence path:
-`.workflow/case_studies/case_066_environment_radar_comparison/comparison_report.json`.
 
 ## Manual cartesian model-metric radar
-
-Anchor: `Python：一键生成专业级雷达图！_1778682717`.
-
-Case-095 evidence lives in
-`.workflow/case_studies/case_095_manual_cartesian_model_metric_radar/comparison_report.json`.
 
 Use this when the source manually constructs a radar chart on a hidden
 cartesian axes rather than using `projection="polar"`. This is still a radar

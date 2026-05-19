@@ -104,11 +104,7 @@ ax_dir.spines['top'].set_visible(False)
 ax_dir.spines['right'].set_visible(False)
 ```
 
-Anchor: `期刊复刻：通过双侧棒棒糖图解析特征重要性与ALE主效应方向`.
-
 ## Executable mapping: PFI + signed ALE paired lollipops
-
-Anchor: `期刊复刻：通过双侧棒棒糖图解析特征重要性与ALE主效应方向`.
 
 Use this when rows contain a feature name, a positive feature-importance / PFI
 score, and a signed ALE/main-effect value. The feature order is determined by

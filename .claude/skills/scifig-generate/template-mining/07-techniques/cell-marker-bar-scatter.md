@@ -2,9 +2,6 @@
 
 Anchor case: `高级感！Python复刻Cell顶刊散点柱状图_1777451193`.
 
-Case-077 evidence lives in
-`.workflow/case_studies/case_077_cell_marker_bar_scatter/comparison_report.json`.
-
 ## Hallmark Elements
 
 1. Single-panel marker-composition chart, not a multi-panel board.

@@ -2,9 +2,6 @@
 
 Anchor case: `Python复现顶刊CEJ _ 拒绝手绘！如何用代码"量产"高颜值多面板吸附等温线图？_1777452771`.
 
-Case-082 evidence lives in
-`.workflow/case_studies/case_082_adsorption_isotherm_multipanel/comparison_report.json`.
-
 ## Learned Essence
 
 This case is a condition-wise adsorption comparison board, not a generic line chart.

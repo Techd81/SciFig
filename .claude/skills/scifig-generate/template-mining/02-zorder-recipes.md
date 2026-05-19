@@ -151,8 +151,6 @@ Case-092 `density_linear_regression_fit` specialization:
 
 ### adsorption-isotherm multipanel (CEJ 2x3 condition storyboard)
 
-Anchor: `Python复现顶刊CEJ _ 拒绝手绘！如何用代码"量产"高颜值多面板吸附等温线图`.
-
 ```python
 # L0: light dashed grid in every panel
 ax.grid(linestyle='--', color='#D8D8D8', alpha=0.7, zorder=0)
@@ -247,8 +245,6 @@ Case-054 `triple_y_mechanical_grid` specialization:
   orange and green series.
 
 ### signed PCA score bars
-
-Anchor: `期刊配图优化：Python绘制“双面板PCA得分图”，优雅展示多配方综合评价`.
 
 - L0: light y-grid behind both the PCA decomposition and total-score panels.
 - L2/L3: PC component bars and total-score bars sit above the grid; signed
@@ -473,8 +469,6 @@ Case-055 `layered_heatmap_matrix` specialization:
 
 ### 2D-PDP interaction contour matrix
 
-Anchor: `期刊配图：利用多面板2D-PDP揭示机器学习模型的双变量交互与控制边界`.
-
 - L1: filled `contourf` response surface is the base evidence layer; keep shared
   levels across panels before comparing high-response regions.
 - L3: Q1 / median / Q3 contour lines sit above the fill as control-boundary
@@ -491,8 +485,6 @@ Anchor: `期刊配图：利用多面板2D-PDP揭示机器学习模型的双变�
   panel only to mimic the Case-062 2x2 shape.
 
 ### 3D-PDP surface panel
-
-Anchor: `期刊配图：基于集成模型的3D部分依赖图(PDP)非线性交互效应可视化`.
 
 - L0/L1: transparent 3D panes and the dashed grid are spatial scaffolding; set
   pane alpha to zero before adding the surface so the back walls do not visually
@@ -511,8 +503,6 @@ Anchor: `期刊配图：基于集成模型的3D部分依赖图(PDP)非线性交�
 
 ### PDP + ICE threshold grid
 
-Anchor: `机制解释图复刻：基于Random Forest与局部依赖图(PDP)揭示特征关键阈值`.
-
 - L1: ICE curves are the heterogeneity background. Use many thin gray lines with
   low alpha so they read as uncertainty/individual-response texture rather than
   separate highlighted series.
@@ -529,8 +519,6 @@ Anchor: `机制解释图复刻：基于Random Forest与局部依赖图(PDP)揭�
   a separate data series.
 
 ### TTOP permafrost raster map
-
-Anchor: `Python 实战  _ 基于土地类型、DDF、DDT 计算 TTOP 并绘制冻土分布图`.
 
 - L1/L2: raster cells are the base evidence layer. Use a continuous diverging
   map for TTOP magnitude and a discrete class map for permafrost extent; do not
@@ -615,8 +603,6 @@ metric axis.
 
 ### grouped-box median regression
 
-Anchor: `Python绘制箱型图与回归线，一眼看穿数据趋势！`.
-
 - L0: alternating `axvspan` interval bands sit behind all distribution marks and
   replace the grid for bin readability.
 - L2: paired box bodies, whiskers, and caps are the distribution layer; keep
@@ -629,8 +615,6 @@ Anchor: `Python绘制箱型图与回归线，一眼看穿数据趋势！`.
   text sit above the marks in axes coordinates.
 
 ### grouped environmental flux boxplot
-
-Anchor: `期刊复现：通过多子图布局对比城市化梯度对气体排放量的非线性影响`.
 
 - L0: omit or keep only a very faint y-grid; in this motif the log y-axis is
   the structural scale cue, not decoration.
@@ -645,8 +629,6 @@ Anchor: `期刊复现：通过多子图布局对比城市化梯度对气体排�
   across both gas panels so the single legend remains truthful.
 
 ### cell marker bar-scatter
-
-Anchor: `高级感！Python复刻Cell顶刊散点柱状图`.
 
 ```python
 # L1: mean bar as background summary
@@ -671,8 +653,6 @@ blocks created by a non-uniform x-axis gap.
 
 ### polar waffle feature importance
 
-Anchor: `期刊配图：基于极坐标条形图与华夫饼图拆解机器学习特征重要性`.
-
 - Polar L0: hide the default polar spine/grid and redraw structural concentric
   rings plus radial guide lines by hand.
 - Polar L3: radial bars encode feature-level mean `|SHAP|`; white bar edges
@@ -686,8 +666,6 @@ Anchor: `期刊配图：基于极坐标条形图与华夫饼图拆解机器学�
 
 ### greenhouse flux raincloud
 
-Anchor: `期刊配图：云雨图结合半小提琴与抖动散点展示不同城市化水平的通量差异`.
-
 - L1: half-violin KDE cloud is the distribution-shape layer; keep it behind all
   raw observations.
 - L2: jittered raw observations are the audit layer, with white marker edges and
@@ -698,8 +676,6 @@ Anchor: `期刊配图：云雨图结合半小提琴与抖动散点展示不同�
   redundant legends when color only repeats the urbanization categories.
 
 ### stacked violin metric board
-
-Anchor: `顶刊同款！Python绘制堆叠小提琴图`.
 
 - L1: full violin bodies are the distribution-shape layer; keep black outlines
   but do not let them overpower the summaries.

@@ -75,8 +75,6 @@ inside a parity scatter to attach RMSE, MAE, and runtime directly to the model
 fit evidence. Keep the inset axes off, use a table header with a contrasting
 background, and reserve the lower-right data region before placing the table.
 
-Anchor: `Python科研绘图：一行代码实现 R² + 95% 置信区间的高级散点图`, `复现 Nature_Python 绘制广义相加模型(GAM)`.
-
 ---
 
 ## I2 — Perfect-fit diagonal (`perfect_fit_diagonal`)
@@ -116,8 +114,6 @@ for x_center, label in [(1.5, 'Family A'), (5.5, 'Family B'), (9.0, 'Family C')]
             ha='center', va='bottom', fontsize=11,
             fontweight='bold', color='#444')
 ```
-
-Anchor: `如何用Python绘制教科书级的双Y轴组合图`, `期刊复现：双Y轴分组柱状与折线组合图`.
 
 ---
 
@@ -185,8 +181,6 @@ def add_bracket(ax, x1, x2, y, p, line_h=0.02, fontsize=11):
 - Bracket height ~2% of y-range; line width 0.8.
 - Use `ns` (italic) when p ≥ 0.05 to make non-significance explicit.
 
-Anchor: `进阶绘图：解决"多变量拥挤"痛点——Python 绘制带显著性星号与斜向色条的三角热图`.
-
 ---
 
 ## I6 — Density-colored scatter (`density_color_scatter`)
@@ -214,8 +208,6 @@ fig.colorbar(sc, ax=ax, shrink=0.6, pad=0.04, label='Density')
 - `rasterized=True` so PDF stays under 5MB
 - Always pair with a **colorbar labeled "Density"** — otherwise readers misinterpret the color as a third variable
 - `edgecolor='white'` for crispness
-
-Anchor: `复现 CEJ 顶刊神图：密度散点+边缘直方图`, `期刊配图：基于高斯核密度的3x3多面板散点图`.
 
 ---
 
@@ -251,8 +243,6 @@ ax2.tick_params(axis='y', colors=LINE_COLOR)
 ax2.set_ylabel('Strength (MPa)', color=LINE_COLOR)
 ```
 
-Anchor: `如何用Python绘制教科书级的双Y轴组合图`, `期刊复现：Nature Comms 双Y轴组合图`.
-
 ---
 
 ## I9 — Confidence/prediction band (`error_band_fill_between`)
@@ -278,8 +268,6 @@ ax.fill_between(curve_x, curve_y - 1.96*se, curve_y + 1.96*se,
 - Alpha 0.35-0.45 for prediction interval (more visible)
 - Always `linewidth=0` so the fill has no border
 - Always lower zorder than the primary line/scatter
-
-Anchor: `期刊图表复现：基于预测区间与训练_测试划分的时序拟合效果对比`, `复现 Nature_Python 绘制广义相加模型(GAM)`.
 
 ---
 
@@ -318,8 +306,6 @@ for ang in angles[:-1]:
     ax.plot([ang, ang], [0, 1.0], color='black', linewidth=0.6, alpha=0.4, zorder=0)
 ```
 
-Anchor: `绝美！Nature 这张雷达图`, `顶刊复刻 _ 这种"中心挖空"+"立体高光"的雷达图`.
-
 ---
 
 ## I12 — Imshow gradient box (`imshow_gradient_box`)
@@ -339,8 +325,6 @@ def draw_gradient_box(ax, x, q1, width, height, color, alpha=0.85, zorder=2):
                          edgecolor=color, linewidth=1.2, zorder=zorder + 1)
     ax.add_patch(rect)
 ```
-
-Anchor: `顶刊审美 _ 用 Python 绘制带"垂直渐变特效"的组合箱线图`.
 
 ---
 
@@ -374,8 +358,6 @@ for split, df_s in df.groupby('split'):
                edgecolor='white', linewidth=0.4,
                label=split, zorder=4)
 ```
-
-Anchor: split overlay in predicted-vs-actual cases.
 
 ---
 

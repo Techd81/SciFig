@@ -39,8 +39,6 @@ Case-072 duplicate-audit note:
   already learned in Case-007. Keep the existing `marginal_joint` /
   `joint_marginal_grid` routing rather than minting another density-scatter
   template.
-- The closure evidence lives in
-  `.workflow/case_studies/case_072_cej_density_marginal_audit/comparison_report.json`.
   It verifies that Case-007 already captured five reference screenshots, the
   replica, comparison report, runtime probe, and runtime QA for attached
   marginal axes plus density encoding.
@@ -140,11 +138,7 @@ cf = ax_main.contourf(xx, yy, zz, levels=12, cmap='GnBu_r', zorder=3)
 ax_main.contour(xx, yy, zz, levels=12, colors='white', linewidths=0.4, zorder=4)
 ```
 
-Anchor: `期刊复现：联合等高线热图与边缘分布图`.
-
 ## Variant: Contour-search + marginal validation
-
-Anchor: `期刊复现：联合等高线热图与边缘分布图验证模型预测精度与参数寻优_1777454914`.
 
 Use this when a model-validation figure must show both search-space behavior and
 final prediction accuracy:
@@ -164,13 +158,7 @@ final prediction accuracy:
   relation. No public generator yet composes the contour-search plus
   marginal-validation board.
 
-Case-048 evidence lives in
-`.workflow/case_studies/case_048_contour_marginal_validation/comparison_report.json`.
-
 ## Variant: Joint residual marginal performance
-
-Anchor:
-`期刊复现：通过带边缘密度的联合残差图全面评估预测模型性能_1777454731`.
 
 Use this when a single regression-performance figure must verify accuracy,
 split distribution overlap, and residual bias at the same time:
@@ -212,11 +200,6 @@ Executable mapping: `scatter_regression` enters marginal-joint mode for standalo
 
 ## Variant: nested model matrix
 
-Anchor: `Python绘图实战：基于GridSpec构建多面板回归预测与边缘分布组合图`.
-
-Case-084 evidence lives in
-`.workflow/case_studies/case_084_nested_marginal_joint_matrix/comparison_report.json`.
-
 `gen_scatter_regression` enters `nested_marginal_joint_matrix` mode when model /
 algorithm, split, actual, and predicted roles are present and the motif is
 planned. It builds a 2x3 outer model matrix; each model cell uses
@@ -229,11 +212,6 @@ QA cues: `modelPanelCount == n_models`, `marginalAxesCount == n_models * 2`,
 train/test legend should replace repeated per-panel legends.
 
 ## Variant: train/validation OLS CI with marginal histograms
-
-Anchor: `【Python绘图！用Matplotlib+Statsmodels打造带边缘直方图的炫酷散点回归分析`.
-
-Case-096 evidence lives in
-`.workflow/case_studies/case_096_train_val_marginal_ols_ci/comparison_report.json`.
 
 Use this when the prediction diagnostic has one true-vs-predicted main scatter,
 separate train and validation point clouds, split-specific OLS fits, and

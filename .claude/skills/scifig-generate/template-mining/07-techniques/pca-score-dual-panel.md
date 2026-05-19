@@ -1,8 +1,5 @@
 # PCA Score Dual Panel
 
-Anchor:
-`期刊配图优化：Python绘制“双面板PCA得分图”，优雅展示多配方综合评价_1777451762`.
-
 Use this when a formulation or recipe table contains signed PCA component
 scores and a weighted total score.
 
@@ -33,6 +30,3 @@ Current `stacked_bar_comp` validates one generic stacked-composition channel.
 It does not yet compose the signed PCA decomposition plus paired total-score
 ranking board, dynamic positive/negative bottoms, shared zero lines, or
 polarity-aware rotated labels.
-
-Case-053 evidence lives in
-`.workflow/case_studies/case_053_pca_score_dual_panel/comparison_report.json`.
