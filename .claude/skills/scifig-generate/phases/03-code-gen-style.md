@@ -3,9 +3,8 @@
 > **COMPACT SENTINEL [Phase 3: code-gen-style]**
 > This phase contains 6 execution steps (Step 3.1 - 3.6, with 3.4b and 3.4c sub-protocols).
 > Generator implementations are in sub-files under `phases/code-gen/`:
->   - `generators-distribution.md` (distribution, time-series, statistical, genomics, engineering, ecology charts)
->   - `generators-clinical.md` (clinical trial, composition, hierarchical charts)
->   - `generators-psychology.md` (relationship, psychology, social science charts)
+> Generator implementations are domain-split legal Python modules under `phases/code-gen/` named `generators_<domain>.py`:
+>   distribution, time_series, matrix, scatter, diagnostics, clinical, genomics, ml, composition, network, radar, engineering, ranked.
 > If you can read this sentinel but cannot find the full Step protocol below, context has been compressed.
 > Recovery: `Read("phases/03-code-gen-style.md")`
 
@@ -574,10 +573,19 @@ statsReport = build_stats_report(chartPlan, dataProfile)
 # Helper: build generator function code from split source files.
 # Each generator signature: gen_xxx(df, dataProfile, chartPlan, rcParams, palette, col_map=None, ax=None) -> ax
 GENERATOR_SOURCE_FILES = [
-    ".claude/skills/scifig-generate/phases/code-gen/generators-distribution.py",
-    ".claude/skills/scifig-generate/phases/code-gen/generators-distribution.md",
-    ".claude/skills/scifig-generate/phases/code-gen/generators-clinical.md",
-    ".claude/skills/scifig-generate/phases/code-gen/generators-psychology.md",
+    ".claude/skills/scifig-generate/phases/code-gen/generators_clinical.py",
+    ".claude/skills/scifig-generate/phases/code-gen/generators_composition.py",
+    ".claude/skills/scifig-generate/phases/code-gen/generators_diagnostics.py",
+    ".claude/skills/scifig-generate/phases/code-gen/generators_distribution.py",
+    ".claude/skills/scifig-generate/phases/code-gen/generators_engineering.py",
+    ".claude/skills/scifig-generate/phases/code-gen/generators_genomics.py",
+    ".claude/skills/scifig-generate/phases/code-gen/generators_matrix.py",
+    ".claude/skills/scifig-generate/phases/code-gen/generators_ml.py",
+    ".claude/skills/scifig-generate/phases/code-gen/generators_network.py",
+    ".claude/skills/scifig-generate/phases/code-gen/generators_radar.py",
+    ".claude/skills/scifig-generate/phases/code-gen/generators_ranked.py",
+    ".claude/skills/scifig-generate/phases/code-gen/generators_scatter.py",
+    ".claude/skills/scifig-generate/phases/code-gen/generators_time_series.py",
 ]
 
 
@@ -963,9 +971,7 @@ styledCode = {
 > 6. `full_code_string` embeds helper source from `phases/code-gen/helpers.py` and multi-panel source from `phases/code-gen/generators-multipanel.py`, keeps `crowdingPlan` and `visualContentPlan` attached to `chartPlan`, passes `ax` and `col_map` to generators, runs `apply_visual_content_pass(...)` before `enforce_figure_legend_contract(...)`, persists each `legend_contract_report` to `output/reports/render_contracts.json` before `export_editable_svg_bundle(...)`, tracks `legendContractEnforced`, `layoutContractEnforced`, `layoutContractFailures`, `colorbarReflowCount`, `colorbarPanelOverlapCount`, `metricTableDataOverlapCount`, `metricTableRelocatedCount`, `metricTableSuppressedCount`, `metricTableFallbackBoxCount`, `axisLegendRemainingCount`, `visualGrammarMotifsApplied`, `templateMotifsApplied`, `metricTableCount`, `referenceLineCount`, `densityHaloCount`, `marginalAxesCount`, and `densityColorEncodingCount`, and derives requested PNG outputs from the canonical editable SVG using `workflowPreferences["rasterDpi"]`
 
 
-> **Generator code**: Read [code-gen/generators-distribution.md](code-gen/generators-distribution.md) for distribution chart generators (violin_paired, violin_split, dot_strip, histogram, density, ecdf, joyplot, ridge, and 40+ additional chart types across genomics, engineering, ecology, and more).
-> **Generator code**: Read [code-gen/generators-clinical.md](code-gen/generators-clinical.md) for clinical trial, composition, and hierarchical chart generators (caterpillar_plot, swimmer_plot, risk_ratio_plot, tornado_chart, nomogram, decision_curve, treemap, sunburst, waffle_chart, marimekko, stacked_area_comp, nested_donut).
-> **Generator code**: Read [code-gen/generators-psychology.md](code-gen/generators-psychology.md) for relationship, psychology, and social science chart generators (chord_diagram, parallel_coordinates, sankey, radar, likert_divergent, likert_stacked, mediation_path, interaction_plot).
+> **Generator code — do NOT read into context**: The 13 domain-split `generators_<domain>.py` modules under `code-gen/` are NOT meant to be read into the conversation (they hold ~8k lines of generator source in total). `_build_generator_code(needed_names)` in Step 3.6 extracts only the `gen_xxx` functions the current figure needs — plus their `dependency_map` entries and the shared `_*` helpers — and embeds them into the generated script. To learn which generator a chart key resolves to, consult `code-gen/registry.py` (`CHART_GENERATORS[key] -> "gen_xxx"`); function bodies load on demand at assembly time, never via manual `Read`.
 ## Output
 
 - **Variable**: `styledCode`

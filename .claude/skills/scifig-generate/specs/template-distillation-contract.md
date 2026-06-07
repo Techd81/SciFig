@@ -123,11 +123,20 @@ family is covered.
 ```python
 import re
 from pathlib import Path
-SOURCE_FILES = [
-    "phases/code-gen/generators-distribution.md",
-    "phases/code-gen/generators-distribution.py",
-    "phases/code-gen/generators-clinical.md",
-    "phases/code-gen/generators-psychology.md",
+SOURCE_FILES = [  # 13 domain-split generators_<domain>.py modules
+    "phases/code-gen/generators_clinical.py",
+    "phases/code-gen/generators_composition.py",
+    "phases/code-gen/generators_diagnostics.py",
+    "phases/code-gen/generators_distribution.py",
+    "phases/code-gen/generators_engineering.py",
+    "phases/code-gen/generators_genomics.py",
+    "phases/code-gen/generators_matrix.py",
+    "phases/code-gen/generators_ml.py",
+    "phases/code-gen/generators_network.py",
+    "phases/code-gen/generators_radar.py",
+    "phases/code-gen/generators_ranked.py",
+    "phases/code-gen/generators_scatter.py",
+    "phases/code-gen/generators_time_series.py",
 ]
 BINDINGS = {
     # Polar / Radar family

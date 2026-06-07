@@ -1283,7 +1283,7 @@ def apply_template_radar_signature(ax, angles, value_rows=None, colors=None, vis
     """Legacy radar polish: polygon grid plus glass markers.
 
     DEPRECATED MIGRATION TARGET: New radar code (gen_radar in
-    generators-distribution.md, post-Phase C1) calls
+    generators_radar.py, post-Phase C1) calls
     template_mining_helpers.add_polygon_polar_grid + apply_zorder_recipe('radar')
     directly. This shim remains for:
       1. Backward compatibility with legacy code paths still importing it

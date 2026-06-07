@@ -19,10 +19,19 @@ from pathlib import Path
 
 SKILL_ROOT = Path(__file__).resolve().parents[2]
 SOURCE_FILES = [
-    SKILL_ROOT / "phases" / "code-gen" / "generators-distribution.md",
-    SKILL_ROOT / "phases" / "code-gen" / "generators-distribution.py",
-    SKILL_ROOT / "phases" / "code-gen" / "generators-clinical.md",
-    SKILL_ROOT / "phases" / "code-gen" / "generators-psychology.md",
+    SKILL_ROOT / "phases" / "code-gen" / "generators_clinical.py",
+    SKILL_ROOT / "phases" / "code-gen" / "generators_composition.py",
+    SKILL_ROOT / "phases" / "code-gen" / "generators_diagnostics.py",
+    SKILL_ROOT / "phases" / "code-gen" / "generators_distribution.py",
+    SKILL_ROOT / "phases" / "code-gen" / "generators_engineering.py",
+    SKILL_ROOT / "phases" / "code-gen" / "generators_genomics.py",
+    SKILL_ROOT / "phases" / "code-gen" / "generators_matrix.py",
+    SKILL_ROOT / "phases" / "code-gen" / "generators_ml.py",
+    SKILL_ROOT / "phases" / "code-gen" / "generators_network.py",
+    SKILL_ROOT / "phases" / "code-gen" / "generators_radar.py",
+    SKILL_ROOT / "phases" / "code-gen" / "generators_ranked.py",
+    SKILL_ROOT / "phases" / "code-gen" / "generators_scatter.py",
+    SKILL_ROOT / "phases" / "code-gen" / "generators_time_series.py",
 ]
 SMOKE_SOURCE_FILES = SOURCE_FILES + [
     SKILL_ROOT / "phases" / "03-code-gen-style.md",

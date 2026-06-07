@@ -50,7 +50,7 @@ fig.savefig("output.svg")
    - Read `06-narrative-arcs.md` to bind the figure to one of 10 corpus arcs.
    - Read `04-grid-recipes.md` if `panel_count > 1`.
    - Lookup `case-index.json` for ≥3 cases matching `chart_families` or `narrative_arc`.
-   - Inspect each candidate's `images`, `image_evidence`, `code_blocks`, and `visual_signals`; Markdown image links are first-class evidence and must not be treated as absent just because there are no standalone PNG/JPG files under `template/`.
+   - For deeper visual evidence (`images`, `image_evidence`, `code_blocks`, `visual_signals`), read the matching case in `case-evidence.json` (local, regenerable from `template/` via `_extraction/enrich.py`; `case-index.json` itself is the slim routing index). Markdown image links are first-class evidence and must not be treated as absent just because there are no standalone PNG/JPG files under `template/`.
 3. **Phase 3** code generation:
    - Read `01-rcparams-kernel.md` for the kernel; call `apply_journal_kernel(variant, journalProfile)`.
    - Read `02-zorder-recipes.md` for the matching chart family; call `apply_zorder_recipe(family, ax, layers)`.

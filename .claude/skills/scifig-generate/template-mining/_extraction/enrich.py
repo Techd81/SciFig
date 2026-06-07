@@ -3,8 +3,9 @@ and preamble prose to the case-index. Reads each source_path recorded by
 extract.py but only keeps ~600 chars of prose (the visual-analysis paragraph).
 Run after extract.py.
 
-Output:
-  - case-index.json (overwritten with extra fields)
+Output (Stage-4 split):
+  - case-index.json (slim runtime routing index — RUNTIME_KEEP_FIELDS only)
+  - case-evidence.json (bulk images/code_blocks/visual_signals/... — gitignored)
   - narratives.md (human-readable per-case digest)
 """
 from __future__ import annotations
@@ -20,6 +21,17 @@ SKILL_DIR = Path(__file__).resolve().parents[1]
 OUT_DIR = Path(__file__).resolve().parent
 
 CASE_INDEX = SKILL_DIR / "case-index.json"
+CASE_EVIDENCE = SKILL_DIR / "case-evidence.json"
+
+# Runtime routing (phases/02-recommend-stats.md rank_template_cases_for_family)
+# reads only these fields. Everything else is bulk evidence (images, code_blocks,
+# visual_signals, image_evidence, rc, ...) split into case-evidence.json —
+# regenerable from template/, kept out of git.
+RUNTIME_KEEP_FIELDS = {
+    "id", "file", "source_path", "title", "narrative_arc", "preamble",
+    "chart_families", "signature_tricks", "palette_hex", "cmaps",
+    "grid", "counts", "template_motifs", "bundle_key", "learning_status",
+}
 
 # -------------- narrative arc classifier (title-driven) --------------
 # Order matters; first match wins.
@@ -154,7 +166,11 @@ def main():
         for t in tricks:
             trick_counter[t] += 1
 
-    CASE_INDEX.write_text(json.dumps(enriched, ensure_ascii=False, indent=2), encoding="utf-8")
+    slim = [{k: v for k, v in case.items() if k in RUNTIME_KEEP_FIELDS} for case in enriched]
+    evidence = [dict({k: v for k, v in case.items() if k not in RUNTIME_KEEP_FIELDS},
+                     id=case.get("id"), file=case.get("file")) for case in enriched]
+    CASE_INDEX.write_text(json.dumps(slim, ensure_ascii=False, indent=2), encoding="utf-8")
+    CASE_EVIDENCE.write_text(json.dumps(evidence, ensure_ascii=False, indent=2), encoding="utf-8")
 
     # write a human-readable digest grouped by narrative arc
     out = ["# Template Mining — Per-Case Narrative & Trick Digest", "",

@@ -28,8 +28,8 @@ BANNED_LEGEND_PATTERNS = [
 
 
 def iter_generator_sources():
-    yield from sorted(SKILL_ROOT.glob("generators-*.md"))
-    yield from sorted(SKILL_ROOT.glob("generators-*.py"))
+    yield from sorted(SKILL_ROOT.glob("generators*.md"))
+    yield from sorted(SKILL_ROOT.glob("generators*.py"))
     if PACKAGE_ROOT.is_dir():
         yield from sorted(PACKAGE_ROOT.glob("*.py"))
 

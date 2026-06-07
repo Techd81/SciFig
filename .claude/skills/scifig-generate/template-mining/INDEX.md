@@ -51,7 +51,7 @@ template-mining/
 1. **Always load** `INDEX.md` (this file) before any phase-2/3 decision.
 2. **Phase 2** (chart + panel selection):
    - Lookup `case-index.json` to find ≥3 cases with matching `chart_families` or `narrative_arc`.
-   - Inspect `images`, `image_evidence`, `code_blocks`, and `visual_signals`; image links embedded in Markdown are evidence even when no standalone image file exists under `template/`.
+   - For deeper evidence (`images`, `image_evidence`, `code_blocks`, `visual_signals`), read the matching case in `case-evidence.json` (local, regenerable; `case-index.json` is the slim routing index). Image links embedded in Markdown are evidence even when no standalone image file exists under `template/`.
    - Read `06-narrative-arcs.md` to confirm story shape.
    - Read `04-grid-recipes.md` if `panel_count > 1`.
 3. **Phase 3** (code generation):
