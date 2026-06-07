@@ -28,6 +28,7 @@ Both modes share the same 121-chart registry, six journal-style profiles (Nature
 
 ## Changelog
 
+- V0.2.1: Refactored the scifig-generate skill — split the 8341-line `generators-distribution.md` monolith into 13 legal domain-split `generators_<domain>.py` modules (function bodies byte-identical, capability unchanged); slimmed `case-index.json` by moving bulk evidence into gitignored `case-evidence.json`; Phase 3 now injects generator source on-demand via `_build_generator_code` instead of reading whole files into context. Verified by binding_probe 78/78, source-lint, and 326 passing tests (codex + agy cross-review).
 - V0.2.0: PyPI release pipeline (.github/workflows/release.yml), Sphinx docs site (docs/), tag-triggered CI release workflow, README/CHANGELOG refresh.
 - V0.1.7: 6 synthetic-but-realistic domain fixtures + 30-case parametrized integration suite + scripts/validate_release.sh 6-gate health check; bug fixes for integer column names and scatter regression numerical safety.
 - V0.1.6: scifig.stats multi-group tests (Kruskal-Wallis / ANOVA / Tukey HSD / FDR / recommend_test); scifig.compose layout-recipe loader (12 recipes from layout-recipes-ready.json); 8 common short-name chart aliases; dose_response 4PL Jacobian overflow fix.
