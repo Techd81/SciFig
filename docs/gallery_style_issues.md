@@ -1,4 +1,4 @@
-# Gallery Style Issues — Skill Optimization Spec
+﻿# Gallery Style Issues — Skill Optimization Spec
 
 21 张 Gallery 图经过人工审查发现的问题汇总，供 skill 优化参考。
 
@@ -6,7 +6,7 @@
 
 ## 通用规则
 
-以下规则适用于 scifig-generate 生成的所有图表。
+以下规则适用于 scifig 生成的所有图表。
 
 ### 1. 标题居中
 

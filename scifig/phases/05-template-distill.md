@@ -1,0 +1,136 @@
+﻿# Phase 5: Template Article Distillation
+
+> **COMPACT SENTINEL [Phase 5: template-distill]**
+> This optional maintenance phase contains 8 execution steps.
+> If only this sentinel remains, recover with `Read("phases/05-template-distill.md")`.
+
+Distill reusable visual code and design grammar from `D:/SciFig/template/**/*.md` into the executable `scifig` skill. The corpus may be indexed in batch, but learning is case-by-case: one complete Markdown file, one replica, one comparison, one distilled promotion.
+
+## Objective
+
+- Inventory changed or underused article examples without treating inventory as learning.
+- Study one selected Markdown article deeply before promotion.
+- Classify each finding as a motif, layout recipe, helper primitive, generator, or policy.
+- Promote reusable code into the canonical runtime files instead of growing prompt prose.
+- Keep registry, chart catalog, Phase 2 planning, Phase 3 code generation, and tests aligned.
+- In autonomous mode, run one complete improve -> smoke-generate -> validate -> commit cycle and carry lessons into the next cycle.
+
+## Execution
+
+### Step 5.1: Cycle Context And Previous Lessons
+
+If this is an autonomous maintenance cycle, first inspect:
+
+- current `git status --short`
+- previous ignored smoke folder under `output/autonomous_distill/`
+- previous `distillation_report.json` or report markdown if present
+- the highest-impact mismatch between generated smoke figures and template article cases
+
+Only optimize one or two reusable gaps per cycle. Prefer executable promotions over broad prompt growth.
+
+### Step 5.2: Article Inventory
+
+Scan `template/**/*.md` for Python code fences, Matplotlib APIs, layout APIs, and named visual tricks. Record article filename, source path, code block count, detected chart family, and candidate APIs such as `GridSpec`, `SubGridSpec`, `inset_axes`, `twinx`, `polar`, `contourf`, `gaussian_kde`, `PathPatch`, `FancyBboxPatch`, and custom colormaps.
+
+This scan is only an index. Before any promotion, select one case from the inventory and follow `knowledge/CASE_LEARNING_PROTOCOL.md`. Do not promote a pattern from aggregate counts alone.
+
+### Step 5.2a: One-Case Learning Gate
+
+For the selected Markdown case:
+
+1. Read the full Markdown file, not only `case-index.json`.
+2. Record image evidence: Markdown image links, alt text, line numbers, available local/remote images, and any fetch limitation.
+3. Record code evidence: every plotting code fence, rcParams, palettes, layout APIs, zorder layers, legend placement, annotation idioms, and export calls.
+4. Create a local replica under ignored `.workflow/case_studies/<case_id>/`; template images and replica outputs are evidence only and are not part of the submitted skill.
+5. Write a gap comparison that states what matched, what could not match, and what the transferable essence is.
+6. Promote only one or two reusable elements from that case into `scifig`.
+
+The cycle is blocked if no replica or gap comparison exists for the selected case.
+
+### Step 5.3: Promotion Classification
+
+Use [specs/template-distillation-contract.md](../specs/template-distillation-contract.md). Classify every candidate as:
+
+- `motif`: reusable overlay or annotation grammar for `specs/template-visual-motifs.md`.
+- `layout`: reusable panel structure for `resources/panel-layout-recipes.md` or `knowledge/modules/04-grid-recipes.md`.
+- `helper`: reusable runtime primitive for `runtime/helpers.py` or `template_mining_helpers.py`.
+- `generator`: full chart implementation for a split generator file plus `registry.py`.
+- `policy`: threshold or hard gate for `specs/workflow-policies.md` and Phase 4 QA.
+
+### Step 5.4: Code Promotion
+
+Promote real code in this order:
+
+1. Shared primitives into `runtime/helpers.py` when generated scripts must execute the behavior.
+2. Template-mining primitives into `runtime/template_mining_helpers.py` when Phase 3 needs style helpers before generator assembly.
+3. Existing chart upgrades into the current split generator file.
+4. New chart keys only after a generator, catalog row, recommendation rule, and test exist.
+
+Do not paste article snippets into `SKILL.md` or Phase 3 prose. The promoted code must be import-free or use dependencies already emitted into generated scripts.
+
+### Step 5.5: Planning And QA Sync
+
+If a promoted primitive changes figure planning, update Phase 2:
+
+- `infer_template_layout_intents`
+- `infer_template_visual_motifs`
+- `build_visual_content_plan`
+
+If completion criteria change, update Phase 4 render QA and `specs/workflow-policies.md`.
+
+### Step 5.6: Smoke Generation
+
+Generate a new ignored folder under `output/autonomous_distill/{cycle_id}/`. The smoke bundle must contain five domains, each with three single figures and two composite figures:
+
+- `computer_ai_ml`
+- `genomics_transcriptomics`
+- `clinical_diagnostics_survival`
+- `materials_engineering`
+- `ecology_environmental`
+
+Each smoke run must use the `scifig` runtime contracts: template-backed chart planning, canonical helper source, visual-content pass, `audit_visual_density_contract(...)`, `enforce_figure_legend_contract(...)`, persisted `output/reports/render_contracts.json`, and the bottom-center legend/layout QA. Do not accept smoke output that only inspects planned `chartPlan` defaults; the smoke report must include runtime contract evidence for every saved figure, including `legendModeUsed`, `figureLegendCount`, `axisLegendRemainingCount`, `visualDensityContractEnforced`, `missingTemplateMotifs`, and `missingVisualGrammarMotifs`.
+
+Every autonomous smoke bundle must execute at least one generated-script-shaped probe, not just direct helper calls from the smoke harness. Write a probe script under the ignored cycle folder that follows Phase 3 structure (`output/generate_figure.py` shape): load or embed canonical helper source, build `chartPlan`, run the registered generator, call `apply_visual_content_pass(...)`, call `audit_visual_density_contract(...)`, call `enforce_figure_legend_contract(...)`, persist `render_contracts.json` before `savefig`, then execute that script in a fresh process. Synthetic or harness-built `render_contracts.json` may supplement diagnostics, but it cannot satisfy the required generated-script probe.
+
+If the cycle promotes or regresses a chart-key recommendation, at least one smoke figure must execute the actual registered generator for that chart key, not a hand-drawn lookalike. For `rf_classifier_report_board`, the generator-level smoke fixture must include mixed RF and competitor prediction rows plus stacked feature-importance rows with no explicit selected-model flag, proving the generator itself selects RF, filters the validation sub-board, and renders the importance lane. For template-backed AI/ML routes, the smoke report must include `templateCasePlan.caseIndexResolverUsed == true`, at least three `caseIndexMatches` for the selected family when the family exists in `case-index.json`, and the selected anchors that drove the route. The smoke folder must include a short report listing generated figures, template anchors exercised, generator-level probes, hard failures, and lessons for the next cycle.
+
+### Step 5.7: Validation
+
+Run:
+
+```powershell
+python -m pytest tests/test_crowding_controls.py -q
+python -m pytest tests/test_scifig_generators.py -q
+python -m pytest tests/test_skill_prompt_contracts.py -q
+python -m pytest -q
+git diff --check
+```
+
+Add targeted tests or smoke assertions for every promoted helper, generator, or layout path. If a smoke lesson promotes a render-QA repair, add a pytest regression that first reproduces the bad rendered state and then proves the canonical helper fixes or rejects it. If a smoke lesson promotes a router decision, add a Phase 2 snippet test for the weakest schema that should still route correctly and a generator-level smoke assertion when the recommended chart key already has a registered implementation. If a smoke lesson promotes a density or template-alignment repair, assert exact motif coverage (`planned - applied == []`) rather than only checking aggregate counts. Render QA failures are blockers, not caveats. If smoke artifacts are generated, confirm they remain ignored before commit.
+
+The generated-script probe is a validation gate: fail the cycle if the probe script is missing, does not execute, does not save a figure, does not write `render_contracts.json`, leaves any axis legend, uses a non-`bottom_center` figure legend when a legend exists, or reports missing required motifs. Record the probe script path, figure path, contract path, and pass/fail fields in `distillation_report.json`.
+
+### Step 5.8: Distillation Report And Commit
+
+Summarize:
+
+- article files mined
+- selected case, source Markdown path, replica path, and comparison path
+- learned essence promoted from the selected case
+- promoted motifs/helpers/generators
+- smoke domains and figure counts
+- files changed
+- tests run
+- remaining gaps that still prevent matching the reference cases
+
+Autonomous cycles commit tracked skill changes after validation. Do not commit ignored smoke outputs unless the user explicitly requests artifact archival.
+
+## Output
+
+- **Files**: promoted runtime/helper/generator/spec/test changes under `scifig`
+- **Variable**: `templateDistillationReport`
+- **TodoWrite**: Mark Phase 5 completed
+
+## Next Phase
+
+Return to orchestrator. If generated output quality still trails the article cases, run Phase 5 again on the highest-impact gap rather than adding more generic prompt text.
